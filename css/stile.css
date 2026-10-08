@@ -133,3 +133,18 @@ table.conti tr.totale td { font-weight: 700; border-top: 1px solid var(--bordo);
   #pannello { width: calc(100% - 76px); max-height: 45%; }
   #mini { width: 140px; }
 }
+
+/* attesa nelle fermate */
+ol.fermate .attesaFermata { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 2px 0 4px; font-weight: normal;
+  font-size: 12px; color: var(--tenue); }
+ol.fermate select { font: inherit; font-size: 12px; color: var(--testo); background: #0f1821; border: 1px solid var(--bordo);
+  border-radius: 5px; padding: 1px 4px; }
+ol.fermate input.durata { width: 44px; font: inherit; font-size: 12px; color: var(--testo); background: #0f1821;
+  border: 1px solid var(--bordo); border-radius: 5px; padding: 1px 3px; }
+
+/* finestra informazioni e versione */
+.info-testa { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.info-logo { font-size: 42px; }
+.info-titolo { font-size: 22px; font-weight: 700; color: var(--accento); }
+.corpo a { color: #9cc7ff; }
+.versione { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--bordo); color: var(--tenue); font-size: 12px; }

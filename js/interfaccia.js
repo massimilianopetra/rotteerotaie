@@ -271,9 +271,17 @@
       if (s && !s.accetta[v.merce] && !s.fornisce[v.merce]) avv = `<span class="rosso" title="Qui ${nomeMerce(v.merce).toLowerCase()} non si carica e non si scarica">⚠</span> `;
       else if (s && !s.accetta[v.merce]) avv = `<span class="sotto" title="Qui si carica soltanto">⬆</span> `;
       else if (s && !s.fornisce[v.merce]) avv = `<span class="sotto" title="Qui si scarica soltanto">⬇</span> `;
+      // come aspetta in questa fermata: parte subito, aspetta il pieno, o aspetta un certo tempo
+      const modo = f.pieno ? 'pieno' : f.attesaMin > 0 ? 'tempo' : '';
+      const am = f.attesaMin || 0;
+      const campo = (u, val, max) => `<input type="number" class="durata" data-az="durata" data-k="${k}" data-u="${u}" min="0" max="${max}" value="${val}">`;
       h += `<li class="${k === v.idx ? 'attuale' : ''}">${avv}<span class="link" data-az="apriStazione" data-id="${f.s}">${s ? esc(s.nome) : '?'}</span>
-        <label title="Aspetta di essere pieno prima di partire"><input type="checkbox" data-az="pieno" data-k="${k}" ${f.pieno ? 'checked' : ''}> pieno</label>
-        <button class="mini" data-az="suFermata" data-k="${k}" title="Sposta su">▲</button><button class="mini" data-az="togliFermata" data-k="${k}" title="Togli">✕</button></li>`;
+        <button class="mini" data-az="suFermata" data-k="${k}" title="Sposta su">▲</button><button class="mini" data-az="togliFermata" data-k="${k}" title="Togli">✕</button>
+        <div class="attesaFermata"><select data-az="modoAttesa" data-k="${k}" title="Quanto aspetta in questa stazione prima di ripartire">
+          <option value="" ${modo === '' ? 'selected' : ''}>parte appena carico</option>
+          <option value="pieno" ${modo === 'pieno' ? 'selected' : ''}>attende il pieno</option>
+          <option value="tempo" ${modo === 'tempo' ? 'selected' : ''}>attende fino a…</option></select>
+        ${modo === 'tempo' ? `<span class="durate" title="Riparte allo scadere del tempo, o prima se è pieno">${campo('g', Math.floor(am / 1440), 120)} g ${campo('h', Math.floor((am % 1440) / 60), 23)} h ${campo('m', am % 60, 59)} min</span>` : ''}</div></li>`;
     });
     h += '</ol>';
     if (v.fermate.length) h += '<div class="nota">⬆ qui si carica soltanto · ⬇ qui si scarica soltanto · ⚠ qui questa merce non si carica né si scarica</div>';
@@ -282,6 +290,7 @@
       <button class="${ui.percorso ? 'attivo' : 'primario'}" data-az="fermate">${ui.percorso ? '✔ Fine fermate' : '➕ Aggiungi fermate'}</button>
       <button class="${ui.segui ? 'attivo' : ''}" data-az="segui">🎥 Segui</button>
       <button data-az="fermaVeicolo">${v.fermoManuale ? '▶ Riparti' : '⏸ Resta in stazione'}</button>
+      ${v.tipo !== 'aereo' && (v.stato === 'viaggio' || v.stato === 'bloccato') ? `<button class="${v.stallo ? 'attivo' : ''}" data-az="tornaIndietro" title="Torna alla fermata precedente (per sbloccare due treni che si bloccano a vicenda)">↩ Torna indietro</button>` : ''}
       <button data-az="vendi">💰 Vendi (${G.lire(G.valoreVeicolo(v))})</button></div>`;
     return h;
   }
@@ -445,6 +454,14 @@
       <li>Mettine un'altra in una seconda città e collegale con 🛤️ (tieni premuto e trascina: vedi il costo prima di costruire).
       Una stazione è <b>collegata</b> quando il binario passa sopra una delle sue caselle o ci finisce: non basta passarle accanto.</li>
       <li>Clicca su una stazione e premi «Compra un treno». Poi «Aggiungi fermate» e clicca sull'altra stazione.</li></ol>
+      <h4>Binari, segnali e incroci</h4>
+      <p>Su un tratto di binario passa <b>un treno alla volta</b>: i segnali sono automatici e un treno aspetta (🔴) in
+      stazione o prima di uno scambio finché la strada è libera. Su una linea a <b>binario unico</b> i treni in senso
+      opposto si incrociano solo in stazione o in un <b>binario d'incrocio</b> (un breve raddoppio); con una
+      <b>linea doppia</b> e le stazioni grandi passano molti più treni. Se due treni si bloccano a vicenda (stallo)
+      una notizia ti avvisa: seleziona uno dei due e premi <b>«↩ Torna indietro»</b>.</p>
+      <p>In ogni fermata puoi scegliere se il mezzo <b>parte appena carico</b>, <b>attende il pieno</b> oppure
+      <b>attende fino a</b> un certo tempo (giorni, ore, minuti) per riempirsi di più: riparte allo scadere o prima, se è pieno.</p>
       <h4>Le catene delle merci</h4>
       <p>⛏️ Carbone + ⛰️ Ferro → 🏭 Acciaieria → Acciaio · Acciaio + 🌲 Legname → 🏗️ Fabbrica → Merci → città<br>
       🌾 Grano → 🍝 Pastificio → Cibo → città · 🛢️ Petrolio → ⚗️ Raffineria → Carburante → città · ⚡ La centrale compra il carbone.</p>
@@ -459,6 +476,31 @@
       <tr><td>Annulla / chiudi</td><td>Esc</td></tr></table>`, true);
   }
 
+  // versione e build (da js/versione.js, generato da "npm run versione")
+  G.testoVersione = function (lungo) {
+    const V = window.VERSIONE;
+    if (!V) return 'versione di sviluppo';
+    const base = `v${V.versione} · build ${V.build} (${V.commit}${V.modifiche ? ', con modifiche' : ''})`;
+    return lungo ? `${base} · ${V.data}` : base;
+  };
+
+  function finestraInfo() {
+    apriFinestra('Informazioni', `
+      <div class="info-testa"><span class="info-logo">🚂</span><div><div class="info-titolo">Rotaie &amp; Rotte</div>
+      <div class="sotto">Gioco di strategia dei trasporti nel browser</div></div></div>
+      <table class="elenco">
+        <tr><td>Autore</td><td><b>Massimiliano Petra</b></td></tr>
+        <tr><td>Versione</td><td><b>${window.VERSIONE ? window.VERSIONE.versione : 'sviluppo'}</b></td></tr>
+        <tr><td>Build</td><td>${window.VERSIONE ? `${window.VERSIONE.build} · commit ${window.VERSIONE.commit}${window.VERSIONE.modifiche ? ' (con modifiche)' : ''} · ${window.VERSIONE.data}` : '—'}</td></tr>
+        <tr><td>Licenza</td><td>GPL-3.0 o successiva: software libero</td></tr>
+        <tr><td>Codice</td><td><a href="https://github.com/massimilianopetra/rotteerotaie" target="_blank" rel="noopener">github.com/massimilianopetra/rotteerotaie</a></td></tr>
+        <tr><td>Sito</td><td><a href="https://massimilianopetra.github.io/rotteerotaie/" target="_blank" rel="noopener">massimilianopetra.github.io/rotteerotaie</a></td></tr>
+      </table>
+      <p>Costruisci ferrovie, strade, autostrade e aeroporti, compra i mezzi e porta passeggeri e merci fra città
+      inventate che crescono grazie a te, dall'Ottocento ai giorni nostri.</p>` +
+      (st() ? '' : '<div class="pulsanti"><button data-az="menuIniziale">← Torna al menu</button></div>'));
+  }
+
   function finestraMenu(avvio) {
     const salv = G.esisteSalvataggio && G.esisteSalvataggio();
     const seme = Math.floor(Math.random() * 1e6);
@@ -471,7 +513,8 @@
       <div class="pulsanti"><button class="primario" data-az="iniziaPartita">🚂 Nuova partita</button>
       ${salv ? '<button data-az="carica">📂 Continua la partita salvata</button>' : ''}
       ${!avvio ? '<button data-az="salva">💾 Salva</button><button data-az="chiudiFinestra">Annulla</button>' : ''}</div>
-      <div class="nota">Con lo stesso seme si ottiene lo stesso mondo. La partita si salva nel browser (anche da sola ogni 1° gennaio).</div>`;
+      <div class="nota">Con lo stesso seme si ottiene lo stesso mondo. La partita si salva nel browser (anche da sola ogni 1° gennaio).</div>
+      <div class="versione">Rotaie &amp; Rotte ${G.testoVersione()} · di Massimiliano Petra · <span class="link" data-az="finestra" data-f="info">ℹ️ Informazioni</span></div>`;
     apriFinestra(avvio ? 'Rotaie & Rotte' : 'Partita', h);
   }
   ui.finestraMenu = finestraMenu;
@@ -495,7 +538,7 @@
     chiudiPannello,
     chiudiFinestra,
     vaiA: d => G.vaiA(+d.x, +d.y),
-    finestra: d => ({ veicoli: finestraVeicoli, mondo: finestraMondo, finanze: finestraFinanze, aiuto: finestraAiuto, menu: () => finestraMenu(false) })[d.f](),
+    finestra: d => ({ veicoli: finestraVeicoli, mondo: finestraMondo, finanze: finestraFinanze, aiuto: finestraAiuto, info: finestraInfo, menu: () => finestraMenu(false) })[d.f](),
     schedaMondo: d => finestraMondo(d.s),
     apriStazione: d => { const s = st().stazioni[+d.id]; if (!s) return; ui.apriPannello('stazione', +d.id); if (d.vai) { G.vaiA(s.x + 0.5, s.y + 0.5); chiudiFinestra(); } },
     apriCitta: d => { const c = st().citta[+d.id]; ui.apriPannello('citta', +d.id); if (d.vai) { G.vaiA(c.x + 0.5, c.y + 0.5); chiudiFinestra(); } },
@@ -523,7 +566,24 @@
       ui.percorso = attiva;
       disegnaPannello();
     },
-    pieno: (d, el) => { const v = veicoloSel(); if (v) { v.fermate[+d.k].pieno = el.checked; } },
+    modoAttesa: (d, el) => {
+      const v = veicoloSel(); if (!v) return;
+      const f = v.fermate[+d.k];
+      f.pieno = el.value === 'pieno';
+      f.attesaMin = el.value === 'tempo' ? (f.attesaMin || 60) : 0; // di partenza un'ora
+      disegnaPannello();
+    },
+    durata: d => {
+      const v = veicoloSel(); if (!v) return;
+      const val = u => Math.max(0, parseInt(($(`#pannello input.durata[data-k="${d.k}"][data-u="${u}"]`) || {}).value, 10) || 0);
+      v.fermate[+d.k].attesaMin = Math.min(120 * 1440, val('g') * 1440 + Math.min(23, val('h')) * 60 + Math.min(59, val('m')));
+    },
+    tornaIndietro: () => {
+      const v = veicoloSel(); if (!v) return;
+      const e = G.tornaIndietro(st(), v);
+      G.avviso(e || `${v.nome} torna indietro`, !!e);
+      disegnaPannello();
+    },
     suFermata: d => { const v = veicoloSel(), k = +d.k; if (v && k > 0) { const t = v.fermate[k]; v.fermate[k] = v.fermate[k - 1]; v.fermate[k - 1] = t; disegnaPannello(); } },
     togliFermata: d => { const v = veicoloSel(); if (v) { G.togliFermata(st(), v, +d.k); disegnaPannello(); } },
     segui: () => { ui.segui = !ui.segui; disegnaPannello(); },
@@ -548,6 +608,7 @@
       G.nuovaPartita({ nome: $('#npNome').value.trim() || 'Ferrovie Riunite', anno: +$('#npAnno').value, W, H, numCitta: +$('#npCitta').value, seme });
       $('#finestra').classList.add('nascosto'); ui.finestra = null;
     },
+    menuIniziale: () => finestraMenu(true),
     griglia: () => { ui.griglia = !ui.griglia; }
   };
   const veicoloSel = () => ui.selVeicolo && st() && st().veicoli.find(k => k.id === ui.selVeicolo);
@@ -763,12 +824,12 @@
     }, true);
     document.addEventListener('click', e => {
       const el = e.target.closest('[data-az]');
-      if (!el || el.tagName === 'INPUT' || el.disabled) return;
+      if (!el || el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.disabled) return;
       AZIONI[el.dataset.az](el.dataset, el);
     });
     document.addEventListener('change', e => {
       const el = e.target;
-      if (el.dataset.az && el.tagName === 'INPUT') AZIONI[el.dataset.az](el.dataset, el);
+      if (el.dataset.az && (el.tagName === 'INPUT' || el.tagName === 'SELECT')) AZIONI[el.dataset.az](el.dataset, el);
       if (el.dataset.cambia === 'acquisto') aggiornaAcquisto(false);
     });
     document.addEventListener('input', e => { if (e.target.dataset.cambia === 'acquisto') aggiornaAcquisto(false); });
@@ -778,6 +839,7 @@
     p.addEventListener('pointerleave', () => { ui.mouseSuPannello = false; });
     preparaMouse();
     preparaTastiera();
+    console.info('Rotaie & Rotte ' + G.testoVersione(true) + ' — di Massimiliano Petra');
     scegliStrumento('info');
     impostaVelocita(1);
     // aggiornamenti periodici di barra e pannello

@@ -44,6 +44,7 @@
 
   // coda con priorità (heap binario)
   function Coda() { this.k = []; this.p = []; }
+  G.Coda = Coda;
   Coda.prototype.vuota = function () { return this.k.length === 0; };
   Coda.prototype.metti = function (k, p) {
     const K = this.k, P = this.p;

@@ -16,7 +16,7 @@
     let meglio = null;
     for (const i of G.caselleStazione(st, s)) {
       if (!mask[i]) continue;
-      const p = G.cercaPercorso(st, da, i, rete);
+      const p = rete === 'binario' ? G.cercaPercorsoTreno(st, da, i) : G.cercaPercorso(st, da, i, rete);
       if (p && (!meglio || p.length < meglio.length)) meglio = p;
     }
     return meglio;
@@ -66,6 +66,10 @@
       x: c.x, y: c.y, ang: 0, tile: t0,
       carico: [], qta: 0, profittoAnno: 0, profittoScorso: 0, eta: 0, prezzo, guasti: 0, fermoManuale: false
     };
+    if (mod.tipo === 'treno') { // circolazione: caselle prenotate e distanza percorsa
+      Object.assign(v, { pr: [], odo: 0, odo0: 0, limite: 0, bloccatoDa: 0, attesaSegnale: 0, stallo: false, ricalcolo: -1 });
+      G.prendiCasella(st, v, t0, 0);
+    }
     st.veicoli.push(v);
     G.spendi(st, prezzo, 'veicoli');
     G.aggiornaServizi(st);
@@ -76,6 +80,7 @@
     const k = st.veicoli.indexOf(v);
     if (k < 0) return;
     G.incassa(st, G.valoreVeicolo(v), 'vendite');
+    if (v.tipo === 'treno') G.liberaTutto(st, v);
     st.veicoli.splice(k, 1);
     G.aggiornaServizi(st);
   };
@@ -160,7 +165,7 @@
       v.caselle = null;
       v.punti = [{ x: v.x, y: v.y }, arrivo];
     } else {
-      const caselle = G.percorsoVersoStazione(st, v.tile, s, RETE[v.tipo]);
+      const caselle = v.tipo === 'treno' ? G.percorsoTreno(st, v.tile, s, v) : G.percorsoVersoStazione(st, v.tile, s, RETE[v.tipo]);
       if (!caselle) {
         v.stato = 'bloccato'; v.timer = TM.riprovaOre * ORA;
         v.motivo = `Nessun ${v.tipo === 'treno' ? 'binario' : 'collegamento stradale'} fino a ${s.nome}`;
@@ -172,17 +177,74 @@
     }
     calcolaLunghezze(v);
     v.pos = 0; v.seg = 0; v.stato = 'viaggio'; v.motivo = '';
+    if (v.tipo === 'treno') {
+      v.odo0 = v.odo; v.limite = 0; v.bloccatoDa = 0; v.attesaSegnale = 0;
+      G.prendiCasella(st, v, v.caselle[0], v.odo);
+      G.estendiPrenotazione(st, v); // subito: chi parte dopo vede il binario occupato e ne sceglie un altro
+    }
     if (v.lunTot < 0.01) arriva(st, v);
+  }
+
+  // treno fermo al segnale: prova una strada diversa che eviti i binari occupati
+  // (un binario parallelo, un raddoppio, un altro binario della stazione)
+  function cercaAlternativa(st, v) {
+    // subito appena fermo al segnale; poi al massimo ogni 30 minuti e solo se qualche treno ha preso
+    // o lasciato del binario (il calcolo costa: con molti treni fermi rallenterebbe il gioco)
+    if (v.stallo || v.ricalcolo === st.versionePren) return false; // in stallo: aspetta il giocatore
+    if (v.ricalcolo !== -1 && st.giorno - (v.ricalcoloT || 0) < 30 * MINUTO) return false;
+    v.ricalcolo = st.versionePren; v.ricalcoloT = st.giorno;
+    const f = v.fermate[v.idx], s = f && st.stazioni[f.s];
+    if (!s) return false;
+    // il treno continua nel suo senso di marcia (in stazione, fermo all'inizio del percorso, può anche invertirlo)
+    const qui = v.caselle[v.limite], dir = v.limite > 0 ? G.direzione(st.mondo, v.caselle[v.limite - 1], qui) : -1;
+    const nuovo = G.percorsoTreno(st, qui, s, v, dir);
+    if (!nuovo || nuovo.length < 2 || nuovo.join() === v.caselle.slice(v.limite).join()) return false;
+    if (!G.trattoLibero(st, v, nuovo)) return false; // anche la strada nuova è occupata: meglio aspettare dove si è
+    const W = st.mondo.W;
+    v.caselle = nuovo;
+    v.punti = nuovo.map(i => ({ x: i % W + 0.5, y: ((i / W) | 0) + 0.5 }));
+    calcolaLunghezze(v);
+    v.pos = 0; v.seg = 0; v.odo0 = v.odo; v.limite = 0;
+    return G.estendiPrenotazione(st, v);
+  }
+
+  // movimento di un treno: avanza solo fin dove ha prenotato il binario
+  function muoviTreno(st, v, dt) {
+    let avanti = velocita(st, v) * dt;
+    for (;;) {
+      const fin = v.lun[v.limite];
+      if (v.limite >= v.caselle.length - 1 || v.pos + avanti <= fin) { v.pos = Math.min(v.pos + avanti, v.lunTot); break; }
+      avanti -= Math.max(0, fin - v.pos);
+      v.pos = fin;
+      if (!G.estendiPrenotazione(st, v) && !cercaAlternativa(st, v)) { v.attesaSegnale += dt; break; }
+    }
+    v.odo = v.odo0 + v.pos;
+    G.liberaDietro(st, v);
   }
   function ripianifica(st, v) {
     if (v.punti && v.punti.length) { const p = v.punti[Math.min(v.seg, v.punti.length - 1)]; if (v.tipo !== 'aereo') { v.x = p.x; v.y = p.y; } }
     if (v.caselle) v.tile = v.caselle[Math.min(v.seg, v.caselle.length - 1)];
+    if (v.tipo === 'treno' && v.pr) G.liberaAvanti(st, v); // il binario prenotato sulla vecchia strada non serve più
     pianifica(st, v);
   }
+
+  // il giocatore rimanda indietro un mezzo alla fermata da cui è partito (per sciogliere uno stallo sui binari)
+  G.tornaIndietro = function (st, v) {
+    if (v.tipo === 'aereo') return 'Un aereo in volo non può tornare indietro';
+    if (v.stato === 'guasto') return 'Il mezzo è guasto: aspetta la riparazione';
+    if (v.stato !== 'viaggio' && v.stato !== 'bloccato') return 'Il mezzo non è in viaggio';
+    const n = v.fermate.length;
+    if (n < 2) return 'Il mezzo non ha una fermata a cui tornare';
+    v.idx = (v.idx - 1 + n) % n;
+    if (v.tipo === 'treno') { v.stallo = false; v.bloccatoDa = 0; v.attesaSegnale = 0; v.ricalcolo = -1; }
+    ripianifica(st, v);
+    return null;
+  };
 
   function arriva(st, v) {
     const f = v.fermate[v.idx], s = f && st.stazioni[f.s];
     v.stato = 'sosta'; v.attesa = 0; v.timer = sostaMinima(v);
+    if (v.tipo === 'treno') G.liberaTutto(st, v); // in stazione il treno non occupa più la linea
     if (!s) { v.stato = 'fermo'; return; }
     const c = G.centroStazione(s);
     // treni e mezzi su strada restano sulla casella dove sono arrivati (le stazioni grandi ne hanno più d'una)
@@ -239,6 +301,8 @@
     const resta = s && s.servite[v.merce] && (s.attesa[v.merce] || 0) >= 1 && v.qta < v.cap - 0.5;
     if (resta && v.attesa < 0.5) return;
     if (f && f.pieno && v.qta < v.cap - 0.5 && v.attesa < 120) return; // aspetta il carico pieno (al massimo 4 mesi)
+    // attesa a tempo: resta fino all'ora indicata per riempirsi di più, ma parte prima se è pieno
+    if (f && f.attesaMin > 0 && v.qta < v.cap - 0.5 && v.attesa < f.attesaMin * MINUTO) return;
     v.idx = (v.idx + 1) % v.fermate.length;
     pianifica(st, v);
   }
@@ -264,8 +328,9 @@
   }
 
   function viaggio(st, v, dt) {
-    v.pos += velocita(st, v) * dt;
-    if (Math.random() < dt * 0.0012 * (1 + v.eta / 6)) {
+    if (v.tipo === 'treno') muoviTreno(st, v, dt);
+    else v.pos += velocita(st, v) * dt;
+    if (!v.bloccatoDa && Math.random() < dt * 0.0012 * (1 + v.eta / 6)) {
       v.stato = 'guasto'; v.timer = (TM.guastoOre[0] + Math.random() * (TM.guastoOre[1] - TM.guastoOre[0])) * ORA; v.guasti++;
       if (v.tipo === 'aereo') v.stato = 'viaggio'; // gli aerei non si fermano in volo
     }
@@ -283,6 +348,7 @@
         case 'fermo': if (v.fermate.length) { v.stato = 'sosta'; v.timer = sostaMinima(v); } break;
       }
     }
+    G.controllaStalli(st);
   };
 
   // dopo una modifica alla rete: chi viaggia su un tratto sparito ricalcola la strada
@@ -303,6 +369,7 @@
 
   // dopo il caricamento di una partita i percorsi vanno ricalcolati
   G.riprendiVeicoli = function (st) {
+    G.ricostruisciPrenotazioni(st);
     for (const v of st.veicoli) {
       if (v.stato === 'viaggio' || v.stato === 'guasto') {
         if (v.tipo !== 'aereo') { v.x = (v.tile % st.mondo.W) + 0.5; v.y = ((v.tile / st.mondo.W) | 0) + 0.5; }
@@ -311,11 +378,37 @@
     }
   };
 
+  // minuti → "2 g 3 h 15 min"
+  G.testoDurata = function (min) {
+    min = Math.max(0, Math.round(min));
+    const g = Math.floor(min / 1440), h = Math.floor((min % 1440) / 60), m = min % 60, p = [];
+    if (g) p.push(g + ' g');
+    if (h) p.push(h + ' h');
+    if (m || !p.length) p.push(m + ' min');
+    return p.join(' ');
+  };
+
   G.statoVeicolo = function (st, v) {
     const f = v.fermate[v.idx], s = f && st.stazioni[f.s];
     switch (v.stato) {
-      case 'sosta': return s ? (f.pieno && v.qta < v.cap - 0.5 && v.timer <= 0 ? `Attende il carico pieno a ${s.nome}` : `In sosta a ${s.nome}`) : 'In sosta';
-      case 'viaggio': return s ? `Diretto a ${s.nome}` : 'In viaggio';
+      case 'sosta': {
+        if (!s) return 'In sosta';
+        const pieno = v.qta >= v.cap - 0.5;
+        if (f.pieno && !pieno && v.timer <= 0) return `Attende il carico pieno a ${s.nome}`;
+        if (f.attesaMin > 0 && !pieno && v.timer <= 0) {
+          const resta = f.attesaMin - v.attesa * 1440;
+          if (resta > 0) return `Attende a ${s.nome} (ancora ${G.testoDurata(resta)})`;
+        }
+        return `In sosta a ${s.nome}`;
+      }
+      case 'viaggio': {
+        if (v.bloccatoDa) {
+          const altro = st.veicoli.find(k => k.id === v.bloccatoDa);
+          if (v.stallo) return `Stallo! ${altro ? altro.nome + ' e questo treno' : 'I treni'} si bloccano a vicenda: premi «Torna indietro»`;
+          return `Fermo al segnale: binario occupato${altro ? ' da ' + altro.nome : ''}`;
+        }
+        return s ? `Diretto a ${s.nome}` : 'In viaggio';
+      }
       case 'guasto': return 'Guasto! Riparazione in corso';
       case 'bloccato': return v.motivo || 'Bloccato';
       default: return 'Fermo: aggiungi delle fermate';

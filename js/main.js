@@ -72,7 +72,7 @@
     const stato = {};
     for (const k of ['citta', 'industrie', 'stazioni', 'soldi', 'prestito', 'giorno', 'giornoInt', 'oraInt', 'versioneRete',
       'conti', 'notizie', 'contatori', 'valoreInfra', 'mesiInRosso', 'industrieIniziali']) stato[k] = st[k];
-    stato.veicoli = st.veicoli.map(v => Object.assign({}, v, { punti: null, lun: null, caselle: null }));
+    stato.veicoli = st.veicoli.map(v => Object.assign({}, v, { punti: null, lun: null, caselle: null, pr: [] }));
     try {
       localStorage.setItem(CHIAVE, JSON.stringify({ versione: 1, opz: st.opz, stato, griglie }));
       return null;
