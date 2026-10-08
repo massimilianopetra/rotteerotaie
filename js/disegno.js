@@ -1,0 +1,467 @@
+// Disegno della mappa vista dall'alto su un canvas 2D.
+// Il terreno è preparato una volta in un'immagine (8 pixel per casella) e poi ridimensionato con lo zoom;
+// strade, binari, case, industrie, stazioni e veicoli si ridisegnano a ogni fotogramma (solo la parte visibile).
+(function () {
+  'use strict';
+  const G = window.GIOCO, C = window.CATALOGO, T = G.T, OCC = G.OCC;
+  const PX = 8;
+  const D = G.disegno = { cam: { x: 0, y: 0, ts: 16 }, terreno: null, mini: null, ox: 0, oy: 0 };
+
+  // ---------------------------------------------------------------- terreno
+  function altA(m, fx, fy) {
+    const u = Math.max(0, Math.min(m.W - 1.001, fx - 0.5)), v = Math.max(0, Math.min(m.H - 1.001, fy - 0.5));
+    const x0 = u | 0, y0 = v | 0, ax = u - x0, ay = v - y0, W = m.W, i = y0 * W + x0;
+    const a = m.alt[i], b = m.alt[i + 1], c = m.alt[i + W], d = m.alt[i + W + 1];
+    return a + (b - a) * ax + (c - a) * ay + (a - b - c + d) * ax * ay;
+  }
+
+  function coloreTerra(m, a) {
+    const tappe = [
+      [m.livMare, 98, 156, 74], [m.livPian, 146, 166, 90], [m.livColl, 150, 134, 100], [m.livNeve, 126, 116, 108]
+    ];
+    if (a <= tappe[0][0]) return [tappe[0][1], tappe[0][2], tappe[0][3]];
+    for (let k = 1; k < tappe.length; k++) {
+      if (a <= tappe[k][0]) {
+        const p = tappe[k - 1], q = tappe[k], f = (a - p[0]) / (q[0] - p[0]);
+        return [p[1] + (q[1] - p[1]) * f, p[2] + (q[2] - p[2]) * f, p[3] + (q[3] - p[3]) * f];
+      }
+    }
+    const f = Math.min(0.85, (a - m.livNeve) * 60), u = tappe[3];
+    return [u[1] + (222 - u[1]) * f, u[2] + (226 - u[2]) * f, u[3] + (234 - u[3]) * f];
+  }
+
+  function pixelCasella(m, x, y, data, larg, ox, oy) {
+    const i = y * m.W + x, t = m.tipo[i], mare = m.livMare;
+    // alberi: tre chiome per casella in posizioni pseudo-casuali
+    const alberi = [];
+    if (m.bosco[i]) for (let k = 0; k < 3; k++) {
+      alberi.push([1.6 + G.hash(x * 3 + k, y) * 4.8, 1.6 + G.hash(x, y * 3 + k + 7) * 4.8, 1.5 + G.hash(x + k, y + 11) * 0.9]);
+    }
+    for (let py = 0; py < PX; py++) for (let px = 0; px < PX; px++) {
+      const fx = x + (px + 0.5) / PX, fy = y + (py + 0.5) / PX;
+      const n = (G.hash(x * PX + px, y * PX + py) - 0.5) * 10;
+      let r, g, b;
+      if (t === T.ACQUA) {
+        const p = Math.max(0, Math.min(1, (mare - altA(m, fx, fy)) / (mare * 0.45)));
+        r = 66 - 36 * p; g = 134 - 54 * p; b = 188 - 40 * p;
+        r += n * 0.4; g += n * 0.4; b += n * 0.4;
+      } else if (t === T.FIUME) {
+        r = 72 + n * 0.5; g = 140 + n * 0.5; b = 202 + n * 0.5;
+      } else {
+        const a = altA(m, fx, fy);
+        [r, g, b] = coloreTerra(m, a);
+        const ombra = Math.max(-45, Math.min(45, (altA(m, fx - 0.25, fy - 0.25) - altA(m, fx + 0.25, fy + 0.25)) * 1300));
+        r += ombra + n; g += ombra + n; b += ombra * 0.8 + n;
+        if (alberi.length) {
+          r *= 0.86; g *= 0.9; b *= 0.82;
+          for (const [cx, cy, rr] of alberi) {
+            const dx = px + 0.5 - cx, dy = py + 0.5 - cy;
+            if (dx * dx + dy * dy <= rr * rr) {
+              const luce = dx + dy < -0.6;
+              r = luce ? 62 : 34; g = luce ? 116 : 82; b = luce ? 54 : 40;
+              r += n * 0.5; g += n * 0.5;
+            }
+          }
+        }
+      }
+      const k = ((oy + py) * larg + ox + px) * 4;
+      data[k] = r; data[k + 1] = g; data[k + 2] = b; data[k + 3] = 255;
+    }
+  }
+
+  G.preparaTerreno = function (st) {
+    const m = st.mondo, cv = document.createElement('canvas');
+    cv.width = m.W * PX; cv.height = m.H * PX;
+    const ctx = cv.getContext('2d');
+    const img = ctx.createImageData(cv.width, cv.height);
+    for (let y = 0; y < m.H; y++) for (let x = 0; x < m.W; x++) pixelCasella(m, x, y, img.data, cv.width, x * PX, y * PX);
+    ctx.putImageData(img, 0, 0);
+    D.terreno = { cv, ctx };
+    D.mini = null;
+    st.minimappaSporca = true;
+  };
+
+  function ridisegnaCasella(m, i) {
+    const x = i % m.W, y = (i / m.W) | 0, img = D.terreno.ctx.createImageData(PX, PX);
+    pixelCasella(m, x, y, img.data, PX, 0, 0);
+    D.terreno.ctx.putImageData(img, x * PX, y * PX);
+  }
+
+  // ---------------------------------------------------------------- conversioni
+  G.schermoAMondo = (sx, sy) => ({ x: (sx - D.ox) / D.cam.ts, y: (sy - D.oy) / D.cam.ts });
+
+  // ---------------------------------------------------------------- reti
+  function percorsiRete(V, mask, divisore) {
+    const { m, ts, ox, oy } = V, p1 = new Path2D(), p2 = new Path2D();
+    let n1 = 0, n2 = 0;
+    for (let y = Math.max(0, V.y0 - 1); y <= Math.min(m.H - 1, V.y1 + 1); y++) {
+      for (let x = Math.max(0, V.x0 - 1); x <= Math.min(m.W - 1, V.x1 + 1); x++) {
+        const i = y * m.W + x, mk = mask[i];
+        if (!mk) continue;
+        const cx = ox + (x + 0.5) * ts, cy = oy + (y + 0.5) * ts;
+        for (let d = 1; d <= 4; d++) if ((mk >> d) & 1) {
+          const j = i + G.DY[d] * m.W + G.DX[d];
+          const secondo = divisore && divisore(i, j);
+          const p = secondo ? p2 : p1;
+          p.moveTo(cx, cy); p.lineTo(cx + G.DX[d] * ts, cy + G.DY[d] * ts);
+          if (secondo) n2++; else n1++;
+        }
+      }
+    }
+    return { p1, p2, n1, n2 };
+  }
+
+  function disegnaPonti(V) {
+    const { m, ts, ox, oy, ctx } = V;
+    ctx.fillStyle = '#7d6b55';
+    for (let y = V.y0; y <= V.y1; y++) for (let x = V.x0; x <= V.x1; x++) {
+      const i = y * m.W + x;
+      if (m.tipo[i] === T.FIUME && (m.mBin[i] || m.mStr[i])) {
+        ctx.fillRect(ox + (x + 0.12) * ts, oy + (y + 0.12) * ts, ts * 0.76, ts * 0.76);
+      }
+    }
+  }
+
+  function disegnaStrade(V) {
+    const { m, ts, ctx } = V;
+    const r = percorsiRete(V, m.mStr, (i, j) => m.tipoStr[i] === 2 && m.tipoStr[j] === 2);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if (r.n1) {
+      ctx.strokeStyle = '#5f5b52'; ctx.lineWidth = Math.max(1.6, ts * 0.36); ctx.stroke(r.p1);
+      if (ts >= 6) { ctx.strokeStyle = '#aaa595'; ctx.lineWidth = ts * 0.24; ctx.stroke(r.p1); }
+    }
+    if (r.n2) {
+      ctx.strokeStyle = '#2b2e33'; ctx.lineWidth = Math.max(2.2, ts * 0.56); ctx.stroke(r.p2);
+      if (ts >= 6) {
+        ctx.strokeStyle = '#4b5058'; ctx.lineWidth = ts * 0.44; ctx.stroke(r.p2);
+        ctx.strokeStyle = '#f0d264'; ctx.lineWidth = Math.max(1, ts * 0.04);
+        ctx.setLineDash([ts * 0.18, ts * 0.18]); ctx.lineCap = 'butt'; ctx.stroke(r.p2); ctx.setLineDash([]); ctx.lineCap = 'round';
+      }
+    }
+  }
+
+  function disegnaBinari(V) {
+    const { m, ts, ctx } = V;
+    const r = percorsiRete(V, m.mBin, null);
+    if (!r.n1) return;
+    if (ts < 10) {
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#3a281a'; ctx.lineWidth = Math.max(1.5, ts * 0.28); ctx.stroke(r.p1);
+      return;
+    }
+    ctx.lineCap = 'butt';
+    ctx.strokeStyle = '#6b5136'; ctx.lineWidth = ts * 0.38;
+    ctx.setLineDash([ts * 0.06, ts * 0.09]); ctx.stroke(r.p1); ctx.setLineDash([]);
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#c9ccd0'; ctx.lineWidth = ts * 0.2; ctx.stroke(r.p1);
+    ctx.strokeStyle = '#6e5841'; ctx.lineWidth = ts * 0.1; ctx.stroke(r.p1);
+  }
+
+  // ---------------------------------------------------------------- edifici
+  const COL_CASE = [null, ['#c8694a', '#b85e43', '#d07a52'], ['#b5503a', '#a8473a', '#c2603f'],
+    ['#cdbb9c', '#bfae90', '#d6c6a8'], ['#8d99a8', '#7f8b9b', '#9aa6b4']];
+  const DIM = [0, 0.46, 0.6, 0.74, 0.88];
+
+  function disegnaCase(V) {
+    const { m, ts, ox, oy, ctx } = V;
+    for (let y = V.y0; y <= V.y1; y++) for (let x = V.x0; x <= V.x1; x++) {
+      const i = y * m.W + x;
+      if (m.occ[i] !== OCC.CASA) continue;
+      const l = m.liv[i], s = ts * DIM[l], h1 = G.hash(x, y), h2 = G.hash(y + 91, x);
+      const gioco = ts * (0.92 - DIM[l]) * 0.5;
+      const cx = ox + (x + 0.5) * ts + (h1 - 0.5) * gioco, cy = oy + (y + 0.5) * ts + (h2 - 0.5) * gioco;
+      if (ts >= 5) { ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(cx - s / 2 + ts * 0.06, cy - s / 2 + ts * 0.08, s, s); }
+      ctx.fillStyle = COL_CASE[l][Math.floor(h1 * 3)];
+      ctx.fillRect(cx - s / 2, cy - s / 2, s, s);
+      if (ts >= 10) {
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        if (h2 < 0.5) ctx.fillRect(cx - s / 2, cy - s / 2, s, s / 2); else ctx.fillRect(cx - s / 2, cy - s / 2, s / 2, s);
+        if (l >= 3) { ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1; ctx.strokeRect(cx - s / 2 + 0.5, cy - s / 2 + 0.5, s - 1, s - 1); }
+      }
+    }
+  }
+
+  function emoji(ctx, testo, x, y, dim) {
+    ctx.font = `${Math.round(dim)}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(testo, x, y);
+  }
+
+  function visibile(V, x, y, lato) {
+    return x + lato >= V.x0 - 1 && x <= V.x1 + 1 && y + lato >= V.y0 - 1 && y <= V.y1 + 1;
+  }
+
+  function disegnaIndustrie(st, V) {
+    const { ts, ox, oy, ctx } = V;
+    for (const ind of st.industrie) {
+      if (ind.chiusa || !visibile(V, ind.x, ind.y, 2)) continue;
+      const def = C.industrie[ind.tipo], x = ox + ind.x * ts, y = oy + ind.y * ts, s = 2 * ts, b = ts * 0.1;
+      ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(x + b + ts * 0.1, y + b + ts * 0.12, s - 2 * b, s - 2 * b);
+      ctx.fillStyle = def.colore; ctx.fillRect(x + b, y + b, s - 2 * b, s - 2 * b);
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = Math.max(1, ts * 0.06);
+      ctx.strokeRect(x + b, y + b, s - 2 * b, s - 2 * b);
+      if (ts >= 6) emoji(ctx, def.icona, x + ts, y + ts, ts * 1.1);
+    }
+  }
+
+  function disegnaStazioni(st, V, ui) {
+    const { ts, ox, oy, ctx } = V;
+    for (const s of st.stazioni) {
+      if (!s || !visibile(V, s.x, s.y, s.lato)) continue;
+      const x = ox + s.x * ts, y = oy + s.y * ts;
+      if (s.tipo === 'stazione') {
+        const b = ts * 0.1, l = ts - 2 * b;
+        ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(x + b + ts * 0.08, y + b + ts * 0.1, l, l);
+        ctx.fillStyle = '#ead9b0'; ctx.fillRect(x + b, y + b, l, l);
+        ctx.fillStyle = '#a8442f'; ctx.fillRect(x + b, y + b, l, l * 0.42);
+        ctx.strokeStyle = '#4a3a28'; ctx.lineWidth = Math.max(1, ts * 0.05); ctx.strokeRect(x + b, y + b, l, l);
+      } else if (s.tipo === 'deposito') {
+        const b = ts * 0.2, l = ts - 2 * b;
+        ctx.fillStyle = '#2f6db5'; ctx.fillRect(x + b, y + b, l, l);
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, ts * 0.06); ctx.strokeRect(x + b, y + b, l, l);
+        if (ts >= 12) { ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(ts * 0.45)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('A', x + ts / 2, y + ts / 2 + 1); }
+      } else {
+        const s2 = 2 * ts;
+        ctx.fillStyle = '#a7ab9f'; ctx.fillRect(x + ts * 0.05, y + ts * 0.05, s2 - ts * 0.1, s2 - ts * 0.1);
+        ctx.fillStyle = '#45484c'; ctx.fillRect(x + ts * 0.12, y + ts * 1.1, s2 - ts * 0.24, ts * 0.42);
+        if (ts >= 8) {
+          ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, ts * 0.04); ctx.setLineDash([ts * 0.15, ts * 0.12]);
+          ctx.beginPath(); ctx.moveTo(x + ts * 0.25, y + ts * 1.31); ctx.lineTo(x + s2 - ts * 0.25, y + ts * 1.31); ctx.stroke(); ctx.setLineDash([]);
+        }
+        ctx.fillStyle = '#e8e8e8'; ctx.fillRect(x + ts * 0.2, y + ts * 0.2, ts * 0.9, ts * 0.55);
+        ctx.fillStyle = '#c0392b'; ctx.fillRect(x + ts * 1.4, y + ts * 0.2, ts * 0.22, ts * 0.6);
+      }
+      // merce in attesa: quadratini colorati
+      if (ts >= 16) {
+        let riga = 0;
+        const q = ts * 0.16;
+        for (const k in s.attesa) {
+          const n = Math.min(8, Math.ceil(s.attesa[k] / 25));
+          if (s.attesa[k] < 1) continue;
+          ctx.fillStyle = C.merci[k].colore;
+          for (let j = 0; j < n; j++) ctx.fillRect(x + s.lato * ts + 2 + j * (q + 1), y + riga * (q + 1), q, q);
+          riga++;
+        }
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------- veicoli
+  function rettangolo(ctx, x, y, ang, lun, larg, colore, bordo) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+    ctx.fillStyle = colore; ctx.fillRect(-lun / 2, -larg / 2, lun, larg);
+    if (bordo) { ctx.strokeStyle = bordo; ctx.lineWidth = 1; ctx.strokeRect(-lun / 2, -larg / 2, lun, larg); }
+    ctx.restore();
+  }
+
+  function sagomaAereo(ctx, x, y, ang, dim, colore) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(dim, dim);
+    ctx.fillStyle = colore;
+    ctx.beginPath();
+    ctx.moveTo(0.5, 0); ctx.lineTo(0.38, 0.06); ctx.lineTo(0.08, 0.07); ctx.lineTo(-0.05, 0.5); ctx.lineTo(-0.15, 0.5);
+    ctx.lineTo(-0.1, 0.07); ctx.lineTo(-0.36, 0.06); ctx.lineTo(-0.45, 0.2); ctx.lineTo(-0.5, 0.2); ctx.lineTo(-0.47, 0);
+    ctx.lineTo(-0.5, -0.2); ctx.lineTo(-0.45, -0.2); ctx.lineTo(-0.36, -0.06); ctx.lineTo(-0.1, -0.07); ctx.lineTo(-0.15, -0.5);
+    ctx.lineTo(-0.05, -0.5); ctx.lineTo(0.08, -0.07); ctx.lineTo(0.38, -0.06); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  function disegnaVeicoli(st, V, ui) {
+    const { ts, ox, oy, ctx } = V;
+    const fuori = v => v.x < V.x0 - 3 || v.x > V.x1 + 4 || v.y < V.y0 - 3 || v.y > V.y1 + 4;
+    // prima treni e mezzi su strada, poi gli aerei sopra a tutto
+    for (const passo of [0, 1]) for (const v of st.veicoli) {
+      if ((v.tipo === 'aereo') !== (passo === 1) || fuori(v)) continue;
+      const mod = G.modello(v.modello), sel = ui.selVeicolo === v.id;
+      if (v.tipo === 'treno') {
+        const pezzi = 1 + v.vagoni, passoV = 0.44;
+        for (let k = pezzi - 1; k >= 0; k--) {
+          const q = v.punti ? G.puntoSu(v, v.pos - k * passoV, v.seg) : { x: v.x, y: v.y, ang: v.ang };
+          rettangolo(ctx, ox + q.x * ts, oy + q.y * ts, q.ang, ts * 0.4, Math.max(2, ts * 0.22),
+            k === 0 ? mod.colore : C.merci[v.merce].colore, ts >= 10 ? 'rgba(0,0,0,0.6)' : null);
+        }
+      } else if (v.tipo === 'strada') {
+        const off = ts * 0.1, px = -Math.sin(v.ang) * off, py = Math.cos(v.ang) * off;
+        const x = ox + v.x * ts + px, y = oy + v.y * ts + py;
+        rettangolo(ctx, x, y, v.ang, Math.max(3, ts * 0.32), Math.max(2, ts * 0.17), v.classe === 'bus' ? mod.colore : C.merci[v.merce].colore, 'rgba(0,0,0,0.6)');
+      } else {
+        const prog = v.stato === 'viaggio' && v.lunTot > 0 ? Math.min(1, Math.min(v.pos, v.lunTot - v.pos) / 2) : 0;
+        const dim = Math.max(12, ts * 0.9) * (1 + prog * 0.3);
+        sagomaAereo(ctx, ox + (v.x + prog * 0.7) * ts, oy + (v.y + prog * 0.9) * ts, v.ang, dim, 'rgba(0,0,0,0.3)');
+        sagomaAereo(ctx, ox + v.x * ts, oy + v.y * ts, v.ang, dim, mod.colore);
+      }
+      if (sel) {
+        ctx.strokeStyle = '#ffeb3b'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(ox + v.x * ts, oy + v.y * ts, Math.max(8, ts * 0.5), 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------- scritte e sovrapposizioni
+  function etichetta(ctx, testo, x, y, dim, colore) {
+    ctx.font = `bold ${Math.round(dim)}px "Segoe UI", Arial, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = Math.max(2, dim / 4); ctx.strokeStyle = 'rgba(0,0,0,0.75)'; ctx.lineJoin = 'round';
+    ctx.strokeText(testo, x, y);
+    ctx.fillStyle = colore || '#fff'; ctx.fillText(testo, x, y);
+  }
+
+  function disegnaEtichette(st, V) {
+    const { ts, ox, oy, ctx } = V;
+    const dim = Math.max(11, Math.min(20, ts * 0.8));
+    for (const c of st.citta) {
+      if (!visibile(V, c.x - 4, c.y - 2, 8)) continue;
+      const x = ox + (c.x + 0.5) * ts, y = oy + (c.y + 0.5) * ts - Math.max(ts * 1.2, 16);
+      etichetta(ctx, c.nome, x, y, dim, '#fff');
+      etichetta(ctx, G.numero(c.pop) + ' ab.', x, y + dim * 0.95, dim * 0.68, '#ffe9a8');
+    }
+    if (ts >= 20) {
+      for (const s of st.stazioni) {
+        if (!s || !visibile(V, s.x, s.y, s.lato)) continue;
+        etichetta(ctx, s.nome, ox + (s.x + s.lato / 2) * ts, oy + (s.y + s.lato) * ts + 7, 10, '#cfe6ff');
+      }
+    }
+    if (ts >= 22) {
+      for (const ind of st.industrie) {
+        if (ind.chiusa || !visibile(V, ind.x, ind.y, 2)) continue;
+        etichetta(ctx, C.industrie[ind.tipo].nome, ox + (ind.x + 1) * ts, oy + (ind.y + 2) * ts + 7, 10, '#e8e0ff');
+      }
+    }
+  }
+
+  function rettCaselle(V, x, y, w, h, riempi, bordo) {
+    const { ts, ox, oy, ctx } = V;
+    if (riempi) { ctx.fillStyle = riempi; ctx.fillRect(ox + x * ts, oy + y * ts, w * ts, h * ts); }
+    if (bordo) { ctx.strokeStyle = bordo; ctx.lineWidth = 1.5; ctx.strokeRect(ox + x * ts + 0.5, oy + y * ts + 0.5, w * ts - 1, h * ts - 1); }
+  }
+
+  function disegnaSovrapposizioni(st, V, ui) {
+    const { m, ts, ox, oy, ctx } = V;
+    // bacino della stazione selezionata o in costruzione
+    let b = ui.bacino;
+    if (!b && ui.pannello && ui.pannello.tipo === 'stazione') {
+      const s = st.stazioni[ui.pannello.id];
+      if (s) b = { x: s.x, y: s.y, lato: s.lato, raggio: C.stazioni[s.tipo].raggio, ok: true, esistente: true };
+    }
+    if (b) {
+      const r = b.raggio;
+      rettCaselle(V, b.x - r, b.y - r, b.lato + 2 * r, b.lato + 2 * r, 'rgba(90,170,255,0.16)', 'rgba(140,200,255,0.8)');
+      if (!b.esistente) rettCaselle(V, b.x, b.y, b.lato, b.lato, b.ok ? 'rgba(80,220,120,0.45)' : 'rgba(240,70,60,0.5)', '#fff');
+    }
+    // percorso del veicolo selezionato
+    const v = ui.selVeicolo && st.veicoli.find(k => k.id === ui.selVeicolo);
+    if (v && v.fermate.length) {
+      ctx.strokeStyle = 'rgba(255,235,59,0.85)'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]);
+      ctx.beginPath();
+      v.fermate.forEach((f, k) => {
+        const s = st.stazioni[f.s]; if (!s) return;
+        const c = G.centroStazione(s);
+        if (k === 0) ctx.moveTo(ox + c.x * ts, oy + c.y * ts); else ctx.lineTo(ox + c.x * ts, oy + c.y * ts);
+      });
+      if (v.fermate.length > 2) ctx.closePath();
+      ctx.stroke(); ctx.setLineDash([]);
+      v.fermate.forEach((f, k) => {
+        const s = st.stazioni[f.s]; if (!s) return;
+        const c = G.centroStazione(s);
+        ctx.fillStyle = '#ffeb3b'; ctx.beginPath(); ctx.arc(ox + c.x * ts, oy + c.y * ts - ts * 0.7, 9, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(String(k + 1), ox + c.x * ts, oy + c.y * ts - ts * 0.7);
+      });
+    }
+    // anteprima del tracciato
+    const a = ui.anteprima;
+    if (a && a.caselle) {
+      ctx.strokeStyle = a.ok ? 'rgba(90,255,140,0.85)' : 'rgba(255,80,70,0.85)';
+      ctx.lineWidth = Math.max(3, ts * 0.3); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      a.caselle.forEach((i, k) => {
+        const x = ox + (i % m.W + 0.5) * ts, y = oy + (((i / m.W) | 0) + 0.5) * ts;
+        if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      if (a.caselle.length === 1) ctx.lineTo(ox + (a.caselle[0] % m.W + 0.5) * ts + 0.1, oy + (((a.caselle[0] / m.W) | 0) + 0.5) * ts);
+      ctx.stroke();
+    }
+    // casella sotto il mouse
+    if (ui.cursore >= 0 && ui.strumento !== 'info' && !ui.bacino) {
+      rettCaselle(V, ui.cursore % m.W, (ui.cursore / m.W) | 0, 1, 1, null, 'rgba(255,255,255,0.8)');
+    }
+  }
+
+  function disegnaEffetti(st, V) {
+    const { ts, ox, oy, ctx } = V;
+    if (ts < 8) return;
+    for (const e of st.effetti) {
+      ctx.globalAlpha = Math.max(0, 1 - e.t / 2.5);
+      etichetta(ctx, e.testo, ox + e.x * ts, oy + e.y * ts - ts * 0.6 - e.t * 22, 13, '#ffe066');
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------------------------------------------------------------- fotogramma
+  G.disegna = function (st, ctx, w, h, ui) {
+    const m = st.mondo, cam = D.cam, ts = cam.ts;
+    while (st.sporchi.length) { ridisegnaCasella(m, st.sporchi.pop()); st.minimappaSporca = true; }
+    const ox = Math.round(w / 2 - cam.x * ts), oy = Math.round(h / 2 - cam.y * ts);
+    D.ox = ox; D.oy = oy;
+    const x0 = Math.max(0, Math.floor(-ox / ts)), y0 = Math.max(0, Math.floor(-oy / ts));
+    const x1 = Math.min(m.W - 1, Math.ceil((w - ox) / ts)), y1 = Math.min(m.H - 1, Math.ceil((h - oy) / ts));
+    ctx.fillStyle = '#121c26'; ctx.fillRect(0, 0, w, h);
+    ctx.imageSmoothingEnabled = ts < PX;
+    ctx.drawImage(D.terreno.cv, x0 * PX, y0 * PX, (x1 - x0 + 1) * PX, (y1 - y0 + 1) * PX,
+      ox + x0 * ts, oy + y0 * ts, (x1 - x0 + 1) * ts, (y1 - y0 + 1) * ts);
+    const V = { m, ts, ox, oy, x0, y0, x1, y1, ctx };
+    if (ui.griglia && ts >= 8) {
+      ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 1; ctx.beginPath();
+      for (let x = x0; x <= x1 + 1; x++) { ctx.moveTo(ox + x * ts + 0.5, oy + y0 * ts); ctx.lineTo(ox + x * ts + 0.5, oy + (y1 + 1) * ts); }
+      for (let y = y0; y <= y1 + 1; y++) { ctx.moveTo(ox + x0 * ts, oy + y * ts + 0.5); ctx.lineTo(ox + (x1 + 1) * ts, oy + y * ts + 0.5); }
+      ctx.stroke();
+    }
+    disegnaPonti(V);
+    disegnaStrade(V);
+    disegnaBinari(V);
+    disegnaCase(V);
+    disegnaIndustrie(st, V);
+    disegnaStazioni(st, V, ui);
+    disegnaSovrapposizioni(st, V, ui);
+    disegnaVeicoli(st, V, ui);
+    disegnaEtichette(st, V);
+    disegnaEffetti(st, V);
+  };
+
+  // ---------------------------------------------------------------- minimappa
+  function coloreHex(h) { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
+
+  function costruisciMini(st) {
+    const m = st.mondo;
+    if (!D.mini) { D.mini = document.createElement('canvas'); D.mini.width = m.W; D.mini.height = m.H; }
+    const c = D.mini.getContext('2d');
+    c.imageSmoothingEnabled = true;
+    c.drawImage(D.terreno.cv, 0, 0, m.W, m.H);
+    const img = c.getImageData(0, 0, m.W, m.H), d = img.data;
+    const colInd = {};
+    for (const k in C.industrie) colInd[k] = coloreHex(C.industrie[k].colore);
+    for (let i = 0; i < m.N; i++) {
+      let col = null;
+      if (m.occ[i] === OCC.CASA) col = [214, 92, 64];
+      else if (m.occ[i] === OCC.INDUSTRIA) col = colInd[st.industrie[m.rif[i]].tipo];
+      else if (m.occ[i] === OCC.STAZIONE) col = [255, 255, 255];
+      else if (m.mBin[i]) col = [40, 22, 10];
+      else if (m.tipoStr[i] === 2) col = [30, 30, 36];
+      else if (m.mStr[i]) col = m.strCitta[i] ? [200, 110, 90] : [120, 120, 120];
+      if (col) { d[i * 4] = col[0]; d[i * 4 + 1] = col[1]; d[i * 4 + 2] = col[2]; }
+    }
+    c.putImageData(img, 0, 0);
+  }
+
+  G.disegnaMinimappa = function (st, cv, w, h) {
+    const m = st.mondo, ctx = cv.getContext('2d');
+    if (!D.mini || st.minimappaSporca) { costruisciMini(st); st.minimappaSporca = false; }
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(D.mini, 0, 0, cv.width, cv.height);
+    const sx = cv.width / m.W, sy = cv.height / m.H, ts = D.cam.ts;
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+    ctx.strokeRect((D.cam.x - w / 2 / ts) * sx, (D.cam.y - h / 2 / ts) * sy, w / ts * sx, h / ts * sy);
+    // veicoli come puntini
+    ctx.fillStyle = '#ffeb3b';
+    for (const v of st.veicoli) ctx.fillRect(v.x * sx - 1, v.y * sy - 1, 2.5, 2.5);
+  };
+})();

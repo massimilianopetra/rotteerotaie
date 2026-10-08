@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rotaie &amp; Rotte — strategia dei trasporti</title>
+  <meta name="description" content="Gioco di strategia dei trasporti nel browser: ferrovie, strade, autostrade e aeroporti fra città che crescono.">
+  <link rel="icon" href="icona.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/stile.css">
+</head>
+<body>
+  <header id="barra">
+    <span class="logo">🚂 Rotaie &amp; Rotte</span>
+    <span id="azienda"></span>
+    <span id="soldi" title="Cassa"></span>
+    <span id="prestito"></span>
+    <span class="spazio"></span>
+    <span id="data"></span>
+    <span id="velocita">
+      <button data-az="vel" data-v="0" title="Pausa (spazio)">⏸</button>
+      <button data-az="vel" data-v="1" title="Normale (1)">▶</button>
+      <button data-az="vel" data-v="2" title="Veloce (2)">⏩</button>
+      <button data-az="vel" data-v="3" title="Velocissimo (3)">⏭</button>
+    </span>
+    <span class="spazio"></span>
+    <button data-az="finestra" data-f="veicoli" title="Mezzi (V)">🚂 Mezzi</button>
+    <button data-az="finestra" data-f="mondo" title="Città, industrie e stazioni (M)">🏙️ Mondo</button>
+    <button data-az="finestra" data-f="finanze" title="Finanze (E)">📊 Finanze</button>
+    <button data-az="finestra" data-f="menu" title="Nuova partita, salva, carica">💾 Partita</button>
+    <button data-az="finestra" data-f="aiuto" title="Aiuto (H)">❓</button>
+  </header>
+
+  <nav id="attrezzi"></nav>
+  <canvas id="mappa"></canvas>
+  <aside id="pannello" class="nascosto"></aside>
+  <div id="notizie"></div>
+  <canvas id="mini" title="Clic per spostarti"></canvas>
+
+  <div id="finestra" class="nascosto">
+    <div class="riquadro">
+      <div class="testa"><span></span><button class="chiudi" data-az="chiudiFinestra" title="Chiudi (Esc)">✕</button></div>
+      <div class="corpo"></div>
+    </div>
+  </div>
+  <div id="avviso"></div>
+  <div id="suggerimento"></div>
+
+  <!-- solo script classici: il gioco funziona anche aprendo il file con un doppio clic -->
+  <script src="dati/catalogo.js"></script>
+  <script src="js/casuale.js"></script>
+  <script src="js/mappa.js"></script>
+  <script src="js/rete.js"></script>
+  <script src="js/economia.js"></script>
+  <script src="js/veicoli.js"></script>
+  <script src="js/disegno.js"></script>
+  <script src="js/interfaccia.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
