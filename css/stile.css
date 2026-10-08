@@ -1,0 +1,121 @@
+/* Rotaie & Rotte — tema scuro unico */
+:root {
+  --fondo: #17212b;
+  --pannello: rgba(22, 32, 43, 0.94);
+  --bordo: #34475a;
+  --testo: #e8eef4;
+  --tenue: #9fb2c4;
+  --accento: #f2b134;
+  --blu: #3d7ad6;
+  --verde: #5ccf7a;
+  --rosso: #ff6b5b;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--fondo); color: var(--testo);
+  font: 14px/1.4 "Segoe UI", system-ui, Arial, sans-serif; }
+button { font: inherit; color: var(--testo); background: #26384b; border: 1px solid var(--bordo); border-radius: 6px;
+  padding: 4px 10px; cursor: pointer; }
+button:hover { background: #31495f; }
+button.attivo { background: var(--accento); color: #1d1d1d; border-color: var(--accento); }
+button.primario { background: var(--blu); border-color: var(--blu); }
+button.primario:hover { background: #4b8bea; }
+button.mini { padding: 0 6px; font-size: 11px; }
+.nascosto { display: none !important; }
+.rosso { color: var(--rosso); }
+.verde { color: var(--verde); }
+.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sotto { color: var(--tenue); font-size: 12px; }
+.nota { color: var(--tenue); font-size: 12px; margin: 6px 0; }
+.link { cursor: pointer; color: #9cc7ff; }
+.link:hover { text-decoration: underline; }
+tr.link { color: var(--testo); }
+tr.link:hover { background: rgba(255, 255, 255, 0.06); text-decoration: none; }
+.pallino { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px;
+  border: 1px solid rgba(255, 255, 255, 0.3); }
+
+/* barra in alto */
+#barra { position: fixed; top: 0; left: 0; right: 0; height: 44px; display: flex; align-items: center; gap: 10px;
+  padding: 0 10px; background: var(--pannello); border-bottom: 1px solid var(--bordo); z-index: 10; }
+#barra .logo { font-weight: 700; color: var(--accento); white-space: nowrap; }
+#barra .spazio { flex: 1; }
+#azienda { color: var(--tenue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+#soldi { font-weight: 700; font-size: 16px; color: var(--verde); white-space: nowrap; }
+#soldi.rosso { color: var(--rosso); }
+#prestito { color: var(--tenue); font-size: 12px; white-space: nowrap; }
+#data { font-weight: 600; min-width: 100px; text-align: center; white-space: nowrap; }
+#velocita { display: flex; gap: 3px; }
+#velocita button { padding: 2px 8px; }
+
+/* attrezzi a sinistra */
+#attrezzi { position: fixed; top: 54px; left: 10px; display: flex; flex-direction: column; gap: 5px; z-index: 5; }
+#attrezzi button { width: 46px; height: 46px; font-size: 22px; padding: 0; background: var(--pannello); }
+#attrezzi button.attivo { background: var(--accento); }
+
+#mappa { position: fixed; top: 44px; left: 0; width: 100%; height: calc(100% - 44px); display: block; touch-action: none; }
+
+/* pannello informazioni a destra */
+#pannello { position: fixed; top: 54px; right: 10px; width: 330px; max-height: calc(100% - 64px - 190px); overflow-y: auto;
+  background: var(--pannello); border: 1px solid var(--bordo); border-radius: 10px; padding: 10px 14px; z-index: 6; }
+#pannello h3 { margin: 0 24px 2px 0; font-size: 17px; }
+#pannello h4, .corpo h4 { margin: 12px 0 4px; color: var(--accento); font-size: 13px; text-transform: uppercase; letter-spacing: .04em; }
+#pannello p { margin: 5px 0; }
+#pannello table, .corpo table { width: 100%; border-collapse: collapse; }
+#pannello td { padding: 2px 4px; }
+.chiudi { position: absolute; top: 8px; right: 8px; padding: 0 7px; background: transparent; border: none; font-size: 16px; }
+.barra { height: 7px; background: #0e151c; border-radius: 4px; overflow: hidden; min-width: 60px; margin-top: 3px; }
+.barra > div { height: 100%; border-radius: 4px; }
+.pulsanti { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.banda { background: rgba(242, 177, 52, 0.18); border: 1px solid var(--accento); border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
+ol.fermate { margin: 4px 0; padding-left: 22px; }
+ol.fermate li { margin: 3px 0; }
+ol.fermate li.attuale { font-weight: 600; }
+ol.fermate label { font-size: 12px; color: var(--tenue); margin-left: 6px; }
+.grafico { width: 100%; height: 50px; background: #0e151c; border-radius: 6px; margin-top: 8px; }
+
+/* notizie in basso a sinistra */
+#notizie { position: fixed; left: 66px; bottom: 10px; width: min(560px, calc(100% - 330px)); display: flex; flex-direction: column-reverse;
+  gap: 4px; z-index: 5; pointer-events: none; }
+.notizia { background: var(--pannello); border: 1px solid var(--bordo); border-radius: 8px; padding: 5px 10px; font-size: 13px;
+  pointer-events: auto; transition: background 1s; }
+.notizia[data-az] { cursor: pointer; }
+.notizia b { color: var(--accento); margin-right: 4px; }
+.notizia.nuova { background: #3a4d20; }
+
+/* minimappa */
+#mini { position: fixed; right: 10px; bottom: 10px; width: 230px; border: 2px solid var(--bordo); border-radius: 8px;
+  z-index: 5; cursor: pointer; background: #0e151c; image-rendering: pixelated; }
+
+/* finestre */
+#finestra { position: fixed; inset: 0; background: rgba(5, 10, 15, 0.55); display: flex; align-items: center; justify-content: center; z-index: 20; }
+#finestra .riquadro { position: relative; width: min(520px, 94vw); max-height: 88vh; display: flex; flex-direction: column;
+  background: #1c2935; border: 1px solid var(--bordo); border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); }
+#finestra .riquadro.larga { width: min(860px, 96vw); }
+#finestra .testa { padding: 12px 44px 10px 16px; font-size: 18px; font-weight: 700; color: var(--accento); border-bottom: 1px solid var(--bordo); }
+#finestra .corpo { padding: 12px 16px 16px; overflow-y: auto; }
+.corpo label { display: block; margin: 8px 0; color: var(--tenue); font-size: 13px; }
+.corpo select, .corpo input:not([type=checkbox]) { display: block; width: 100%; margin-top: 3px; padding: 6px 8px; font: inherit;
+  color: var(--testo); background: #0f1821; border: 1px solid var(--bordo); border-radius: 6px; }
+.corpo input[type=range] { padding: 0; }
+.corpo .riga { display: flex; gap: 12px; }
+.corpo .riga label { flex: 1; }
+.corpo .intro { font-size: 15px; }
+.riepilogo { margin: 10px 0; padding: 8px 10px; background: #0f1821; border-radius: 6px; }
+table.elenco th { text-align: left; color: var(--tenue); font-weight: 600; border-bottom: 1px solid var(--bordo); padding: 4px 6px; font-size: 12px; }
+table.elenco td { padding: 4px 6px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); vertical-align: top; }
+table.conti tr.titoletto td { color: var(--accento); font-weight: 600; padding-top: 10px; }
+table.conti tr.totale td { font-weight: 700; border-top: 1px solid var(--bordo); }
+.schede { display: flex; gap: 6px; margin-bottom: 10px; }
+
+/* avviso e suggerimento */
+#avviso { position: fixed; top: 56px; left: 50%; transform: translateX(-50%); padding: 8px 16px; border-radius: 8px;
+  background: #2a5d34; border: 1px solid var(--verde); opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 30; }
+#avviso.visibile { opacity: 1; }
+#avviso.errore { background: #5d2a2a; border-color: var(--rosso); }
+#suggerimento { position: fixed; display: none; pointer-events: none; z-index: 25; max-width: 320px; padding: 6px 10px;
+  background: rgba(10, 16, 22, 0.92); border: 1px solid var(--bordo); border-radius: 6px; font-size: 13px; }
+
+@media (max-width: 800px) {
+  #barra .logo, #azienda, #prestito, #barra > button:not(:last-child) { display: none; }
+  #pannello { width: calc(100% - 76px); max-height: 45%; }
+  #mini { width: 140px; }
+}
