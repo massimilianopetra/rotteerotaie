@@ -166,6 +166,36 @@
   const pallino = k => `<span class="pallino" style="background:${C.merci[k].colore}"></span>`;
   const elencoMerci = o => Object.keys(o).filter(k => o[k]).map(k => pallino(k) + nomeMerce(k)).join(', ') || '—';
 
+  // per ogni merce che la stazione fornisce: quanta ne aspetta in stazione, pronta per partire.
+  // La barra mostra quanti carichi pieni sono: la riempie un carico del mezzo più capiente che la ritira qui.
+  function schedeFornisce(s0, s) {
+    const merci = Object.keys(C.merci).filter(k => s.fornisce[k] || (s.attesa[k] || 0) >= 1);
+    if (!merci.length) return '<h4>Fornisce</h4><div class="sotto">Nulla: nel bacino non ci sono case né industrie che producono.</div>';
+    let h = '<h4>Fornisce · pronti a partire</h4><div class="schede-merci">';
+    for (const k of merci) {
+      const def = C.merci[k], q = Math.floor(s.attesa[k] || 0);
+      const mezzi = s0.veicoli.filter(v => v.merce === k && v.fermate.some(f => f.s === s.id));
+      const cap = Math.max(0, ...mezzi.map(v => v.cap));
+      let nota, frac = 0;
+      if (!s.servite[k]) nota = '<span class="avviso-merce">Nessun mezzo la ritira: compra un mezzo per farla partire</span>';
+      else {
+        const val = G.valutazione(s0, s, k), pv = Math.round(val * 100);
+        const colVal = pv >= 66 ? 'var(--verde)' : pv >= 33 ? 'var(--accento)' : 'var(--rosso)';
+        frac = cap ? q / cap : 0;
+        const carichi = cap ? (frac >= 10 ? Math.round(frac) : frac.toFixed(1).replace('.', ',')) : '—';
+        nota = `≈ ${carichi} ${frac >= 0.95 && frac < 1.05 ? 'carico' : 'carichi'} · ${mezzi.length} ${mezzi.length === 1 ? 'mezzo' : 'mezzi'} · valutazione <b style="color:${colVal}">${pv}%</b>`;
+      }
+      h += `<div class="scheda-merce${s.servite[k] ? '' : ' spenta'}" style="--c:${def.colore}" title="${def.nome}: ${G.numero(q)} ${def.unita} in attesa in stazione">
+        <div class="sm-icona">${def.icona}</div>
+        <div class="sm-corpo">
+          <div class="sm-riga"><span class="sm-nome">${def.nome}</span><span class="sm-num">${G.numero(q)}<small> ${def.unita}</small></span></div>
+          <div class="sm-barra"><div style="width:${Math.round(Math.min(1, frac) * 100)}%"></div>${frac > 1 ? `<span class="sm-pieno">×${Math.floor(frac)}</span>` : ''}</div>
+          <div class="sm-nota">${nota}</div>
+        </div></div>`;
+    }
+    return h + '</div><div class="nota">La valutazione sale quando i mezzi passano spesso: più è alta, più passeggeri e merci arrivano alla stazione.</div>';
+  }
+
   function htmlStazione(s0, s) {
     const def = G.defStazione(s);
     const icona = s.tipo === 'stazione' ? `<span class="icona-titolo">${iconaStazione(def.taglia)}</span>` : def.icona;
@@ -179,14 +209,10 @@
         ? 'Nessun binario passa sulla stazione: i treni non possono arrivarci. Trascina una ferrovia fin sopra una delle sue caselle.'
         : 'Nessuna strada arriva all\'autostazione: costruiscine una fin sopra la sua casella.'}</p>`;
     }
-    h += `<p><b>Accetta:</b> ${elencoMerci(s.accetta)}</p><p><b>Fornisce:</b> ${elencoMerci(s.fornisce)}</p>`;
     h += `<p><b>Abitanti nel bacino:</b> ${G.numero(s.popBacino)}</p>`;
-    const att = Object.keys(s.attesa).filter(k => s.attesa[k] >= 1);
-    if (att.length) {
-      h += '<h4>In attesa</h4><table>';
-      for (const k of att) h += `<tr><td>${pallino(k)}${nomeMerce(k)}</td><td class="num">${G.numero(s.attesa[k])} ${C.merci[k].unita}</td><td>${barra(G.valutazione(s0, s, k), '#4caf50')}</td></tr>`;
-      h += '</table><div class="nota">La barra verde è la valutazione: più passano mezzi, più merce arriva alla stazione.</div>';
-    }
+    h += schedeFornisce(s0, s);
+    const acc = Object.keys(C.merci).filter(k => s.accetta[k]);
+    h += `<h4>Accetta</h4><div class="chips">${acc.length ? acc.map(k => `<span class="chip" style="--c:${C.merci[k].colore}">${C.merci[k].icona} ${nomeMerce(k)}</span>`).join('') : '<span class="sotto">nulla</span>'}</div>`;
     if (s.industrie.length) {
       h += '<h4>Industrie vicine</h4>';
       for (const id of s.industrie) { const ind = s0.industrie[id]; h += `<div class="link" data-az="apriIndustria" data-id="${id}">${C.industrie[ind.tipo].icona} ${esc(ind.nome)}</div>`; }
