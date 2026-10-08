@@ -22,8 +22,8 @@ window.CATALOGO = {
 
   // prezzo: lire per unità per casella di distanza; giorni: viaggio oltre il quale il prezzo cala; icona: per il pannello delle stazioni
   merci: {
-    passeggeri: { icona: '👥', nome: 'Passeggeri', unita: 'pass.', colore: '#f2c94c', prezzo: 1.8, giorni: 20 },
-    posta:      { icona: '✉️', nome: 'Posta',      unita: 'sacchi', colore: '#f4f4f4', prezzo: 3,   giorni: 14 },
+    passeggeri: { icona: '👥', nome: 'Passeggeri', unita: 'pass.', colore: '#f2c94c', prezzo: 0.25, giorni: 20 },
+    posta:      { icona: '✉️', nome: 'Posta',      unita: 'sacchi', colore: '#f4f4f4', prezzo: 0.5, giorni: 14 },
     carbone:    { icona: '🪨', nome: 'Carbone',    unita: 't', colore: '#2b2b2b', prezzo: 2,   giorni: 60 },
     ferro:      { icona: '🔩', nome: 'Ferro',      unita: 't', colore: '#b5603a', prezzo: 2.2, giorni: 60 },
     legname:    { icona: '🪵', nome: 'Legname',    unita: 't', colore: '#8a5a2b', prezzo: 2,   giorni: 50 },
@@ -38,7 +38,7 @@ window.CATALOGO = {
   // case: abitanti per livello (1 casetta, 2 casa, 3 palazzina, 4 palazzo)
   case: { pop: [0, 10, 30, 80, 200], nomi: ['', 'casetta', 'casa', 'palazzina', 'palazzo'] },
   // passeggeri e posta prodotti al giorno per abitante coperto da una stazione
-  produzioneCitta: { passeggeri: 0.004, posta: 0.001 },
+  produzioneCitta: { passeggeri: 0.04, posta: 0.008 },
   // abitanti minimi nel bacino di una stazione perché accetti la merce
   accettazione: { passeggeri: 40, posta: 60, cibo: 80, merci: 150, carburante: 250 },
 
