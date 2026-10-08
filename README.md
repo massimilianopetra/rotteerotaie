@@ -5,6 +5,10 @@ si guida una compagnia che costruisce **ferrovie**, **strade**, **autostrade** e
 compra treni, autobus, camion e aerei e trasporta passeggeri e merci fra città inventate
 che **crescono** grazie ai collegamenti.
 
+**Gioca online: https://massimilianopetra.github.io/rotteerotaie/**
+
+Codice: https://github.com/massimilianopetra/rotteerotaie
+
 ## Come si avvia
 
 Apri `index.html` con un doppio clic (Chrome, Edge o Firefox). Non serve Internet e non serve installare nulla.
@@ -56,6 +60,11 @@ Per costruire una linea: tieni premuto il tasto sinistro e trascina; prima di la
 
 Tutti i numeri del gioco (prezzi delle merci, costi, velocità e anni dei mezzi, industrie, pezzi dei nomi
 delle città) sono in `dati/catalogo.js`, un file pensato per essere modificato a mano.
+
+## Pubblicare su GitHub Pages
+
+Il sito è servito dal ramo `gh-pages`: dopo `npm install` basta `npm run deploy`
+(GitHub Pages impiega circa un minuto; nel browser ricaricare con Ctrl+F5).
 
 ## Licenza
 

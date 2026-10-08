@@ -4,6 +4,8 @@
   "private": true,
   "description": "Gioco di strategia dei trasporti nel browser: ferrovie, strade, autostrade e aeroporti fra città che crescono",
   "license": "GPL-3.0-or-later",
+  "homepage": "https://massimilianopetra.github.io/rotteerotaie/",
+  "repository": "https://github.com/massimilianopetra/rotteerotaie",
   "scripts": {
     "deploy": "gh-pages -d . -s \"{index.html,README.md,icona.svg,css/**,js/**,dati/**}\""
   },
