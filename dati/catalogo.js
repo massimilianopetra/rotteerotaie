@@ -4,12 +4,21 @@
 window.CATALOGO = {
   inizio: { soldi: 400000, prestitoMax: 600000, passoPrestito: 50000, interesse: 0.05 },
 
-  // giorni di gioco che passano in un secondo, per ogni velocità (0 = pausa)
-  velocita: [0, 2, 5, 12],
-  // km/h diviso questo numero = caselle percorse in un giorno di gioco
-  kmhPerCasellaGiorno: 12,
-  // gli aerei sono rallentati (come in molti giochi del genere), altrimenti attraverserebbero la mappa in un attimo
-  fattoreAerei: 0.3,
+  // minuti di gioco che passano in un secondo vero, per ogni velocità (0 = pausa).
+  // Normale: 1 secondo = 5 minuti; poi avanti veloce: 1 ora, 1 giorno, 1 settimana al secondo.
+  velocita: [0, 5, 60, 1440, 10080],
+  nomiVelocita: ['Pausa', 'Normale: 1 s = 5 minuti', 'Veloce: 1 s = 1 ora', 'Velocissimo: 1 s = 1 giorno', 'Turbo: 1 s = 1 settimana'],
+  // lato di una casella in km: i mezzi viaggiano alla loro velocità vera (un treno a 60 km/h fa 60 caselle in un'ora)
+  kmPerCasella: 1,
+  // gli aerei possono essere rallentati (1 = velocità vera)
+  fattoreAerei: 1,
+  tempi: {
+    passoMinuti: 10,                              // passo della simulazione dei mezzi
+    sostaMinuti: { treno: 10, strada: 3, aereo: 30 }, // sosta minima in stazione
+    caricoOra: { treno: 240, strada: 60, aereo: 120 }, // unità caricate o scaricate in un'ora
+    guastoOre: [2, 6],                            // durata di una riparazione
+    riprovaOre: 1                                 // un mezzo bloccato riprova a cercare la strada
+  },
 
   // prezzo: lire per unità per casella di distanza; giorni: viaggio oltre il quale il prezzo cala
   merci: {
@@ -64,6 +73,14 @@ window.CATALOGO = {
     stazione:  { nome: 'Stazione ferroviaria', costo: 20000,  manutenzione: 1200,  raggio: 3, lato: 1, icona: '🚉', anno: 0 },
     deposito:  { nome: 'Autostazione',         costo: 4000,   manutenzione: 300,   raggio: 2, lato: 1, icona: '🚏', anno: 0 },
     aeroporto: { nome: 'Aeroporto',            costo: 100000, manutenzione: 10000, raggio: 4, lato: 2, icona: '✈️', anno: 1925 }
+  },
+  // dimensioni delle stazioni ferroviarie: sostituiscono i valori della "stazione" qui sopra.
+  // lato = caselle per lato (i binari possono attraversarle tutte), carico = rapidità di carico e scarico
+  taglieStazione: {
+    fermata:  { nome: 'Fermata',              breve: 'Piccola', costo: 8000,  manutenzione: 500,  raggio: 2, lato: 1, carico: 0.5, anno: 0 },
+    media:    { nome: 'Stazione',             breve: 'Media',   costo: 20000, manutenzione: 1200, raggio: 3, lato: 1, carico: 1,   anno: 0 },
+    grande:   { nome: 'Stazione grande',      breve: 'Grande',  costo: 45000, manutenzione: 2600, raggio: 4, lato: 2, carico: 1.6, anno: 0 },
+    centrale: { nome: 'Stazione centrale',    breve: 'Centrale', costo: 90000, manutenzione: 5000, raggio: 5, lato: 3, carico: 2.5, anno: 1860 }
   },
 
   // vagone ferroviario: capacità per merce

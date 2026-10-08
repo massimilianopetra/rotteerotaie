@@ -49,6 +49,10 @@
     return { anno: d.getUTCFullYear(), mese: d.getUTCMonth(), giorno: d.getUTCDate() };
   };
   G.testoData = function (st, g) { const d = G.data(st, g); return `${d.giorno} ${MESI[d.mese]} ${d.anno}`; };
+  G.testoOra = function (st) {
+    const min = Math.floor((st.giorno - Math.floor(st.giorno)) * 1440);
+    return String(Math.floor(min / 60)).padStart(2, '0') + ':' + String(min % 60).padStart(2, '0');
+  };
   G.anno = st => G.data(st).anno;
 
   G.notizia = function (st, testo, x, y) {
@@ -59,19 +63,46 @@
   };
 
   // ---------------------------------------------------------------- stazioni
+  // dati di catalogo di una stazione: per le ferroviarie contano anche le dimensioni (taglia)
+  G.defStazione = function (tipo, taglia) {
+    if (typeof tipo === 'object') { taglia = tipo.taglia; tipo = tipo.tipo; }
+    const def = C.stazioni[tipo];
+    if (tipo !== 'stazione') return def;
+    const t = C.taglieStazione[taglia] || C.taglieStazione.media;
+    return Object.assign({}, def, t, { taglia: taglia in C.taglieStazione ? taglia : 'media' });
+  };
+  G.nomeTipoStazione = s => s.tipo === 'stazione' ? 'Stazione ferroviaria · ' + G.defStazione(s).breve.toLowerCase() : C.stazioni[s.tipo].nome;
+
   G.centroStazione = s => ({ x: s.x + s.lato / 2, y: s.y + s.lato / 2 });
-  G.casellaStazione = function (st, s) { return s.y * st.mondo.W + s.x; };
+  G.caselleStazione = function (st, s) {
+    const W = st.mondo.W, el = [];
+    for (let dy = 0; dy < s.lato; dy++) for (let dx = 0; dx < s.lato; dx++) el.push((s.y + dy) * W + s.x + dx);
+    return el;
+  };
+  // una casella della stazione toccata dalla rete giusta (binari per le ferroviarie, strade per le autostazioni)
+  G.casellaStazione = function (st, s) {
+    const m = st.mondo, mask = s.tipo === 'stazione' ? m.mBin : s.tipo === 'deposito' ? m.mStr : null;
+    const el = G.caselleStazione(st, s);
+    if (mask) for (const i of el) if (mask[i]) return i;
+    return el[0];
+  };
+  // la stazione è collegata se almeno una sua casella ha un binario (o una strada)
+  G.stazioneCollegata = function (st, s) {
+    if (s.tipo === 'aeroporto') return true;
+    const m = st.mondo, mask = s.tipo === 'stazione' ? m.mBin : m.mStr;
+    return G.caselleStazione(st, s).some(i => mask[i]);
+  };
 
   G.bacino = function (st, s) {
-    const m = st.mondo, r = C.stazioni[s.tipo].raggio;
+    const m = st.mondo, r = G.defStazione(s).raggio;
     return {
       x0: Math.max(0, s.x - r), y0: Math.max(0, s.y - r),
       x1: Math.min(m.W - 1, s.x + s.lato - 1 + r), y1: Math.min(m.H - 1, s.y + s.lato - 1 + r)
     };
   };
 
-  G.puoCostruireStazione = function (st, tipo, x, y) {
-    const def = C.stazioni[tipo], m = st.mondo, T = G.T;
+  G.puoCostruireStazione = function (st, tipo, x, y, taglia) {
+    const def = G.defStazione(tipo, taglia), m = st.mondo, T = G.T;
     if (G.anno(st) < def.anno) return `${def.nome}: disponibile dal ${def.anno}`;
     let costo = def.costo;
     for (let dy = 0; dy < def.lato; dy++) for (let dx = 0; dx < def.lato; dx++) {
@@ -102,7 +133,8 @@
       const ind = st.industrie.find(k => !k.chiusa && Math.abs(k.x + 1 - c0.x) < 6 && Math.abs(k.y + 1 - c0.y) < 6);
       base = (v ? v.nome : 'Campagna') + ' ' + (ind ? C.industrie[ind.tipo].breve : 'Bivio');
     }
-    const pre = s.tipo === 'aeroporto' ? 'Aeroporto di ' : s.tipo === 'deposito' ? 'Autostazione ' : '';
+    const pre = s.tipo === 'aeroporto' ? 'Aeroporto di ' : s.tipo === 'deposito' ? 'Autostazione ' : s.taglia === 'fermata' ? 'Fermata ' : '';
+    if (s.taglia === 'centrale') base += ' Centrale';
     let nome = pre + base, k = 1;
     while (st.stazioni.some(o => o && o !== s && o.nome === nome)) nome = pre + base + ' ' + (++k);
     return nome;
@@ -158,16 +190,17 @@
     for (const s of st.stazioni) if (s) for (const id of s.industrie) st.industrie[id].stazioni.push(s.id);
   };
 
-  G.costruisciStazione = function (st, tipo, x, y) {
-    const r = G.puoCostruireStazione(st, tipo, x, y);
+  G.costruisciStazione = function (st, tipo, x, y, taglia) {
+    const r = G.puoCostruireStazione(st, tipo, x, y, taglia);
     if (typeof r === 'string') return r;
     if (st.soldi < r.costo) return 'Fondi insufficienti';
-    const def = C.stazioni[tipo], m = st.mondo;
+    const def = G.defStazione(tipo, taglia), m = st.mondo;
     const s = {
       id: st.stazioni.length, tipo, x, y, lato: def.lato, nome: '',
       attesa: {}, ultimoRitiro: {}, accetta: {}, fornisce: {}, servite: {}, industrie: [],
       popBacino: 0, citta: -1, primoArrivo: false
     };
+    if (tipo === 'stazione') s.taglia = def.taglia;
     st.stazioni.push(s);
     for (let dy = 0; dy < def.lato; dy++) for (let dx = 0; dx < def.lato; dx++) {
       const i = (y + dy) * m.W + x + dx;
@@ -246,8 +279,8 @@
     }
   };
 
-  // ---------------------------------------------------------------- un giorno
-  G.giornaliero = function (st) {
+  // ---------------------------------------------------------------- produzione (ogni ora: f = frazione di giorno)
+  G.produzione = function (st, f) {
     const m = st.mondo, pc = C.produzioneCitta, popLiv = C.case.pop;
     // le case producono passeggeri e posta per le stazioni che li ritirano
     for (const s of st.stazioni) {
@@ -259,7 +292,7 @@
         if (m.occ[i] === OCC.CASA) pop += popLiv[m.liv[i]] / m.copertura[i];
       }
       for (const merce of ['passeggeri', 'posta']) {
-        if (s.servite[merce]) G.aggiungiAttesa(st, s, merce, pop * pc[merce] * G.valutazione(st, s, merce));
+        if (s.servite[merce]) G.aggiungiAttesa(st, s, merce, pop * pc[merce] * f * G.valutazione(st, s, merce));
       }
     }
     // le industrie producono; la parte trasportata va alle stazioni che servono la merce
@@ -269,7 +302,7 @@
       let q = 0, merce = null;
       if (def.produce) {
         merce = def.produce;
-        q = ind.produzione / 30;
+        q = ind.produzione / 30 * f;
         if (def.riserva) {
           if (ind.riserva < ind.riservaIniziale * 0.15) q *= 0.6;
           q = Math.min(q, ind.riserva);
@@ -296,6 +329,10 @@
       }
       if (def.riserva && ind.riserva <= 0) chiudiIndustria(st, ind);
     }
+  };
+
+  // ---------------------------------------------------------------- un giorno
+  G.giornaliero = function (st) {
     // la merce che aspetta troppo si rovina un po'
     for (const s of st.stazioni) if (s) for (const k in s.attesa) if (s.attesa[k] > 300) s.attesa[k] *= 0.997;
   };
@@ -348,7 +385,7 @@
       if (m.mBin[i]) bin++;
       if (m.mStr[i] && !m.strCitta[i]) { if (m.tipoStr[i] === 2) aut++; else str++; }
     }
-    for (const s of st.stazioni) if (s) staz += C.stazioni[s.tipo].manutenzione;
+    for (const s of st.stazioni) if (s) staz += G.defStazione(s).manutenzione;
     return {
       binari: bin * C.reti.binario.manutenzione,
       strade: str * C.reti.strada.manutenzione + aut * C.reti.autostrada.manutenzione,
@@ -427,5 +464,28 @@
       }
     }
     if (G.salvaAutomatico) G.salvaAutomatico(st);
+  };
+
+  // ---------------------------------------------------------------- il tempo che passa
+  // i mezzi si muovono a piccoli passi; la produzione è oraria; poi giorno, mese e anno
+  function passo(st, dt) {
+    G.aggiornaVeicoli(st, dt);
+    st.giorno += dt;
+    while (Math.floor(st.giorno * 24) > st.oraInt) {
+      st.oraInt++;
+      G.produzione(st, 1 / 24);
+      if (Math.floor(st.oraInt / 24) > st.giornoInt) {
+        st.giornoInt++;
+        const prima = G.data(st, st.giornoInt - 1), ora = G.data(st, st.giornoInt);
+        G.giornaliero(st);
+        if (ora.mese !== prima.mese) G.mensile(st);
+        if (ora.anno !== prima.anno) G.annuale(st, ora.anno);
+      }
+    }
+  }
+  G.avanza = function (st, giorni) {
+    const p = C.tempi.passoMinuti / 1440;
+    if (st.oraInt === undefined) st.oraInt = Math.floor(st.giorno * 24);
+    while (giorni > 1e-9) { const d = Math.min(giorni, p); passo(st, d); giorni -= d; }
   };
 })();

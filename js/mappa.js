@@ -142,7 +142,7 @@
   G.statoVuoto = function (opz, m) {
     return {
       opz, mondo: m, citta: [], industrie: [], stazioni: [], veicoli: [],
-      soldi: C.inizio.soldi, prestito: 0, giorno: 0, giornoInt: 0, versioneRete: 1,
+      soldi: C.inizio.soldi, prestito: 0, giorno: 7 / 24, giornoInt: 0, oraInt: 7, versioneRete: 1, // si comincia alle 7 del mattino
       conti: { anno: opz.anno, corrente: G.nuovoConto(), storico: [] },
       notizie: [], contatori: { veicolo: 0 }, valoreInfra: 0,
       sporchi: [], effetti: [], mesiInRosso: 0
