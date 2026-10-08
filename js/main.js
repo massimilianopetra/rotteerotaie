@@ -105,6 +105,9 @@
   requestAnimationFrame(ciclo);
   // #rapida (anche #rapida,seme=123) salta il menu: comodo per le prove
   const h = location.hash;
+  // #debug (anche #rapida,debug) mostra gli aiuti per le prove, come il binario prenotato dai treni;
+  // si attiva anche dalla console con GIOCO.modoDebug = true
+  G.modoDebug = h.includes('debug');
   if (h.includes('rapida')) {
     const ms = /seme=(\d+)/.exec(h);
     G.nuovaPartita({ nome: 'Ferrovie Riunite', anno: 1850, W: 192, H: 144, numCitta: 14, seme: ms ? +ms[1] : 12345 });

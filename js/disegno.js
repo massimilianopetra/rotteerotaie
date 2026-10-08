@@ -503,8 +503,8 @@
         ctx.fillText(String(k + 1), ox + c.x * ts, oy + c.y * ts - ts * 0.7);
       });
     }
-    // binario prenotato dal treno selezionato (davanti alla testa)
-    if (v && v.tipo === 'treno' && v.pr && ts >= 6) {
+    // binario prenotato dal treno selezionato (davanti alla testa): solo in modalità debug
+    if (G.modoDebug && v && v.tipo === 'treno' && v.pr && ts >= 6) {
       ctx.fillStyle = 'rgba(255,170,40,0.28)';
       for (const e of v.pr) if (e.d > v.odo + 0.3) ctx.fillRect(ox + (e.i % m.W) * ts, oy + ((e.i / m.W) | 0) * ts, ts, ts);
     }
