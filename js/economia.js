@@ -261,7 +261,7 @@
   };
 
   G.aggiungiAttesa = function (st, s, merce, q) {
-    s.attesa[merce] = Math.min(2000, (s.attesa[merce] || 0) + q);
+    s.attesa[merce] = Math.min(5000, (s.attesa[merce] || 0) + q);
   };
 
   // merce scaricata in una stazione che la accetta
@@ -354,7 +354,7 @@
   G.cresciCitta = function (st, c, rnd) {
     const ms = c.mese;
     // punti di crescita del mese: ogni punto è una casa nuova o più grande
-    let punti = 0.05 + 0.15 * c.nServite + ms.partiti / 300 + ms.arrivati / 400 + ms.posta / 300 +
+    let punti = 0.05 + 0.15 * c.nServite + ms.partiti / 3000 + ms.arrivati / 4000 + ms.posta / 2400 +
       ms.merci / 100 + ms.cibo / 100 + ms.carburante / 150;
     punti = Math.min(punti, 10);
     const n = Math.floor(punti) + (rnd() < punti % 1 ? 1 : 0);
