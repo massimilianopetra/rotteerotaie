@@ -20,19 +20,19 @@ window.CATALOGO = {
     riprovaOre: 1                                 // un mezzo bloccato riprova a cercare la strada
   },
 
-  // prezzo: lire per unità per casella di distanza; giorni: viaggio oltre il quale il prezzo cala
+  // prezzo: lire per unità per casella di distanza; giorni: viaggio oltre il quale il prezzo cala; icona: per il pannello delle stazioni
   merci: {
-    passeggeri: { nome: 'Passeggeri', unita: 'pass.', colore: '#f2c94c', prezzo: 1.8, giorni: 20 },
-    posta:      { nome: 'Posta',      unita: 'sacchi', colore: '#f4f4f4', prezzo: 3,   giorni: 14 },
-    carbone:    { nome: 'Carbone',    unita: 't', colore: '#2b2b2b', prezzo: 2,   giorni: 60 },
-    ferro:      { nome: 'Ferro',      unita: 't', colore: '#b5603a', prezzo: 2.2, giorni: 60 },
-    legname:    { nome: 'Legname',    unita: 't', colore: '#8a5a2b', prezzo: 2,   giorni: 50 },
-    grano:      { nome: 'Grano',      unita: 't', colore: '#e6c35c', prezzo: 2.4, giorni: 30 },
-    petrolio:   { nome: 'Petrolio',   unita: 'kl', colore: '#4b3a5a', prezzo: 2.4, giorni: 50 },
-    acciaio:    { nome: 'Acciaio',    unita: 't', colore: '#8fa3b8', prezzo: 3.5, giorni: 40 },
-    cibo:       { nome: 'Cibo',       unita: 't', colore: '#7fbf5a', prezzo: 4,   giorni: 25 },
-    carburante: { nome: 'Carburante', unita: 'kl', colore: '#d9534f', prezzo: 3.5, giorni: 30 },
-    merci:      { nome: 'Merci',      unita: 'casse', colore: '#5b8def', prezzo: 4.2, giorni: 35 }
+    passeggeri: { icona: '👥', nome: 'Passeggeri', unita: 'pass.', colore: '#f2c94c', prezzo: 1.8, giorni: 20 },
+    posta:      { icona: '✉️', nome: 'Posta',      unita: 'sacchi', colore: '#f4f4f4', prezzo: 3,   giorni: 14 },
+    carbone:    { icona: '🪨', nome: 'Carbone',    unita: 't', colore: '#2b2b2b', prezzo: 2,   giorni: 60 },
+    ferro:      { icona: '🔩', nome: 'Ferro',      unita: 't', colore: '#b5603a', prezzo: 2.2, giorni: 60 },
+    legname:    { icona: '🪵', nome: 'Legname',    unita: 't', colore: '#8a5a2b', prezzo: 2,   giorni: 50 },
+    grano:      { icona: '🌾', nome: 'Grano',      unita: 't', colore: '#e6c35c', prezzo: 2.4, giorni: 30 },
+    petrolio:   { icona: '🛢️', nome: 'Petrolio',   unita: 'kl', colore: '#4b3a5a', prezzo: 2.4, giorni: 50 },
+    acciaio:    { icona: '⚙️', nome: 'Acciaio',    unita: 't', colore: '#8fa3b8', prezzo: 3.5, giorni: 40 },
+    cibo:       { icona: '🍞', nome: 'Cibo',       unita: 't', colore: '#7fbf5a', prezzo: 4,   giorni: 25 },
+    carburante: { icona: '⛽', nome: 'Carburante', unita: 'kl', colore: '#d9534f', prezzo: 3.5, giorni: 30 },
+    merci:      { icona: '📦', nome: 'Merci',      unita: 'casse', colore: '#5b8def', prezzo: 4.2, giorni: 35 }
   },
 
   // case: abitanti per livello (1 casetta, 2 casa, 3 palazzina, 4 palazzo)
