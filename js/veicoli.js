@@ -6,7 +6,21 @@
 
   const RETE = { treno: 'binario', strada: 'strada', aereo: 'aria' };
   const TIPO_STAZ = G.TIPO_STAZ = { treno: 'stazione', strada: 'deposito', aereo: 'aeroporto' };
-  const RITMO = { treno: 80, strada: 30, aereo: 60 }; // unità caricate o scaricate al giorno
+  const TM = C.tempi, ORA = 1 / 24, MINUTO = 1 / 1440;
+  // unità caricate o scaricate in un giorno; le stazioni ferroviarie grandi caricano più in fretta
+  const ritmo = (v, s) => TM.caricoOra[v.tipo] * 24 * (s ? G.defStazione(s).carico || 1 : 1);
+  const sostaMinima = v => TM.sostaMinuti[v.tipo] * MINUTO;
+  // il percorso più breve fino alla stazione: va bene una qualsiasi delle sue caselle toccate dalla rete
+  G.percorsoVersoStazione = function (st, da, s, rete) {
+    const mask = rete === 'binario' ? st.mondo.mBin : st.mondo.mStr;
+    let meglio = null;
+    for (const i of G.caselleStazione(st, s)) {
+      if (!mask[i]) continue;
+      const p = G.cercaPercorso(st, da, i, rete);
+      if (p && (!meglio || p.length < meglio.length)) meglio = p;
+    }
+    return meglio;
+  };
   const NOMI = { treno: 'Treno', bus: 'Autobus', camion: 'Camion', aereo: 'Aereo' };
 
   G.modello = id => C.veicoli.find(v => v.id === id);
@@ -41,14 +55,15 @@
     if (st.soldi < prezzo) return 'Fondi insufficienti';
     const classe = mod.tipo === 'strada' ? mod.classe : mod.tipo;
     st.contatori[classe] = (st.contatori[classe] || 0) + 1;
-    const c = G.centroStazione(s);
+    const c = G.centroStazione(s), t0 = G.casellaStazione(st, s), W = st.mondo.W;
+    if (mod.tipo !== 'aereo') { c.x = t0 % W + 0.5; c.y = ((t0 / W) | 0) + 0.5; }
     const v = {
       id: ++st.contatori.veicolo, nome: `${NOMI[classe]} ${st.contatori[classe]}`,
       modello: modId, tipo: mod.tipo, classe, merce, vagoni,
       cap: G.capacita(mod, merce, vagoni), fermate: [{ s: sid, pieno: false }], idx: 0,
-      stato: 'sosta', timer: 1, attesa: 0, motivo: '',
+      stato: 'sosta', timer: TM.sostaMinuti[mod.tipo] * MINUTO, attesa: 0, motivo: '',
       caselle: null, punti: null, lun: null, lunTot: 0, pos: 0, seg: 0,
-      x: c.x, y: c.y, ang: 0, tile: G.casellaStazione(st, s),
+      x: c.x, y: c.y, ang: 0, tile: t0,
       carico: [], qta: 0, profittoAnno: 0, profittoScorso: 0, eta: 0, prezzo, guasti: 0, fermoManuale: false
     };
     st.veicoli.push(v);
@@ -75,14 +90,14 @@
     if (ultima && ultima.s === sid) return 'È già l\'ultima fermata';
     if (v.tipo !== 'aereo') {
       const da = ultima ? st.stazioni[ultima.s] : null;
-      if (da && !G.cercaPercorso(st, G.casellaStazione(st, da), G.casellaStazione(st, s), RETE[v.tipo])) {
+      if (da && !G.percorsoVersoStazione(st, G.casellaStazione(st, da), s, RETE[v.tipo])) {
         v.fermate.push({ s: sid, pieno: false });
         G.aggiornaServizi(st);
         return 'Fermata aggiunta, ma non c\'è ancora un collegamento con la precedente!';
       }
     }
     v.fermate.push({ s: sid, pieno: false });
-    if (v.stato === 'fermo') { v.stato = 'sosta'; v.timer = 0.5; v.idx = v.fermate.length - 1; }
+    if (v.stato === 'fermo') { v.stato = 'sosta'; v.timer = sostaMinima(v); v.idx = v.fermate.length - 1; }
     G.aggiornaServizi(st);
     return null;
   };
@@ -145,9 +160,9 @@
       v.caselle = null;
       v.punti = [{ x: v.x, y: v.y }, arrivo];
     } else {
-      const caselle = G.cercaPercorso(st, v.tile, G.casellaStazione(st, s), RETE[v.tipo]);
+      const caselle = G.percorsoVersoStazione(st, v.tile, s, RETE[v.tipo]);
       if (!caselle) {
-        v.stato = 'bloccato'; v.timer = 5;
+        v.stato = 'bloccato'; v.timer = TM.riprovaOre * ORA;
         v.motivo = `Nessun ${v.tipo === 'treno' ? 'binario' : 'collegamento stradale'} fino a ${s.nome}`;
         return;
       }
@@ -167,10 +182,11 @@
 
   function arriva(st, v) {
     const f = v.fermate[v.idx], s = f && st.stazioni[f.s];
-    v.stato = 'sosta'; v.attesa = 0; v.timer = 1;
+    v.stato = 'sosta'; v.attesa = 0; v.timer = sostaMinima(v);
     if (!s) { v.stato = 'fermo'; return; }
     const c = G.centroStazione(s);
-    v.x = c.x; v.y = c.y; v.tile = G.casellaStazione(st, s);
+    // treni e mezzi su strada restano sulla casella dove sono arrivati (le stazioni grandi ne hanno più d'una)
+    if (v.tipo === 'aereo' || !v.caselle) { v.x = c.x; v.y = c.y; v.tile = G.casellaStazione(st, s); }
     if (!s.primoArrivo) {
       s.primoArrivo = true;
       const chi = { treno: 'Il primo treno', strada: 'Il primo ' + NOMI[v.classe].toLowerCase(), aereo: 'Il primo aereo' }[v.tipo];
@@ -188,7 +204,7 @@
         incasso += p.q * def.prezzo * dist * ft;
       }
       G.consegna(st, s, v.merce, v.qta);
-      v.timer += v.qta / RITMO[v.tipo];
+      v.timer += v.qta / ritmo(v, s);
       v.carico = []; v.qta = 0;
       incasso = Math.round(incasso);
       if (incasso > 0) {
@@ -203,7 +219,7 @@
     if (!s.servite[v.merce]) return;
     const disp = s.attesa[v.merce] || 0, spazio = v.cap - v.qta;
     if (disp < 0.01 || spazio <= 0.01) return;
-    const q = Math.min(disp, spazio, RITMO[v.tipo] * dt);
+    const q = Math.min(disp, spazio, ritmo(v, s) * dt);
     s.attesa[v.merce] = disp - q;
     s.ultimoRitiro[v.merce] = st.giornoInt;
     let p = v.carico.find(k => k.o === s.id);
@@ -219,13 +235,17 @@
     v.timer -= dt; v.attesa += dt;
     if (s) carica(st, v, s, dt);
     if (v.timer > 0 || v.fermate.length < 2 || v.fermoManuale) return;
+    // se in stazione resta merce e c'è ancora posto, finisce di caricare (al massimo mezza giornata)
+    const resta = s && s.servite[v.merce] && (s.attesa[v.merce] || 0) >= 1 && v.qta < v.cap - 0.5;
+    if (resta && v.attesa < 0.5) return;
     if (f && f.pieno && v.qta < v.cap - 0.5 && v.attesa < 120) return; // aspetta il carico pieno (al massimo 4 mesi)
     v.idx = (v.idx + 1) % v.fermate.length;
     pianifica(st, v);
   }
 
   function velocita(st, v) {
-    const mod = G.modello(v.modello), m = st.mondo, K = C.kmhPerCasellaGiorno;
+    // caselle al giorno: km/h × 24 ore ÷ km per casella
+    const mod = G.modello(v.modello), m = st.mondo, K = C.kmPerCasella / 24;
     let vel = mod.kmh / K;
     if (v.tipo === 'treno') {
       vel *= 1 - 0.3 * v.vagoni / mod.vagoni;
@@ -238,7 +258,7 @@
     } else {
       vel *= C.fattoreAerei;
       const d = Math.min(v.pos, v.lunTot - v.pos);
-      if (d < 1.5) vel *= 0.35 + 0.65 * d / 1.5; // decollo e atterraggio
+      if (d < 4) vel *= 0.3 + 0.7 * d / 4; // decollo e atterraggio
     }
     return vel;
   }
@@ -246,7 +266,7 @@
   function viaggio(st, v, dt) {
     v.pos += velocita(st, v) * dt;
     if (Math.random() < dt * 0.0012 * (1 + v.eta / 6)) {
-      v.stato = 'guasto'; v.timer = 2 + Math.random() * 3; v.guasti++;
+      v.stato = 'guasto'; v.timer = (TM.guastoOre[0] + Math.random() * (TM.guastoOre[1] - TM.guastoOre[0])) * ORA; v.guasti++;
       if (v.tipo === 'aereo') v.stato = 'viaggio'; // gli aerei non si fermano in volo
     }
     if (v.pos >= v.lunTot) { v.pos = v.lunTot; posiziona(st, v); arriva(st, v); return; }
@@ -260,7 +280,7 @@
         case 'viaggio': viaggio(st, v, dt); break;
         case 'guasto': v.timer -= dt; if (v.timer <= 0) v.stato = 'viaggio'; break;
         case 'bloccato': v.timer -= dt; if (v.timer <= 0) pianifica(st, v); break;
-        case 'fermo': if (v.fermate.length) { v.stato = 'sosta'; v.timer = 0.5; } break;
+        case 'fermo': if (v.fermate.length) { v.stato = 'sosta'; v.timer = sostaMinima(v); } break;
       }
     }
   };

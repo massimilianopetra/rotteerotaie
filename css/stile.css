@@ -42,7 +42,7 @@ tr.link:hover { background: rgba(255, 255, 255, 0.06); text-decoration: none; }
 #soldi { font-weight: 700; font-size: 16px; color: var(--verde); white-space: nowrap; }
 #soldi.rosso { color: var(--rosso); }
 #prestito { color: var(--tenue); font-size: 12px; white-space: nowrap; }
-#data { font-weight: 600; min-width: 100px; text-align: center; white-space: nowrap; }
+#data { font-weight: 600; min-width: 150px; text-align: center; white-space: nowrap; font-variant-numeric: tabular-nums; }
 #velocita { display: flex; gap: 3px; }
 #velocita button { padding: 2px 8px; }
 
@@ -50,6 +50,20 @@ tr.link:hover { background: rgba(255, 255, 255, 0.06); text-decoration: none; }
 #attrezzi { position: fixed; top: 54px; left: 10px; display: flex; flex-direction: column; gap: 5px; z-index: 5; }
 #attrezzi button { width: 46px; height: 46px; font-size: 22px; padding: 0; background: var(--pannello); }
 #attrezzi button.attivo { background: var(--accento); }
+#attrezzi button svg { width: 36px; height: 36px; display: block; margin: auto; }
+#attrezzi button .freccina { position: absolute; right: 3px; bottom: 1px; font-size: 9px; color: var(--tenue); }
+#attrezzi button { position: relative; }
+
+/* menu delle dimensioni delle stazioni ferroviarie */
+#menuStazioni { position: fixed; left: 64px; z-index: 8; width: 300px; padding: 8px; display: flex; flex-direction: column; gap: 6px;
+  background: var(--pannello); border: 1px solid var(--bordo); border-radius: 10px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45); }
+#menuStazioni .titolo { color: var(--accento); font-weight: 700; font-size: 13px; padding: 0 4px; }
+#menuStazioni button { display: flex; align-items: center; gap: 10px; text-align: left; padding: 6px 8px; }
+#menuStazioni button svg { width: 52px; height: 52px; flex: none; background: #6f8a52; border-radius: 6px; }
+#menuStazioni button .sotto { display: block; }
+#menuStazioni button.attivo .sotto { color: #4a3510; }
+#menuStazioni button:disabled { opacity: 0.45; cursor: default; }
+.icona-titolo svg { width: 26px; height: 26px; vertical-align: -6px; }
 
 #mappa { position: fixed; top: 44px; left: 0; width: 100%; height: calc(100% - 44px); display: block; touch-action: none; }
 

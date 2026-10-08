@@ -11,15 +11,49 @@
   const ui = G.ui = {
     strumento: 'info', pannello: null, trascina: null, anteprima: null, bacino: null, cursore: -1,
     selVeicolo: null, segui: false, griglia: false, velocita: 1, percorso: false, tasti: new Set(),
-    mouseSuPannello: false, ultimaVel: 1
+    mouseSuPannello: false, ultimaVel: 1, tagliaStazione: 'media'
   };
+
+  // icone delle stazioni ferroviarie (SVG 40×40): binario e banchina in basso, fabbricato sopra
+  const BINARIO_SVG = '<rect x="1" y="30" width="38" height="7" fill="#6b5136"/><rect x="1" y="31" width="38" height="1.6" fill="#d4d7db"/>' +
+    '<rect x="1" y="34.4" width="38" height="1.6" fill="#d4d7db"/><rect x="2" y="25.5" width="36" height="4" rx="1" fill="#d9d2c1"/>';
+  const ICONE_STAZIONE = {
+    fermata: BINARIO_SVG +
+      '<path d="M10 17 L20 11.5 L30 17 Z" fill="#8c5a3c"/><rect x="12" y="17" width="16" height="8.5" fill="#ead9b0"/>' +
+      '<rect x="18" y="19.5" width="4" height="6" fill="#5a3a24"/><rect x="13.5" y="19" width="3" height="3" fill="#7fb2d9"/><rect x="23.5" y="19" width="3" height="3" fill="#7fb2d9"/>' +
+      '<rect x="33" y="13" width="1.4" height="12.5" fill="#3b3b3b"/><rect x="30" y="10.5" width="7.4" height="4" rx="1" fill="#2f6db5"/>',
+    media: BINARIO_SVG +
+      '<path d="M4 15 L20 6 L36 15 Z" fill="#b04a32"/><path d="M20 6 L36 15 L20 15 Z" fill="#8f3a27"/><rect x="6" y="15" width="28" height="10.5" fill="#ead9b0"/>' +
+      '<path d="M17.5 25.5 V20.5 A2.5 2.5 0 0 1 22.5 20.5 V25.5 Z" fill="#5a3a24"/>' +
+      '<rect x="8.5" y="18" width="3.5" height="4" fill="#7fb2d9"/><rect x="13" y="18" width="3.5" height="4" fill="#7fb2d9"/>' +
+      '<rect x="23.5" y="18" width="3.5" height="4" fill="#7fb2d9"/><rect x="28" y="18" width="3.5" height="4" fill="#7fb2d9"/>' +
+      '<circle cx="20" cy="11.3" r="2.6" fill="#f7f1e0" stroke="#3a2a1a" stroke-width="0.8"/><path d="M20 11.3 V9.6 M20 11.3 H21.3" stroke="#3a2a1a" stroke-width="0.6"/>',
+    grande: BINARIO_SVG +
+      '<path d="M1.5 18 L6 13 H34 L38.5 18 Z" fill="#8f3a27"/><rect x="2.5" y="18" width="35" height="7.5" fill="#ead9b0"/>' +
+      '<path d="M12 10 L20 3.5 L28 10 Z" fill="#c95b3f"/><rect x="13" y="10" width="14" height="15.5" fill="#f1e3c0"/>' +
+      '<path d="M17.5 25.5 V21 A2.5 2.5 0 0 1 22.5 21 V25.5 Z" fill="#5a3a24"/>' +
+      '<rect x="4.5" y="20" width="3" height="3.5" fill="#7fb2d9"/><rect x="9" y="20" width="3" height="3.5" fill="#7fb2d9"/>' +
+      '<rect x="28" y="20" width="3" height="3.5" fill="#7fb2d9"/><rect x="32.5" y="20" width="3" height="3.5" fill="#7fb2d9"/>' +
+      '<circle cx="20" cy="15" r="3" fill="#f7f1e0" stroke="#3a2a1a" stroke-width="0.8"/><path d="M20 15 V13 M20 15 H21.5" stroke="#3a2a1a" stroke-width="0.6"/>',
+    centrale: BINARIO_SVG +
+      '<path d="M3 24 Q20 1 37 24 Z" fill="#a9c2d6" stroke="#5b6770" stroke-width="1"/>' +
+      '<path d="M8 24 Q20 6 32 24 M14 24 Q20 11 26 24 M20 5.5 V24" fill="none" stroke="#5b6770" stroke-width="0.6"/>' +
+      '<rect x="6" y="17" width="28" height="8.5" fill="#ead9b0"/><rect x="6" y="15.5" width="28" height="2" fill="#b04a32"/>' +
+      '<rect x="3" y="9" width="6" height="16.5" fill="#d9c79e"/><path d="M2.5 9 L6 4.5 L9.5 9 Z" fill="#5b6770"/>' +
+      '<rect x="31" y="9" width="6" height="16.5" fill="#d9c79e"/><path d="M30.5 9 L34 4.5 L37.5 9 Z" fill="#5b6770"/>' +
+      '<path d="M16.5 25.5 V21.5 A3.5 3.5 0 0 1 23.5 21.5 V25.5 Z" fill="#5a3a24"/>' +
+      '<rect x="10" y="19" width="3" height="3.5" fill="#7fb2d9"/><rect x="27" y="19" width="3" height="3.5" fill="#7fb2d9"/>' +
+      '<circle cx="20" cy="13.5" r="2.8" fill="#f7f1e0" stroke="#3a2a1a" stroke-width="0.8"/><path d="M20 13.5 V11.7 M20 13.5 H21.4" stroke="#3a2a1a" stroke-width="0.6"/>'
+  };
+  const iconaStazione = t => `<svg viewBox="0 0 40 40" aria-hidden="true">${ICONE_STAZIONE[t] || ICONE_STAZIONE.media}</svg>`;
+  G.iconaStazione = iconaStazione;
 
   const STRUMENTI = [
     { id: 'info', icona: '🔍', nome: 'Informazioni / sposta la mappa', tasto: 'I' },
     { id: 'binario', icona: '🛤️', nome: 'Costruisci ferrovia (trascina)', tasto: 'B' },
     { id: 'strada', icona: '🛣️', nome: 'Costruisci strada (trascina)', tasto: 'R' },
     { id: 'autostrada', icona: '🚧', nome: 'Costruisci autostrada (trascina)', tasto: 'U' },
-    { id: 'stazione', icona: '🚉', nome: 'Stazione ferroviaria', tasto: 'T' },
+    { id: 'stazione', icona: '🚉', nome: 'Stazione ferroviaria: clic per scegliere le dimensioni', tasto: 'T' },
     { id: 'deposito', icona: '🚏', nome: 'Autostazione (bus e camion)', tasto: 'F' },
     { id: 'aeroporto', icona: '✈️', nome: 'Aeroporto', tasto: 'A' },
     { id: 'demolisci', icona: '💥', nome: 'Demolisci', tasto: 'X' }
@@ -83,14 +117,38 @@
   };
 
   // ---------------------------------------------------------------- strumenti
+  // ---------------------------------------------------------------- menu delle dimensioni delle stazioni
+  function aggiornaPulsanteStazione() {
+    const b = document.querySelector('#attrezzi button[data-id="stazione"]');
+    if (b) b.innerHTML = iconaStazione(ui.tagliaStazione) + '<span class="freccina">▸</span>';
+  }
+  function apriMenuStazioni() {
+    const s0 = st(), menu = $('#menuStazioni'), b = document.querySelector('#attrezzi button[data-id="stazione"]');
+    const anno = s0 ? G.anno(s0) : 0;
+    let h = '<div class="titolo">Dimensioni della stazione</div>';
+    for (const k in C.taglieStazione) {
+      const t = G.defStazione('stazione', k), lb = t.lato + 2 * t.raggio, ok = anno >= t.anno;
+      h += `<button data-az="taglia" data-t="${k}" class="${k === ui.tagliaStazione ? 'attivo' : ''}" ${ok ? '' : 'disabled'}>
+        ${iconaStazione(k)}<span><b>${t.nome}</b><span class="sotto">${t.lato}×${t.lato} caselle · bacino ${lb}×${lb}<br>
+        ${G.lire(t.costo)} · manutenzione ${G.lire(t.manutenzione)} l'anno<br>carico e scarico ×${String(t.carico).replace('.', ',')}${ok ? '' : ` · dal ${t.anno}`}</span></span></button>`;
+    }
+    menu.innerHTML = h;
+    const r = b.getBoundingClientRect();
+    menu.classList.remove('nascosto'); // prima si mostra, poi si misura l'altezza
+    menu.style.top = Math.max(50, Math.min(r.top, window.innerHeight - menu.offsetHeight - 10)) + 'px';
+  }
+  const chiudiMenuStazioni = () => $('#menuStazioni').classList.add('nascosto');
+  const menuStazioniAperto = () => !$('#menuStazioni').classList.contains('nascosto');
+
   function scegliStrumento(id) {
+    if (id !== 'stazione') chiudiMenuStazioni();
     ui.strumento = id; ui.trascina = null; ui.anteprima = null; ui.bacino = null;
     if (id !== 'info') ui.percorso = false;
     document.querySelectorAll('#attrezzi button').forEach(b => b.classList.toggle('attivo', b.dataset.id === id));
     $('#suggerimento').style.display = 'none';
     const s = st();
     if (s && RETI.includes(id) && G.anno(s) < C.reti[id].anno) G.avviso(`${C.reti[id].nome}: disponibile dal ${C.reti[id].anno}`, true);
-    if (s && STAZIONI.includes(id) && G.anno(s) < C.stazioni[id].anno) G.avviso(`${C.stazioni[id].nome}: disponibile dal ${C.stazioni[id].anno}`, true);
+    if (s && STAZIONI.includes(id) && G.anno(s) < G.defStazione(id, ui.tagliaStazione).anno) G.avviso(`${C.stazioni[id].nome}: disponibile dal ${C.stazioni[id].anno}`, true);
     $('#mappa').style.cursor = id === 'info' ? 'grab' : 'crosshair';
   }
 
@@ -109,8 +167,18 @@
   const elencoMerci = o => Object.keys(o).filter(k => o[k]).map(k => pallino(k) + nomeMerce(k)).join(', ') || '—';
 
   function htmlStazione(s0, s) {
-    const def = C.stazioni[s.tipo];
-    let h = `<h3>${def.icona} ${esc(s.nome)}</h3><div class="sotto">${def.nome}</div>`;
+    const def = G.defStazione(s);
+    const icona = s.tipo === 'stazione' ? `<span class="icona-titolo">${iconaStazione(def.taglia)}</span>` : def.icona;
+    let h = `<h3>${icona} ${esc(s.nome)}</h3><div class="sotto">${G.nomeTipoStazione(s)}</div>`;
+    if (s.tipo === 'stazione') {
+      const lb = s.lato + 2 * def.raggio;
+      h += `<p><b>Dimensioni:</b> ${s.lato}×${s.lato} caselle · bacino ${lb}×${lb} · carico ×${String(def.carico).replace('.', ',')}</p>`;
+    }
+    if (!G.stazioneCollegata(s0, s)) {
+      h += `<p class="rosso">⚠ ${s.tipo === 'stazione'
+        ? 'Nessun binario passa sulla stazione: i treni non possono arrivarci. Trascina una ferrovia fin sopra una delle sue caselle.'
+        : 'Nessuna strada arriva all\'autostazione: costruiscine una fin sopra la sua casella.'}</p>`;
+    }
     h += `<p><b>Accetta:</b> ${elencoMerci(s.accetta)}</p><p><b>Fornisce:</b> ${elencoMerci(s.fornisce)}</p>`;
     h += `<p><b>Abitanti nel bacino:</b> ${G.numero(s.popBacino)}</p>`;
     const att = Object.keys(s.attesa).filter(k => s.attesa[k] >= 1);
@@ -336,7 +404,7 @@
       h += '<table class="elenco"><tr><th>Stazione</th><th>Tipo</th><th>In attesa</th></tr>';
       for (const s of s0.stazioni.filter(Boolean)) {
         const att = Object.keys(s.attesa).filter(k => s.attesa[k] >= 1).map(k => `${pallino(k)}${G.numero(s.attesa[k])}`).join(' ') || '—';
-        h += `<tr class="link" data-az="apriStazione" data-id="${s.id}" data-vai="1"><td>${esc(s.nome)}</td><td>${C.stazioni[s.tipo].nome}</td><td>${att}</td></tr>`;
+        h += `<tr class="link" data-az="apriStazione" data-id="${s.id}" data-vai="1"><td>${esc(s.nome)}</td><td>${G.nomeTipoStazione(s)}</td><td>${att}</td></tr>`;
       }
     }
     h += '</table>';
@@ -371,8 +439,11 @@
       <b>aeroporti</b> (dal 1925), compra i mezzi e porta passeggeri e merci dove servono. Ogni consegna viene pagata in base
       alla <b>distanza</b> e alla <b>velocità</b> del viaggio.</p>
       <h4>Primi passi</h4>
-      <ol><li>Con 🚉 metti una stazione in una città: il riquadro azzurro è il <b>bacino</b> da cui arrivano passeggeri e merci.</li>
-      <li>Mettine un'altra in una seconda città e collegale con 🛤️ (tieni premuto e trascina: vedi il costo prima di costruire).</li>
+      <ol><li>Clicca sul pulsante della stazione e scegli le <b>dimensioni</b> (fermata, stazione, grande, centrale), poi mettila in
+      una città: il riquadro azzurro è il <b>bacino</b> da cui arrivano passeggeri e merci. Le stazioni più grandi hanno un bacino più
+      ampio e caricano più in fretta.</li>
+      <li>Mettine un'altra in una seconda città e collegale con 🛤️ (tieni premuto e trascina: vedi il costo prima di costruire).
+      Una stazione è <b>collegata</b> quando il binario passa sopra una delle sue caselle o ci finisce: non basta passarle accanto.</li>
       <li>Clicca su una stazione e premi «Compra un treno». Poi «Aggiungi fermate» e clicca sull'altra stazione.</li></ol>
       <h4>Le catene delle merci</h4>
       <p>⛏️ Carbone + ⛰️ Ferro → 🏭 Acciaieria → Acciaio · Acciaio + 🌲 Legname → 🏗️ Fabbrica → Merci → città<br>
@@ -382,9 +453,9 @@
       <h4>Comandi</h4>
       <table class="elenco"><tr><td>Sposta la mappa</td><td>trascina col tasto destro (o sinistro con 🔍), frecce</td></tr>
       <tr><td>Zoom</td><td>rotellina, tasti + e −</td></tr>
-      <tr><td>Strumenti</td><td>I info · B ferrovia · R strada · U autostrada · T stazione · F autostazione · A aeroporto · X demolisci</td></tr>
+      <tr><td>Strumenti</td><td>I info · B ferrovia · R strada · U autostrada · T stazione (apre le dimensioni) · F autostazione · A aeroporto · X demolisci</td></tr>
       <tr><td>Finestre</td><td>V mezzi · M mondo · E finanze · H aiuto · G griglia</td></tr>
-      <tr><td>Tempo</td><td>spazio pausa · 1 2 3 velocità</td></tr>
+      <tr><td>Tempo</td><td>spazio pausa · 1 normale (1 secondo = 5 minuti) · 2 veloce (1 ora al secondo) · 3 velocissimo (1 giorno al secondo) · 4 turbo (1 settimana al secondo)</td></tr>
       <tr><td>Annulla / chiudi</td><td>Esc</td></tr></table>`, true);
   }
 
@@ -407,7 +478,19 @@
 
   // ---------------------------------------------------------------- azioni dei pulsanti
   const AZIONI = {
-    strumento: d => scegliStrumento(d.id),
+    strumento: d => {
+      if (d.id !== 'stazione') { scegliStrumento(d.id); return; }
+      // il pulsante della stazione apre (o chiude) il menu delle dimensioni
+      const aperto = menuStazioniAperto();
+      scegliStrumento('stazione');
+      if (aperto) chiudiMenuStazioni(); else apriMenuStazioni();
+    },
+    taglia: d => {
+      ui.tagliaStazione = d.t;
+      aggiornaPulsanteStazione();
+      chiudiMenuStazioni();
+      scegliStrumento('stazione');
+    },
     vel: d => impostaVelocita(+d.v),
     chiudiPannello,
     chiudiFinestra,
@@ -495,13 +578,14 @@
   }
 
   function anteprimaStazione(c, e) {
-    const s0 = st(), tipo = ui.strumento, def = C.stazioni[tipo];
-    // l'aeroporto (2×2) si centra sull'incrocio di caselle più vicino al mouse
-    const x = def.lato > 1 ? Math.round(c.wx) - 1 : c.x, y = def.lato > 1 ? Math.round(c.wy) - 1 : c.y;
-    const r = G.puoCostruireStazione(s0, tipo, x, y);
+    const s0 = st(), tipo = ui.strumento, taglia = tipo === 'stazione' ? ui.tagliaStazione : undefined;
+    const def = G.defStazione(tipo, taglia), L = def.lato;
+    // lato pari (2×2): si centra sull'incrocio di caselle più vicino al mouse; lato dispari: sulla casella
+    const x = L % 2 ? c.x - (L - 1) / 2 : Math.round(c.wx) - L / 2, y = L % 2 ? c.y - (L - 1) / 2 : Math.round(c.wy) - L / 2;
+    const r = G.puoCostruireStazione(s0, tipo, x, y, taglia);
     const ok = typeof r !== 'string' && r.costo <= s0.soldi;
-    ui.bacino = { x, y, lato: def.lato, raggio: def.raggio, ok };
-    const finta = { tipo, x, y, lato: def.lato };
+    ui.bacino = { x, y, lato: L, raggio: def.raggio, ok };
+    const finta = { tipo, taglia, x, y, lato: L };
     const b = G.calcolaBacino(s0, finta);
     let h = `<b>${def.nome}</b> · ${typeof r === 'string' ? `<span class="rosso">${r}</span>` : `<span class="${ok ? '' : 'rosso'}">${G.lire(r.costo)}</span>`}`;
     h += `<br>Accetta: ${elencoMerci(b.accetta)}<br>Fornisce: ${elencoMerci(b.fornisce)}`;
@@ -567,7 +651,8 @@
         aggiornaAnteprima(c, e);
       } else if (STAZIONI.includes(ui.strumento)) {
         const p = anteprimaStazione(c, e);
-        const r = G.costruisciStazione(s0, ui.strumento, p.x, p.y);
+        chiudiMenuStazioni();
+        const r = G.costruisciStazione(s0, ui.strumento, p.x, p.y, ui.strumento === 'stazione' ? ui.tagliaStazione : undefined);
         if (typeof r === 'string') G.avviso(r, true);
         else { G.avviso(`Costruita: ${r.nome}`); ui.apriPannello('stazione', r.id); }
       } else if (ui.strumento === 'demolisci') {
@@ -642,7 +727,8 @@
       const k = e.key;
       if (k.startsWith('Arrow')) { ui.tasti.add(k); e.preventDefault(); return; }
       if (k === 'Escape') {
-        if (ui.trascina) { ui.trascina = null; ui.anteprima = null; }
+        if (menuStazioniAperto()) chiudiMenuStazioni();
+        else if (ui.trascina) { ui.trascina = null; ui.anteprima = null; }
         else if (ui.finestra) chiudiFinestra();
         else if (ui.percorso) { ui.percorso = false; disegnaPannello(); }
         else if (ui.strumento !== 'info') scegliStrumento('info');
@@ -651,11 +737,11 @@
       }
       if (ui.finestra) return;
       if (k === ' ') { impostaVelocita(ui.velocita ? 0 : ui.ultimaVel); e.preventDefault(); return; }
-      if (k === '1' || k === '2' || k === '3') { impostaVelocita(+k); return; }
+      if (k === '1' || k === '2' || k === '3' || k === '4') { impostaVelocita(+k); return; }
       if (k === '+') { zoom(1.25); return; }
       if (k === '-') { zoom(0.8); return; }
       const t = STRUMENTI.find(s => s.tasto.toLowerCase() === k.toLowerCase());
-      if (t) { scegliStrumento(t.id); return; }
+      if (t) { AZIONI.strumento({ id: t.id }); return; }
       const f = { v: 'veicoli', m: 'mondo', e: 'finanze', h: 'aiuto' }[k.toLowerCase()];
       if (f) { AZIONI.finestra({ f }); return; }
       if (k.toLowerCase() === 'g') ui.griglia = !ui.griglia;
@@ -667,9 +753,17 @@
   // ---------------------------------------------------------------- avvio
   ui.prepara = function () {
     $('#attrezzi').innerHTML = STRUMENTI.map(s => `<button data-az="strumento" data-id="${s.id}" title="${s.nome} (${s.tasto})">${s.icona}</button>`).join('');
+    aggiornaPulsanteStazione();
+    // il menu delle dimensioni si chiude cliccando altrove
+    // (un clic sulla mappa col menu aperto lo chiude soltanto, senza costruire)
+    document.addEventListener('pointerdown', e => {
+      if (!menuStazioniAperto() || e.target.closest('#menuStazioni, #attrezzi button[data-id="stazione"]')) return;
+      chiudiMenuStazioni();
+      if (e.target.id === 'mappa' && e.button === 0) e.stopPropagation();
+    }, true);
     document.addEventListener('click', e => {
       const el = e.target.closest('[data-az]');
-      if (!el || el.tagName === 'INPUT') return;
+      if (!el || el.tagName === 'INPUT' || el.disabled) return;
       AZIONI[el.dataset.az](el.dataset, el);
     });
     document.addEventListener('change', e => {
@@ -693,7 +787,7 @@
       const soldi = $('#soldi');
       soldi.textContent = G.lire(s0.soldi); soldi.classList.toggle('rosso', s0.soldi < 0);
       $('#prestito').textContent = s0.prestito ? 'debito ' + G.lire(s0.prestito) : '';
-      $('#data').textContent = G.testoData(s0);
+      $('#data').textContent = G.testoData(s0) + ' · ' + G.testoOra(s0);
     }, 250);
     setInterval(() => { if (ui.pannello && !ui.mouseSuPannello) disegnaPannello(); }, 1000);
   };

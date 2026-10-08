@@ -33,6 +33,11 @@ il numero di città e il **seme** del mondo (stesso seme = stesso mondo).
 - **Mezzi storici** che compaiono anno per anno: dalla locomotiva a vapore "Leopolda" all'ETR 500,
   dalla diligenza a cavalli al pullman Gran Turismo, dal Caproni Ca.97 all'Airbus A320.
   Le autostrade arrivano nel 1955, gli aeroporti nel 1925.
+- **Tempo realistico**: a velocità normale un secondo vero è 5 minuti di gioco e i mezzi viaggiano alla
+  loro velocità vera (una casella è un chilometro): un treno a vapore fa 40 km in poco più di un'ora.
+  Per far passare in fretta mesi e anni c'è l'avanti veloce: 1 ora, 1 giorno o 1 settimana al secondo.
+- **Stazioni ferroviarie di quattro dimensioni**: fermata, stazione, stazione grande (2×2) e stazione centrale
+  (3×3, dal 1860). Le più grandi hanno un bacino più ampio e caricano e scaricano più in fretta.
 - **Economia**: ogni consegna è pagata in base alla distanza e alla rapidità; ci sono costi di esercizio,
   manutenzione delle linee, guasti dei mezzi vecchi, prestiti con interesse e il bilancio di fine anno.
 - **Salvataggio** nel browser (anche automatico ogni 1° gennaio).
@@ -43,17 +48,19 @@ il numero di città e il **seme** del mondo (stesso seme = stesso mondo).
 |---|---|
 | Spostare la mappa | trascinare col tasto destro (o sinistro con 🔍), frecce |
 | Zoom | rotellina, tasti `+` e `−` |
-| Strumenti | `I` info · `B` ferrovia · `R` strada · `U` autostrada · `T` stazione · `F` autostazione · `A` aeroporto · `X` demolisci |
+| Strumenti | `I` info · `B` ferrovia · `R` strada · `U` autostrada · `T` stazione (apre il menu delle dimensioni) · `F` autostazione · `A` aeroporto · `X` demolisci |
 | Finestre | `V` mezzi · `M` mondo · `E` finanze · `H` aiuto · `G` griglia |
-| Tempo | `spazio` pausa · `1` `2` `3` velocità |
+| Tempo | `spazio` pausa · `1` normale (1 s = 5 minuti) · `2` veloce (1 ora al secondo) · `3` velocissimo (1 giorno) · `4` turbo (1 settimana) |
 | Annulla / chiudi | `Esc` |
 
 Per costruire una linea: tieni premuto il tasto sinistro e trascina; prima di lasciare vedi il tracciato e il costo.
 
 ## Primi passi
 
-1. Con 🚉 metti una stazione in una città (il riquadro azzurro è il bacino da cui arrivano passeggeri e merci).
-2. Mettine un'altra in una seconda città e collegale con 🛤️.
+1. Clicca sul pulsante della stazione, scegli le dimensioni e mettila in una città (il riquadro azzurro è il bacino
+   da cui arrivano passeggeri e merci).
+2. Mettine un'altra in una seconda città e collegale con 🛤️. Il binario deve passare **sopra** una casella della
+   stazione (o finirci): passarle accanto non basta.
 3. Clicca su una stazione → «Compra un treno» → «Aggiungi fermate» → clicca sull'altra stazione.
 
 ## Modificare il gioco

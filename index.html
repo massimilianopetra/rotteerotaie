@@ -18,9 +18,10 @@
     <span id="data"></span>
     <span id="velocita">
       <button data-az="vel" data-v="0" title="Pausa (spazio)">⏸</button>
-      <button data-az="vel" data-v="1" title="Normale (1)">▶</button>
-      <button data-az="vel" data-v="2" title="Veloce (2)">⏩</button>
-      <button data-az="vel" data-v="3" title="Velocissimo (3)">⏭</button>
+      <button data-az="vel" data-v="1" title="Normale: 1 secondo = 5 minuti (1)">▶</button>
+      <button data-az="vel" data-v="2" title="Veloce: 1 secondo = 1 ora (2)">⏩</button>
+      <button data-az="vel" data-v="3" title="Velocissimo: 1 secondo = 1 giorno (3)">⏭</button>
+      <button data-az="vel" data-v="4" title="Turbo: 1 secondo = 1 settimana (4)">🚀</button>
     </span>
     <span class="spazio"></span>
     <button data-az="finestra" data-f="veicoli" title="Mezzi (V)">🚂 Mezzi</button>
@@ -31,6 +32,7 @@
   </header>
 
   <nav id="attrezzi"></nav>
+  <div id="menuStazioni" class="nascosto"></div>
   <canvas id="mappa"></canvas>
   <aside id="pannello" class="nascosto"></aside>
   <div id="notizie"></div>

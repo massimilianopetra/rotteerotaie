@@ -19,29 +19,13 @@
   }
   window.addEventListener('resize', ridimensiona);
 
-  // ---------------------------------------------------------------- tempo
-  function avanza(st, dt) {
-    G.aggiornaVeicoli(st, dt);
-    st.giorno += dt;
-    while (Math.floor(st.giorno) > st.giornoInt) {
-      st.giornoInt++;
-      const prima = G.data(st, st.giornoInt - 1), ora = G.data(st, st.giornoInt);
-      G.giornaliero(st);
-      if (ora.mese !== prima.mese) G.mensile(st);
-      if (ora.anno !== prima.anno) G.annuale(st, ora.anno);
-    }
-  }
-  G.avanza = function (st, giorni) { // usato anche per le prove
-    while (giorni > 0) { const p = Math.min(giorni, 0.25); avanza(st, p); giorni -= p; }
-  };
-
   let ultimo = performance.now();
   function ciclo(ora) {
     const dtReale = Math.min(0.1, (ora - ultimo) / 1000);
     ultimo = ora;
     const st = G.st;
     if (st) {
-      G.avanza(st, C.velocita[G.ui.velocita] * dtReale);
+      G.avanza(st, C.velocita[G.ui.velocita] / 1440 * dtReale); // velocita: minuti di gioco al secondo
       for (const e of st.effetti) e.t += dtReale;
       st.effetti = st.effetti.filter(e => e.t < 2.5);
       G.ui.aggiornaCamera(dtReale);
@@ -86,7 +70,7 @@
     const griglie = {};
     for (const k of GRIGLIE) griglie[k] = inBase64(st.mondo[k]);
     const stato = {};
-    for (const k of ['citta', 'industrie', 'stazioni', 'soldi', 'prestito', 'giorno', 'giornoInt', 'versioneRete',
+    for (const k of ['citta', 'industrie', 'stazioni', 'soldi', 'prestito', 'giorno', 'giornoInt', 'oraInt', 'versioneRete',
       'conti', 'notizie', 'contatori', 'valoreInfra', 'mesiInRosso', 'industrieIniziali']) stato[k] = st[k];
     stato.veicoli = st.veicoli.map(v => Object.assign({}, v, { punti: null, lun: null, caselle: null }));
     try {
@@ -109,6 +93,7 @@
     const m = G.generaTerreno(dati.opz);
     for (const k of GRIGLIE) m[k] = daBase64(dati.griglie[k], m[k].constructor);
     const st = Object.assign(G.statoVuoto(dati.opz, m), dati.stato);
+    if (dati.stato.oraInt === undefined) st.oraInt = Math.floor(st.giorno * 24);
     avvia(st);
     G.riprendiVeicoli(st);
     return null;

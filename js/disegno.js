@@ -204,17 +204,138 @@
     }
   }
 
+  // ---------------------------------------------------------------- stazioni ferroviarie
+  // piazzale e banchine sotto i binari; sopra i binari pensiline e fabbricato viaggiatori
+  function strisceBanchina(V, i, larg, dist, colore) {
+    const { m, ts, ox, oy, ctx } = V, mk = m.mBin[i];
+    const cx = ox + (i % m.W + 0.5) * ts, cy = oy + (((i / m.W) | 0) + 0.5) * ts;
+    ctx.strokeStyle = colore; ctx.lineWidth = ts * larg; ctx.lineCap = 'butt';
+    ctx.beginPath();
+    for (let d = 0; d < 8; d++) if ((mk >> d) & 1) {
+      const dx = G.DX[d], dy = G.DY[d], l = Math.hypot(dx, dy), nx = -dy / l * ts * dist, ny = dx / l * ts * dist;
+      for (const sgn of [1, -1]) { ctx.moveTo(cx + sgn * nx, cy + sgn * ny); ctx.lineTo(cx + sgn * nx + dx * ts * 0.5, cy + sgn * ny + dy * ts * 0.5); }
+    }
+    ctx.stroke();
+  }
+
+  function disegnaBasiStazioni(st, V) {
+    const { m, ts, ox, oy, ctx } = V;
+    if (ts < 6) return;
+    for (const s of st.stazioni) {
+      if (!s || s.tipo !== 'stazione' || !visibile(V, s.x, s.y, s.lato)) continue;
+      ctx.fillStyle = '#9d978a';
+      ctx.fillRect(ox + s.x * ts, oy + s.y * ts, s.lato * ts, s.lato * ts);
+      for (const i of G.caselleStazione(st, s)) if (m.mBin[i]) strisceBanchina(V, i, 0.2, 0.33, '#d9d2c1');
+    }
+  }
+
+  function tetto(ctx, x, y, w, h, colore, scuro) {
+    // tetto a padiglione visto dall'alto: due falde e il colmo lungo il lato più lungo
+    ctx.fillStyle = colore; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = scuro;
+    if (w >= h) ctx.fillRect(x, y + h / 2, w, h / 2); else ctx.fillRect(x + w / 2, y, w / 2, h);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    if (w >= h) { ctx.moveTo(x + h / 2, y + h / 2); ctx.lineTo(x + w - h / 2, y + h / 2); }
+    else { ctx.moveTo(x + w / 2, y + w / 2); ctx.lineTo(x + w / 2, y + h - w / 2); }
+    ctx.stroke();
+  }
+
+  function orologio(ctx, cx, cy, r) {
+    ctx.fillStyle = '#f7f1e0'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = Math.max(1, r * 0.25); ctx.stroke();
+    ctx.lineWidth = Math.max(1, r * 0.18); ctx.beginPath();
+    ctx.moveTo(cx, cy); ctx.lineTo(cx, cy - r * 0.7); ctx.moveTo(cx, cy); ctx.lineTo(cx + r * 0.5, cy); ctx.stroke();
+  }
+
+  // fabbricato viaggiatori nel rettangolo (in pixel); taglia: fermata, media, grande, centrale
+  function fabbricato(ctx, x, y, w, h, taglia, ts) {
+    const b = Math.min(w, h) * 0.1;
+    x += b; y += b; w -= 2 * b; h -= 2 * b;
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(x + ts * 0.07, y + ts * 0.09, w, h);
+    if (taglia === 'fermata') { // casello con tettoia
+      tetto(ctx, x, y, w, h, '#8c5a3c', '#6f4630');
+      return;
+    }
+    ctx.fillStyle = '#ead9b0'; ctx.fillRect(x, y, w, h);
+    const r = Math.min(w, h) * 0.12;
+    tetto(ctx, x + r, y + r, w - 2 * r, h - 2 * r, '#b04a32', '#8f3a27');
+    ctx.strokeStyle = '#4a3a28'; ctx.lineWidth = Math.max(1, ts * 0.04); ctx.strokeRect(x, y, w, h);
+    if (taglia === 'grande' || taglia === 'centrale') { // corpo centrale più alto con l'orologio
+      const cw = Math.min(w, h) * 0.55, cx = x + w / 2, cy = y + h / 2;
+      ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(cx - cw / 2 + ts * 0.05, cy - cw / 2 + ts * 0.06, cw, cw);
+      tetto(ctx, cx - cw / 2, cy - cw / 2, cw, cw, '#c95b3f', '#a3462f');
+      if (ts >= 12) orologio(ctx, cx, cy, cw * 0.28);
+    }
+    if (taglia === 'centrale' && ts >= 8) { // quattro torrette agli angoli
+      const t = Math.min(w, h) * 0.22;
+      for (const [tx, ty] of [[x, y], [x + w - t, y], [x, y + h - t], [x + w - t, y + h - t]]) {
+        ctx.fillStyle = '#5b6770'; ctx.fillRect(tx, ty, t, t);
+        ctx.fillStyle = '#7f8c96'; ctx.fillRect(tx, ty, t, t / 2);
+      }
+    } else if (taglia === 'media' && ts >= 14) orologio(ctx, x + w / 2, y + h / 2, Math.min(w, h) * 0.16);
+  }
+
+  function disegnaStazioneFerroviaria(st, V, s) {
+    const { m, ts, ox, oy, ctx } = V, taglia = s.taglia || 'media';
+    const x = ox + s.x * ts, y = oy + s.y * ts, L = s.lato * ts;
+    if (ts < 6) { // da lontano: un segno semplice
+      ctx.fillStyle = '#ead9b0'; ctx.fillRect(x, y, L, L);
+      ctx.fillStyle = '#b04a32'; ctx.fillRect(x, y, L, L * 0.45);
+      return;
+    }
+    const caselle = G.caselleStazione(st, s), libere = caselle.filter(i => !m.mBin[i]);
+    // pensiline sopra le banchine (la fermata ha solo il casello)
+    if (taglia !== 'fermata') for (const i of caselle) if (m.mBin[i]) strisceBanchina(V, i, 0.14, 0.34, 'rgba(120,52,36,0.9)');
+    if (s.lato === 1) {
+      const mk = m.mBin[caselle[0]];
+      if (!mk) { fabbricato(ctx, x, y, ts, ts, taglia, ts); return; }
+      // il fabbricato si mette di fianco al binario: bit 2 e 6 = est-ovest, bit 0 e 4 = nord-sud
+      const oriz = (mk & 0x44) && !(mk & 0x11), vert = (mk & 0x11) && !(mk & 0x44);
+      const p = taglia === 'fermata' ? 0.28 : 0.34;
+      if (oriz) fabbricato(ctx, x + ts * 0.08, y - ts * 0.04, ts * 0.84, ts * p, taglia, ts);
+      else if (vert) fabbricato(ctx, x - ts * 0.04, y + ts * 0.08, ts * p, ts * 0.84, taglia, ts);
+      else {
+        // binari in diagonale o incroci: un piccolo edificio in un angolo libero
+        const q = ts * 0.4, ne = mk & 0x22; // diagonale NE-SO: liberi gli angoli NO e SE
+        fabbricato(ctx, ne ? x : x + ts - q, y, q, q, taglia, ts);
+      }
+      return;
+    }
+    if (!libere.length) return;
+    // le caselle senza binari si dividono in blocchi contigui: il blocco più grande è il fabbricato principale,
+    // gli altri sono ali più semplici; un blocco rettangolare diventa un solo edificio
+    const blocchi = [], visto = new Set();
+    for (const i of libere) {
+      if (visto.has(i)) continue;
+      const b = [], coda = [i];
+      visto.add(i);
+      while (coda.length) {
+        const k = coda.pop();
+        b.push(k);
+        for (const j of [k - 1, k + 1, k - m.W, k + m.W]) {
+          if (libere.includes(j) && !visto.has(j) && (Math.abs(j - k) !== 1 || ((j / m.W) | 0) === ((k / m.W) | 0))) { visto.add(j); coda.push(j); }
+        }
+      }
+      blocchi.push(b);
+    }
+    blocchi.sort((a, b) => b.length - a.length);
+    blocchi.forEach((b, n) => {
+      const tb = n === 0 ? taglia : 'media2';
+      const xs = b.map(i => i % m.W), ys = b.map(i => (i / m.W) | 0);
+      const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+      if ((x1 - x0 + 1) * (y1 - y0 + 1) === b.length) fabbricato(ctx, ox + x0 * ts, oy + y0 * ts, (x1 - x0 + 1) * ts, (y1 - y0 + 1) * ts, tb, ts);
+      else for (const i of b) fabbricato(ctx, ox + (i % m.W) * ts, oy + ((i / m.W) | 0) * ts, ts, ts, 'media2', ts);
+    });
+  }
+
   function disegnaStazioni(st, V, ui) {
     const { ts, ox, oy, ctx } = V;
     for (const s of st.stazioni) {
       if (!s || !visibile(V, s.x, s.y, s.lato)) continue;
       const x = ox + s.x * ts, y = oy + s.y * ts;
       if (s.tipo === 'stazione') {
-        const b = ts * 0.1, l = ts - 2 * b;
-        ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(x + b + ts * 0.08, y + b + ts * 0.1, l, l);
-        ctx.fillStyle = '#ead9b0'; ctx.fillRect(x + b, y + b, l, l);
-        ctx.fillStyle = '#a8442f'; ctx.fillRect(x + b, y + b, l, l * 0.42);
-        ctx.strokeStyle = '#4a3a28'; ctx.lineWidth = Math.max(1, ts * 0.05); ctx.strokeRect(x + b, y + b, l, l);
+        disegnaStazioneFerroviaria(st, V, s);
       } else if (s.tipo === 'deposito') {
         const b = ts * 0.2, l = ts - 2 * b;
         ctx.fillStyle = '#2f6db5'; ctx.fillRect(x + b, y + b, l, l);
@@ -340,7 +461,7 @@
     let b = ui.bacino;
     if (!b && ui.pannello && ui.pannello.tipo === 'stazione') {
       const s = st.stazioni[ui.pannello.id];
-      if (s) b = { x: s.x, y: s.y, lato: s.lato, raggio: C.stazioni[s.tipo].raggio, ok: true, esistente: true };
+      if (s) b = { x: s.x, y: s.y, lato: s.lato, raggio: G.defStazione(s).raggio, ok: true, esistente: true };
     }
     if (b) {
       const r = b.raggio;
@@ -417,6 +538,7 @@
     }
     disegnaPonti(V);
     disegnaStrade(V);
+    disegnaBasiStazioni(st, V);
     disegnaBinari(V);
     disegnaCase(V);
     disegnaIndustrie(st, V);
