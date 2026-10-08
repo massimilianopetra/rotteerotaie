@@ -38,6 +38,12 @@ il numero di città e il **seme** del mondo (stesso seme = stesso mondo).
   Per far passare in fretta mesi e anni c'è l'avanti veloce: 1 ora, 1 giorno o 1 settimana al secondo.
 - **Stazioni ferroviarie di quattro dimensioni**: fermata, stazione, stazione grande (2×2) e stazione centrale
   (3×3, dal 1860). Le più grandi hanno un bacino più ampio e caricano e scaricano più in fretta.
+- **Binari occupati e segnali automatici**: su un tratto di binario passa un treno alla volta. I treni aspettano
+  in stazione o prima di uno scambio, scelgono da soli un binario parallelo libero e si incrociano nei binari
+  d'incrocio (raddoppi), sulle linee doppie e nelle stazioni grandi. Se due treni si bloccano a vicenda una notizia
+  avvisa il giocatore, che può rimandarne uno indietro con «↩ Torna indietro».
+- **Attesa nelle fermate**: un mezzo può partire appena carico, attendere il pieno oppure attendere fino a un certo
+  tempo (giorni, ore, minuti) per riempirsi di più.
 - **Economia**: ogni consegna è pagata in base alla distanza e alla rapidità; ci sono costi di esercizio,
   manutenzione delle linee, guasti dei mezzi vecchi, prestiti con interesse e il bilancio di fine anno.
 - **Salvataggio** nel browser (anche automatico ogni 1° gennaio).
@@ -62,6 +68,13 @@ Per costruire una linea: tieni premuto il tasto sinistro e trascina; prima di la
 2. Mettine un'altra in una seconda città e collegale con 🛤️. Il binario deve passare **sopra** una casella della
    stazione (o finirci): passarle accanto non basta.
 3. Clicca su una stazione → «Compra un treno» → «Aggiungi fermate» → clicca sull'altra stazione.
+
+## Versione e build
+
+La finestra **ℹ️ Informazioni** (e il menu iniziale) mostrano autore, versione e build, per esempio
+«v1.1.0 · build 7 (a1b2c3d)». I dati stanno in `js/versione.js`, che non è in git: lo genera
+`npm run versione` (versione da `package.json`, numero di commit, commit e data) e parte da solo prima di
+`npm run deploy`. Senza quel file il gioco funziona lo stesso e dice «versione di sviluppo».
 
 ## Modificare il gioco
 

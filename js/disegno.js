@@ -417,6 +417,21 @@
     }
   }
 
+  // segnale rosso davanti ai treni che aspettano che il binario si liberi
+  function disegnaSegnali(st, V) {
+    const { m, ts, ox, oy, ctx } = V;
+    if (ts < 8) return;
+    for (const v of st.veicoli) {
+      if (v.tipo !== 'treno' || v.stato !== 'viaggio' || !v.bloccatoDa || !v.caselle) continue;
+      const i = v.caselle[Math.min(v.limite + 1, v.caselle.length - 1)], j = v.caselle[v.limite];
+      // a metà fra la testa del treno e la casella occupata, spostato di lato
+      const x = ox + ((i % m.W + j % m.W) / 2 + 0.5) * ts, y = oy + ((((i / m.W) | 0) + ((j / m.W) | 0)) / 2 + 0.5) * ts;
+      const r = Math.max(3, ts * 0.13), dx = -Math.sin(v.ang) * ts * 0.32, dy = Math.cos(v.ang) * ts * 0.32;
+      ctx.fillStyle = '#1b1b1b'; ctx.fillRect(x + dx - r * 1.3, y + dy - r * 1.3, r * 2.6, r * 2.6);
+      ctx.fillStyle = '#ff3b30'; ctx.beginPath(); ctx.arc(x + dx, y + dy, r, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
   // ---------------------------------------------------------------- scritte e sovrapposizioni
   function etichetta(ctx, testo, x, y, dim, colore) {
     ctx.font = `bold ${Math.round(dim)}px "Segoe UI", Arial, sans-serif`;
@@ -488,6 +503,11 @@
         ctx.fillText(String(k + 1), ox + c.x * ts, oy + c.y * ts - ts * 0.7);
       });
     }
+    // binario prenotato dal treno selezionato (davanti alla testa)
+    if (v && v.tipo === 'treno' && v.pr && ts >= 6) {
+      ctx.fillStyle = 'rgba(255,170,40,0.28)';
+      for (const e of v.pr) if (e.d > v.odo + 0.3) ctx.fillRect(ox + (e.i % m.W) * ts, oy + ((e.i / m.W) | 0) * ts, ts, ts);
+    }
     // anteprima del tracciato
     const a = ui.anteprima;
     if (a && a.caselle) {
@@ -545,6 +565,7 @@
     disegnaStazioni(st, V, ui);
     disegnaSovrapposizioni(st, V, ui);
     disegnaVeicoli(st, V, ui);
+    disegnaSegnali(st, V);
     disegnaEtichette(st, V);
     disegnaEffetti(st, V);
   };
