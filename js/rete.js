@@ -313,9 +313,9 @@
     return caselle;
   }
 
-  // Galleria scavata dal giocatore: dritta (una linea di caselle da a a b) e in piano, alla quota dell'imbocco a.
-  // Le caselle in mezzo devono stare sotto il terreno (almeno sogliaMetri di roccia sopra) e l'uscita b più o meno
-  // alla stessa quota (entro sogliaMetri). Restituisce un tracciato come cercaTracciato; se non si può,
+  // Galleria scavata dal giocatore: dritta (una linea di caselle da a a b), dalla quota dell'imbocco a a quella
+  // dell'uscita b in pendenza costante, al massimo quella della rete (35‰ ferrovia, 45‰ autostrada). Le caselle in
+  // mezzo devono stare sotto il terreno (almeno sogliaMetri di roccia sopra). Restituisce un tracciato come cercaTracciato; se non si può,
   // tr.impossibile dice perché e tr.blocchi sono le caselle da segnare in rosso.
   // rete: 'binario' (predefinita) o 'autostrada'
   G.cercaGalleria = function (st, a, b, rete) {
@@ -338,27 +338,32 @@
     }
     if (caselle.length < 3) return no('Trascina dall\'imbocco fino all\'uscita dall\'altra parte del monte: la galleria è lunga almeno 3 caselle', [], caselle);
     if (mb) return no('Non si esce qui: ' + mb, [b], caselle);
-    const quota = mask[a] ? G.quotaRete(st, a, rete) : Hm[a], n = caselle.length, qTesto = G.numero(Math.round(quota)) + ' m';
-    // in mezzo: tutto sotto il terreno, senza incrociare la stessa rete o stazioni
-    const scoperte = [], occupate = [];
-    for (let k = 1; k < n - 1; k++) {
-      const i = caselle[k];
-      if (mask[i] || m.occ[i] === OCC.STAZIONE) occupate.push(i);
-      else if (Hm[i] < quota + O.sogliaMetri) scoperte.push(i);
-    }
+    const n = caselle.length;
+    // in mezzo: niente stessa rete né stazioni
+    const occupate = caselle.slice(1, -1).filter(i => mask[i] || m.occ[i] === OCC.STAZIONE);
     if (occupate.length) return no('La galleria incrocerebbe ' + (rete === 'binario' ? 'un binario' : 'una strada') + ' o una stazione: falla partire o arrivare lì, oppure passa altrove', occupate, caselle);
+    // la galleria va in linea retta dalla quota dell'imbocco a quella dell'uscita, al massimo con la pendenza della rete
+    const qa = mask[a] ? G.quotaRete(st, a, rete) : Hm[a], qb = mask[b] ? G.quotaRete(st, b, rete) : Hm[b];
+    const dist = new Float64Array(n);
+    for (let k = 1; k < n; k++) dist[k] = dist[k - 1] + km * 1000 * LUN[G.direzione(m, caselle[k - 1], caselle[k])];
+    const pend = Math.abs(qb - qa) / dist[n - 1] * 1000, pmax = O.pendenzaMax[rete];
+    if (pend > pmax + 0.5) {
+      return no('Troppo ripida: fra imbocco (' + G.numero(Math.round(qa)) + ' m) e uscita (' + G.numero(Math.round(qb)) + ' m) ci sono ' +
+        G.numero(Math.round(Math.abs(qb - qa))) + ' m su ' + G.numero(Math.round(dist[n - 1] / 100) / 10) + ' km, cioè ' + Math.round(pend) +
+        '‰: il limite è ' + pmax + '‰. Allungala, oppure fai partire l\'imbocco ' + (qb > qa ? 'più in alto' : 'più in basso') + '.', [b], caselle);
+    }
+    const quote = new Float64Array(n);
+    for (let k = 0; k < n; k++) quote[k] = qa + (qb - qa) * dist[k] / dist[n - 1];
+    // e deve restare sotto il terreno: almeno sogliaMetri di roccia sopra
+    const scoperte = [];
+    // (vicino agli imbocchi basta stare sotto il terreno: è il tratto di galleria artificiale)
+    for (let k = 1; k < n - 1; k++) if (Hm[caselle[k]] < quote[k] + (k === 1 || k === n - 2 ? 0 : O.sogliaMetri)) scoperte.push(caselle[k]);
     if (scoperte.length) {
       return no('La galleria uscirebbe allo scoperto: nelle caselle in rosso il terreno non sta almeno ' + O.sogliaMetri +
-        ' m sopra la galleria (' + qTesto + '). Cambia direzione o fermati prima.', scoperte, caselle);
+        ' m sopra la galleria. Cambia direzione, fermati prima, oppure spezzala in due gallerie con un tratto all’aperto nella valle.', scoperte, caselle);
     }
-    const qb = mask[b] ? G.quotaRete(st, b, rete) : Hm[b], salto = Math.round(qb - quota);
-    if (Math.abs(salto) > O.sogliaMetri) {
-      return no('L\'uscita è ' + G.numero(Math.abs(salto)) + ' m più ' + (salto > 0 ? 'in alto' : 'in basso') + ' della galleria (' + qTesto +
-        '): la galleria è in piano, quindi l\'uscita deve stare alla stessa quota (entro ' + O.sogliaMetri + ' m). ' +
-        (salto > 0 ? 'Allungala fino a dove il monte riscende.' : 'Accorciala, oppure fai partire l\'imbocco più in basso.'), [b], caselle);
-    }
-    const prezzo = C.reti[rete].costo * km, quote = new Float64Array(n).fill(quota), opere = new Uint8Array(n), costi = new Float64Array(n);
-    const r = { quote, opere, costi, costo: 0, pendenza: 0, gallerie: 1, kmGallerie: 0, viadotti: 0, kmViadotti: 0, scavo: 0, ripidi: [] };
+    const prezzo = C.reti[rete].costo * km, opere = new Uint8Array(n), costi = new Float64Array(n), quota = qa;
+    const r = { quote, opere, costi, costo: 0, pendenza: pend, gallerie: 1, kmGallerie: 0, viadotti: 0, kmViadotti: 0, scavo: 0, ripidi: [], quotaUscita: qb };
     for (let k = 0; k < n; k++) {
       const i = caselle[k];
       if (k === 0 || k === n - 1) costi[k] = G.costoCasella(st, i, rete); // gli imbocchi sono in superficie

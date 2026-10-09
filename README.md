@@ -152,9 +152,10 @@ ferrovia, **70‰** la strada e **45‰** l'autostrada: il gioco calcola da solo
 finché può. Dove passa più di 25 m **sopra** il terreno costruisce un **viadotto** (×6 il costo al km della rete); gli
 scarti minori sono trincee e rilevati pagati a metro. Dove dovrebbe passare più di 25 m **sotto** il terreno la **ferrovia
 (e l'autostrada) non si costruisce** (le caselle troppo ripide diventano rosse): la galleria la scava il giocatore con **🚇 Galleria**, la
-seconda voce del menu della ferrovia (tasto `B`) o dell'autostrada (tasto `U`). La galleria è **dritta e in piano** alla quota dell'imbocco: si trascina
-dall'imbocco all'uscita dall'altra parte del monte, sopra deve esserci sempre almeno 25 m di monte e l'uscita deve stare
-alla stessa quota (±25 m); costa ×10. Le strade normali invece fanno ancora le gallerie da sole. L'anteprima mostra viadotti e
+seconda voce del menu della ferrovia (tasto `B`) o dell'autostrada (tasto `U`). La galleria è **dritta** e va dalla quota dell'imbocco a quella dell'uscita,
+salendo o scendendo al massimo con la pendenza della rete (35‰ ferrovia, 45‰ autostrada): si trascina dall'imbocco
+all'uscita dall'altra parte del monte e sopra deve esserci almeno 25 m di monte (vicino agli imbocchi basta stare sotto
+il terreno); costa ×10. Le strade normali invece fanno ancora le gallerie da sole. L'anteprima mostra viadotti e
 pendenza massima, e la ricerca del tracciato gira attorno ai monti quando può. I treni **rallentano in salita**: il vapore pieno al 35‰ va a circa metà velocità, elettriche
 e diesel reggono il doppio, i treni corti salgono meglio. Sulla mappa le gallerie sono tratteggiate con gli imbocchi,
 i viadotti hanno impalcato e piloni. Esempi sull'Italia: Milano–Torino tutta in pianura; Genova–Alessandria con una
