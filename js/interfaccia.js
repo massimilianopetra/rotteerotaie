@@ -112,18 +112,19 @@
     if (sx === undefined) { sx = cv.clientWidth / 2; sy = cv.clientHeight / 2; }
     // il punto sotto il mouse si calcola dalla camera, non dall'ultimo fotogramma disegnato:
     // con più scatti di rotellina fra due fotogrammi la vista altrimenti scivolerebbe via
-    const p = { x: D.cam.x + (sx - cv.clientWidth / 2) / D.cam.ts, y: D.cam.y + (sy - cv.clientHeight / 2) / D.cam.ts };
+    // (G.deltaMondo vale anche nella vista 3D, girata o no)
+    const d0 = G.deltaMondo(sx - cv.clientWidth / 2, sy - cv.clientHeight / 2), p = { x: D.cam.x + d0.x, y: D.cam.y + d0.y };
     D.cam.ts = Math.max(3, Math.min(48, D.cam.ts * f));
-    D.cam.x = p.x - (sx - cv.clientWidth / 2) / D.cam.ts;
-    D.cam.y = p.y - (sy - cv.clientHeight / 2) / D.cam.ts;
+    const d1 = G.deltaMondo(sx - cv.clientWidth / 2, sy - cv.clientHeight / 2);
+    D.cam.x = p.x - d1.x;
+    D.cam.y = p.y - d1.y;
     limitaCamera();
   }
   ui.aggiornaCamera = function (dt) {
-    const v = 700 * dt / D.cam.ts;
-    if (ui.tasti.has('ArrowLeft')) D.cam.x -= v;
-    if (ui.tasti.has('ArrowRight')) D.cam.x += v;
-    if (ui.tasti.has('ArrowUp')) D.cam.y -= v;
-    if (ui.tasti.has('ArrowDown')) D.cam.y += v;
+    // le frecce spostano la vista sullo schermo (nella vista 3D le direzioni del mondo sono di sbieco)
+    const v = 700 * dt, sx = (ui.tasti.has('ArrowRight') ? v : 0) - (ui.tasti.has('ArrowLeft') ? v : 0);
+    const sy = (ui.tasti.has('ArrowDown') ? v : 0) - (ui.tasti.has('ArrowUp') ? v : 0);
+    if (sx || sy) { const d = G.deltaMondo(sx, sy); D.cam.x += d.x; D.cam.y += d.y; }
     if (ui.segui && ui.selVeicolo && st()) {
       const veic = st().veicoli.find(k => k.id === ui.selVeicolo);
       if (veic) { D.cam.x += (veic.x - D.cam.x) * Math.min(1, dt * 5); D.cam.y += (veic.y - D.cam.y) * Math.min(1, dt * 5); }
@@ -635,6 +636,7 @@
   function aiutoComandi() {
     return `<table class="elenco"><tr><td>Sposta la mappa</td><td>trascina col tasto destro (o sinistro con 🔍), frecce</td></tr>
       <tr><td>Zoom</td><td>rotellina, tasti + e −</td></tr>
+      <tr><td>Vista 3D</td><td>D passa dalla vista dall'alto (2D) a quella in 3D assonometrica e ritorno · O gira la vista 3D di 90° (Maiusc+O al contrario)</td></tr>
       <tr><td>Strumenti</td><td>I info · B ferrovia · R strada · U autostrada · T stazione (apre le dimensioni) · F autostazione · A aeroporto · P porto · X demolisci</td></tr>
       <tr><td>Finestre</td><td>V mezzi · M mondo · E gestione (conti e grafici) · K banca · H aiuto · G griglia · L livelli della mappa (cosa mostrare) · C vie dei paesi</td></tr>
       <tr><td>Tempo</td><td>spazio pausa · 1 normale (1 secondo = 5 minuti) · 2 veloce (1 ora al secondo) · 3 velocissimo (1 giorno al secondo) · 4 turbo (1 settimana al secondo)</td></tr>
@@ -914,8 +916,25 @@
       const v = VISTE.find(x => x.id === d.v);
       for (const l of LIVELLI) if (l.k !== 'griglia') ui.livelli[l.k] = !!v.l[l.k];
       salvaLivelli();
+    },
+    // vista 2D dall'alto o 3D assonometrica (tasto D); in 3D si gira di 90° (tasto O, Maiusc+O al contrario)
+    vista3d: d => {
+      const si = G.vista3d(d && d.si !== undefined ? d.si === '1' : undefined);
+      G.avviso(si ? '🧊 Vista 3D: O per girarla, D per tornare alla vista dall’alto' : '🗺️ Vista dall’alto (2D)');
+      aggiornaPulsanteVista();
+    },
+    ruota: d => {
+      if (!G.disegno.iso) G.vista3d(true);
+      G.ruotaVista(+d.dir || 1);
+      G.avviso('🧭 Vista girata: guardi verso ' + ['nord-ovest', 'sud-ovest', 'sud-est', 'nord-est'][G.disegno.rot]);
+      aggiornaPulsanteVista();
     }
   };
+  function aggiornaPulsanteVista() {
+    const b = $('#pulsante3d');
+    if (b) b.classList.toggle('attivo', !!G.disegno.iso);
+    if (menuMappaAperto()) disegnaMenuMappa();
+  }
   function partitaCaricata(e) {
     if (e) { G.avviso(e, true); return; }
     $('#finestra').classList.add('nascosto'); ui.finestra = null; G.avviso('Partita caricata');
@@ -1054,7 +1073,7 @@
       if (ui.pan) {
         const dx = e.clientX - ui.pan.sx, dy = e.clientY - ui.pan.sy;
         if (Math.abs(dx) + Math.abs(dy) > 4) ui.pan.mosso = true;
-        if (ui.pan.mosso) { D.cam.x = ui.pan.cx - dx / D.cam.ts; D.cam.y = ui.pan.cy - dy / D.cam.ts; ui.segui = false; limitaCamera(); }
+        if (ui.pan.mosso) { const d = G.deltaMondo(dx, dy); D.cam.x = ui.pan.cx - d.x; D.cam.y = ui.pan.cy - d.y; ui.segui = false; limitaCamera(); }
         return;
       }
       if (ui.trascina && ui.trascina.demolisci) { demolisciQui(c); return; }
@@ -1136,6 +1155,8 @@
       if (k.toLowerCase() === 'g') impostaLivello('griglia', !ui.livelli.griglia);
       if (k.toLowerCase() === 'c') impostaLivello('vie', !ui.livelli.vie);
       if (k.toLowerCase() === 'l') AZIONI.menuMappa();
+      if (k.toLowerCase() === 'd') AZIONI.vista3d();
+      if (k.toLowerCase() === 'o') AZIONI.ruota({ dir: e.shiftKey ? -1 : 1 });
     });
     window.addEventListener('keyup', e => ui.tasti.delete(e.key));
     window.addEventListener('blur', () => ui.tasti.clear());
@@ -1189,14 +1210,20 @@
   const menuMappaAperto = () => !$('#menuMappa').classList.contains('nascosto');
   function disegnaMenuMappa() {
     const att = vistaAttuale();
-    let h = '<div class="titolo">Viste pronte</div><div class="viste">';
+    const iso = G.disegno.iso;
+    let h = '<div class="titolo">Vista</div><div class="viste">' +
+      `<button data-az="vista3d" data-si="0" class="${iso ? '' : 'attivo'}"><span class="ic">🗺️</span>Dall'alto (2D)</button>` +
+      `<button data-az="vista3d" data-si="1" class="${iso ? 'attivo' : ''}"><span class="ic">🧊</span>3D assonometrica</button>` +
+      '<button data-az="ruota" data-dir="-1" title="Gira a sinistra (Maiusc+O)"><span class="ic">⟲</span>Gira</button>' +
+      '<button data-az="ruota" data-dir="1" title="Gira a destra (O)"><span class="ic">⟳</span>Gira</button></div>';
+    h += '<div class="titolo">Viste pronte</div><div class="viste">';
     for (const v of VISTE) h += `<button data-az="vista" data-v="${v.id}" class="${att === v.id ? 'attivo' : ''}"><span class="ic">${v.icona}</span>${v.nome}</button>`;
     h += '</div><div class="titolo">Cosa mostrare</div>';
     for (const l of LIVELLI) {
       h += `<label class="livello"><input type="checkbox" data-az="livello" data-k="${l.k}" ${ui.livelli[l.k] ? 'checked' : ''}>` +
         `<span class="ic">${l.icona}</span><span class="nome">${l.nome}</span>${l.tasto ? '<kbd>' + l.tasto + '</kbd>' : ''}</label>`;
     }
-    h += '<div class="nota">Con un attrezzo in mano si vede sempre quello che serve (i binari con la ferrovia, le strade con la strada…). Il tasto <kbd>L</kbd> apre e chiude questo menu.</div>';
+    h += '<div class="nota">Con un attrezzo in mano si vede sempre quello che serve (i binari con la ferrovia, le strade con la strada…). Il tasto <kbd>L</kbd> apre e chiude questo menu, <kbd>D</kbd> passa dalla vista dall’alto a quella 3D, <kbd>O</kbd> la gira.</div>';
     $('#menuMappa').innerHTML = h;
   }
   function apriMenuMappa() {
@@ -1258,6 +1285,7 @@
     console.info('Rotaie & Rotte ' + G.testoVersione(true) + ' — di Massimiliano Petra');
     scegliStrumento('info');
     impostaVelocita(1);
+    aggiornaPulsanteVista();
     // aggiornamenti periodici di barra e pannello
     setInterval(() => {
       const s0 = st(); if (!s0) return;

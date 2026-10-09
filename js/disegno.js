@@ -80,19 +80,25 @@
     const img = ctx.createImageData(cv.width, cv.height);
     for (let y = 0; y < m.H; y++) for (let x = 0; x < m.W; x++) pixelCasella(m, x, y, img.data, cv.width, x * PX, y * PX);
     ctx.putImageData(img, 0, 0);
-    D.terreno = { cv, ctx };
+    // i pixel restano in memoria: la vista 3D ci prende i colori del suo terreno in rilievo
+    D.terreno = { cv, ctx, img, px: PX };
     D.mini = null;
+    D.iso3d = null; // il terreno della vista 3D si rifà quando serve
     st.minimappaSporca = true;
   };
 
   function ridisegnaCasella(m, i) {
-    const x = i % m.W, y = (i / m.W) | 0, img = D.terreno.ctx.createImageData(PX, PX);
-    pixelCasella(m, x, y, img.data, PX, 0, 0);
-    D.terreno.ctx.putImageData(img, x * PX, y * PX);
+    const x = i % m.W, y = (i / m.W) | 0, img = D.terreno.img;
+    pixelCasella(m, x, y, img.data, img.width, x * PX, y * PX);
+    D.terreno.ctx.putImageData(img, 0, 0, x * PX, y * PX, PX, PX);
+    if (G.ridisegnaCasellaIso) G.ridisegnaCasellaIso(m, i);
   }
 
   // ---------------------------------------------------------------- conversioni
-  G.schermoAMondo = (sx, sy) => ({ x: (sx - D.ox) / D.cam.ts, y: (sy - D.oy) / D.cam.ts });
+  // nella vista 3D (assonometrica) le conversioni sono quelle di disegno3d.js
+  G.schermoAMondo = (sx, sy) => (D.iso ? G.schermoAMondoIso(sx, sy) : { x: (sx - D.ox) / D.cam.ts, y: (sy - D.oy) / D.cam.ts });
+  // di quanto si sposta la camera (in caselle) per uno spostamento di dx, dy pixel sullo schermo
+  G.deltaMondo = (dx, dy) => (D.iso ? G.deltaMondoIso(dx, dy) : { x: dx / D.cam.ts, y: dy / D.cam.ts });
 
   // ---------------------------------------------------------------- reti
   // salta(i, j): tratti da non disegnare (da lontano le vie comunali stanno nell'immagine dell'abitato)
@@ -360,6 +366,7 @@
 
   // fabbricato viaggiatori nel rettangolo (in pixel); taglia: fermata, media, grande, centrale
   function fabbricato(ctx, x, y, w, h, taglia, ts) {
+    if (D.raccogli) { D.raccogli.push({ x, y, w, h, taglia }); return; }
     const b = Math.min(w, h) * 0.1;
     x += b; y += b; w -= 2 * b; h -= 2 * b;
     ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(x + ts * 0.07, y + ts * 0.09, w, h);
@@ -459,6 +466,26 @@
     if (ts >= 12) { ctx.font = `${Math.round(ts * 0.36)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('⚓', x + ts * 0.7, y + ts * 0.72); }
   }
 
+  function disegnaDeposito(ctx, x, y, ts) {
+    const b = ts * 0.2, l = ts - 2 * b;
+    ctx.fillStyle = '#2f6db5'; ctx.fillRect(x + b, y + b, l, l);
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, ts * 0.06); ctx.strokeRect(x + b, y + b, l, l);
+    if (ts >= 12) { ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(ts * 0.45)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('A', x + ts / 2, y + ts / 2 + 1); }
+  }
+
+  // aeroporto (2×2): piazzale, pista con la mezzeria, aerostazione e torre di controllo
+  function disegnaAeroporto(ctx, x, y, ts) {
+    const s2 = 2 * ts;
+    ctx.fillStyle = '#a7ab9f'; ctx.fillRect(x + ts * 0.05, y + ts * 0.05, s2 - ts * 0.1, s2 - ts * 0.1);
+    ctx.fillStyle = '#45484c'; ctx.fillRect(x + ts * 0.12, y + ts * 1.1, s2 - ts * 0.24, ts * 0.42);
+    if (ts >= 8) {
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, ts * 0.04); ctx.setLineDash([ts * 0.15, ts * 0.12]);
+      ctx.beginPath(); ctx.moveTo(x + ts * 0.25, y + ts * 1.31); ctx.lineTo(x + s2 - ts * 0.25, y + ts * 1.31); ctx.stroke(); ctx.setLineDash([]);
+    }
+    ctx.fillStyle = '#e8e8e8'; ctx.fillRect(x + ts * 0.2, y + ts * 0.2, ts * 0.9, ts * 0.55);
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(x + ts * 1.4, y + ts * 0.2, ts * 0.22, ts * 0.6);
+  }
+
   function disegnaStazioni(st, V, ui) {
     const { ts, ox, oy, ctx } = V;
     for (const s of st.stazioni) {
@@ -467,22 +494,11 @@
       if (s.tipo === 'stazione') {
         disegnaStazioneFerroviaria(st, V, s);
       } else if (s.tipo === 'deposito') {
-        const b = ts * 0.2, l = ts - 2 * b;
-        ctx.fillStyle = '#2f6db5'; ctx.fillRect(x + b, y + b, l, l);
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, ts * 0.06); ctx.strokeRect(x + b, y + b, l, l);
-        if (ts >= 12) { ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(ts * 0.45)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('A', x + ts / 2, y + ts / 2 + 1); }
+        disegnaDeposito(ctx, x, y, ts);
       } else if (s.tipo === 'porto') {
         disegnaPorto(st, V, s, x, y);
       } else {
-        const s2 = 2 * ts;
-        ctx.fillStyle = '#a7ab9f'; ctx.fillRect(x + ts * 0.05, y + ts * 0.05, s2 - ts * 0.1, s2 - ts * 0.1);
-        ctx.fillStyle = '#45484c'; ctx.fillRect(x + ts * 0.12, y + ts * 1.1, s2 - ts * 0.24, ts * 0.42);
-        if (ts >= 8) {
-          ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, ts * 0.04); ctx.setLineDash([ts * 0.15, ts * 0.12]);
-          ctx.beginPath(); ctx.moveTo(x + ts * 0.25, y + ts * 1.31); ctx.lineTo(x + s2 - ts * 0.25, y + ts * 1.31); ctx.stroke(); ctx.setLineDash([]);
-        }
-        ctx.fillStyle = '#e8e8e8'; ctx.fillRect(x + ts * 0.2, y + ts * 0.2, ts * 0.9, ts * 0.55);
-        ctx.fillStyle = '#c0392b'; ctx.fillRect(x + ts * 1.4, y + ts * 0.2, ts * 0.22, ts * 0.6);
+        disegnaAeroporto(ctx, x, y, ts);
       }
       // merce in attesa: quadratini colorati
       if (ts >= 16) {
@@ -750,7 +766,8 @@
   G.disegna = function (st, ctx, w, h, ui) {
     const m = st.mondo, cam = D.cam, ts = cam.ts;
     while (st.sporchi.length) { ridisegnaCasella(m, st.sporchi.pop()); st.minimappaSporca = true; }
-    if (st.minimappaSporca) D.abitatoSporco = true;
+    if (st.minimappaSporca) { D.abitatoSporco = true; D.abitatoIsoSporco = true; }
+    if (D.iso) { G.disegnaIso(st, ctx, w, h, ui); return; }
     const ox = Math.round(w / 2 - cam.x * ts), oy = Math.round(h / 2 - cam.y * ts);
     D.ox = ox; D.oy = oy;
     const x0 = Math.max(0, Math.floor(-ox / ts)), y0 = Math.max(0, Math.floor(-oy / ts));
@@ -785,6 +802,10 @@
     disegnaEtichette(st, V);
     disegnaEffetti(st, V);
   };
+
+  // aiutanti per la vista 3D (disegno3d.js)
+  D.f = { COL_CASE, DIM, coloreHex, emoji, etichetta, trattiPercorso, sagomaAereo, sagomaNave, disegnaPorto, disegnaDeposito,
+    disegnaAeroporto, disegnaStazioneFerroviaria, strisceBanchina, disegnaSovrapposizioni, altA, px: () => PX };
 
   // ---------------------------------------------------------------- minimappa
   function coloreHex(h) { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
@@ -824,7 +845,14 @@
     ctx.drawImage(D.mini, 0, 0, cv.width, cv.height);
     const sx = cv.width / m.W, sy = cv.height / m.H, ts = D.cam.ts;
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
-    ctx.strokeRect((D.cam.x - w / 2 / ts) * sx, (D.cam.y - h / 2 / ts) * sy, w / ts * sx, h / ts * sy);
+    if (D.iso) { // la parte di mondo inquadrata è un rombo: i quattro angoli dello schermo riportati sul terreno
+      ctx.beginPath();
+      [[0, 0], [w, 0], [w, h], [0, h]].forEach(([a, b], k) => {
+        const p = G.schermoAMondoPiano(a, b);
+        if (k) ctx.lineTo(p.x * sx, p.y * sy); else ctx.moveTo(p.x * sx, p.y * sy);
+      });
+      ctx.closePath(); ctx.stroke();
+    } else ctx.strokeRect((D.cam.x - w / 2 / ts) * sx, (D.cam.y - h / 2 / ts) * sy, w / ts * sx, h / ts * sy);
     // veicoli come puntini
     ctx.fillStyle = '#ffeb3b';
     for (const v of st.veicoli) ctx.fillRect(v.x * sx - 1, v.y * sy - 1, 2.5, 2.5);
