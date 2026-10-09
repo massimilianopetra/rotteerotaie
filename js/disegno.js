@@ -550,6 +550,27 @@
     if (bordo) { ctx.strokeStyle = bordo; ctx.lineWidth = 1.5; ctx.strokeRect(ox + x * ts + 0.5, oy + y * ts + 0.5, w * ts - 1, h * ts - 1); }
   }
 
+  // I tratti del percorso del mezzo selezionato, uno per coppia di fermate consecutive (andata e ritorno su
+  // un tratto si disegnano una volta sola). Si ricalcolano solo quando cambiano fermate o rete.
+  let cacheTratti = { chiave: '', tratti: [] };
+  function trattiPercorso(st, v) {
+    const ord = G.ordineFermate(v), n = ord.length;
+    const chiave = v.id + '|' + st.versioneRete + '|' + ord.map(k => v.fermate[k].s).join(',');
+    if (cacheTratti.chiave === chiave) return cacheTratti.tratti;
+    const rete = { treno: 'binario', strada: 'strada' }[v.tipo], visti = new Set(), tratti = [];
+    for (let k = 0; k < (n > 1 ? n : 0); k++) {
+      const a = st.stazioni[v.fermate[ord[k]].s], b = st.stazioni[v.fermate[ord[(k + 1) % n]].s];
+      if (!a || !b || a === b) continue;
+      const id = Math.min(a.id, b.id) + '-' + Math.max(a.id, b.id);
+      if (visti.has(id)) continue;
+      visti.add(id);
+      const caselle = rete ? G.percorsoVersoStazione(st, G.casellaStazione(st, a), b, rete) : null;
+      tratti.push({ caselle, a: G.centroStazione(a), b: G.centroStazione(b) });
+    }
+    cacheTratti = { chiave, tratti };
+    return tratti;
+  }
+
   function disegnaSovrapposizioni(st, V, ui) {
     const { m, ts, ox, oy, ctx } = V;
     // bacino della stazione selezionata o in costruzione
@@ -566,22 +587,34 @@
     // percorso del veicolo selezionato
     const v = ui.selVeicolo && st.veicoli.find(k => k.id === ui.selVeicolo);
     if (v && v.fermate.length) {
-      ctx.strokeStyle = 'rgba(255,235,59,0.85)'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]);
-      ctx.beginPath();
-      v.fermate.forEach((f, k) => {
-        const s = st.stazioni[f.s]; if (!s) return;
-        const c = G.centroStazione(s);
-        if (k === 0) ctx.moveTo(ox + c.x * ts, oy + c.y * ts); else ctx.lineTo(ox + c.x * ts, oy + c.y * ts);
-      });
-      if (v.fermate.length > 2) ctx.closePath();
-      ctx.stroke(); ctx.setLineDash([]);
-      v.fermate.forEach((f, k) => {
-        const s = st.stazioni[f.s]; if (!s) return;
-        const c = G.centroStazione(s);
-        ctx.fillStyle = '#ffeb3b'; ctx.beginPath(); ctx.arc(ox + c.x * ts, oy + c.y * ts - ts * 0.7, 9, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#000'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(String(k + 1), ox + c.x * ts, oy + c.y * ts - ts * 0.7);
-      });
+      const px = i => ox + (i % m.W + 0.5) * ts, py = i => oy + (((i / m.W) | 0) + 0.5) * ts;
+      // i tratti fra una fermata e l'altra, lungo i binari (o le strade); in rosso tratteggiato quelli senza collegamento
+      ctx.lineWidth = 2; ctx.setLineDash([8, 6]); ctx.lineJoin = 'round';
+      for (const t of trattiPercorso(st, v)) {
+        ctx.strokeStyle = t.caselle || v.tipo === 'aereo' ? 'rgba(255,235,59,0.85)' : 'rgba(255,90,70,0.85)';
+        ctx.beginPath();
+        if (t.caselle) t.caselle.forEach((i, k) => (k ? ctx.lineTo(px(i), py(i)) : ctx.moveTo(px(i), py(i))));
+        else { ctx.moveTo(ox + t.a.x * ts, oy + t.a.y * ts); ctx.lineTo(ox + t.b.x * ts, oy + t.b.y * ts); }
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      // il viaggio in corso, pieno: da dove è il mezzo fino alla prossima fermata
+      if (v.stato === 'viaggio' && v.caselle && v.caselle.length > 1) {
+        ctx.strokeStyle = 'rgba(255,235,59,0.55)'; ctx.lineWidth = Math.max(3, ts * 0.22); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(ox + v.x * ts, oy + v.y * ts);
+        for (let k = Math.min(v.seg + 1, v.caselle.length - 1); k < v.caselle.length; k++) ctx.lineTo(px(v.caselle[k]), py(v.caselle[k]));
+        ctx.stroke();
+      }
+      // numeri delle fermate: una stazione presente più volte li mostra tutti (es. «2·4»)
+      const numeri = new Map();
+      v.fermate.forEach((f, k) => { if (st.stazioni[f.s]) numeri.set(f.s, (numeri.get(f.s) || []).concat(k + 1)); });
+      ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      for (const [sid, el] of numeri) {
+        const c = G.centroStazione(st.stazioni[sid]), testo = el.join('·'), w = Math.max(18, ctx.measureText(testo).width + 10);
+        const x = ox + c.x * ts, y = oy + c.y * ts - ts * 0.7;
+        ctx.fillStyle = '#ffeb3b'; ctx.beginPath(); ctx.roundRect(x - w / 2, y - 9, w, 18, 9); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.fillText(testo, x, y);
+      }
     }
     // binario prenotato dal treno selezionato (davanti alla testa): solo in modalità debug
     if (G.modoDebug && v && v.tipo === 'treno' && v.pr && ts >= 6) {

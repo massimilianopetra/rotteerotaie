@@ -70,6 +70,9 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
   avvisa il giocatore, che può rimandarne uno indietro con «↩ Torna indietro».
 - **Attesa nelle fermate**: un mezzo può partire appena carico, attendere il pieno oppure attendere fino a un certo
   tempo (giorni, ore, minuti) per riempirsi di più.
+- **Giro o andata e ritorno**: con tre o più fermate il mezzo, dopo l'ultima, torna dritto alla prima (giro) oppure rifà
+  le fermate al contrario (andata e ritorno: Milano → Vercelli → Torino → Vercelli → Milano). Il percorso del mezzo
+  selezionato si vede sulla mappa lungo i binari o le strade, con il viaggio in corso evidenziato.
 - **Economia**: ogni consegna è pagata in base alla distanza e alla rapidità; ci sono costi di esercizio,
   manutenzione delle linee, guasti dei mezzi vecchi, prestiti con interesse e il bilancio di fine anno.
 - **Livelli della mappa** (🗺️ Mappa, tasto `L`): si sceglie cosa vedere (case, vie dei paesi, strade, ferrovie, stazioni,
