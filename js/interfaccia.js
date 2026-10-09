@@ -463,27 +463,9 @@
     return h;
   }
 
-  function finestraFinanze() {
-    const s0 = st(), co = s0.conti;
-    const anni = [...co.storico.slice(-3), { anno: co.anno, entrate: co.corrente.entrate, uscite: co.corrente.uscite, corrente: true }];
-    const voceE = new Set(), voceU = new Set();
-    for (const a of anni) { Object.keys(a.entrate).forEach(k => voceE.add(k)); Object.keys(a.uscite).forEach(k => voceU.add(k)); }
-    const nomiU = { costruzione: 'Costruzioni', veicoli: 'Acquisto mezzi', esercizio: 'Esercizio mezzi', manutenzione: 'Manutenzione', interessi: 'Interessi' };
-    const nomiE = k => (C.merci[k] ? 'Trasporto ' + C.merci[k].nome.toLowerCase() : k === 'vendite' ? 'Vendita mezzi' : k);
-    let h = '<table class="elenco conti"><tr><th></th>' + anni.map(a => `<th>${a.anno}${a.corrente ? ' (in corso)' : ''}</th>`).join('') + '</tr>';
-    h += '<tr class="titoletto"><td colspan="9">Entrate</td></tr>';
-    for (const k of voceE) h += `<tr><td>${nomiE(k)}</td>${anni.map(a => `<td class="num">${a.entrate[k] ? G.lire(a.entrate[k]) : ''}</td>`).join('')}</tr>`;
-    h += '<tr class="titoletto"><td colspan="9">Uscite</td></tr>';
-    for (const k of voceU) h += `<tr><td>${nomiU[k] || k}</td>${anni.map(a => `<td class="num">${a.uscite[k] ? G.lire(-a.uscite[k]) : ''}</td>`).join('')}</tr>`;
-    h += `<tr class="totale"><td>Utile</td>${anni.map(a => { const u = G.somma(a.entrate) - G.somma(a.uscite); return `<td class="num ${u < 0 ? 'rosso' : 'verde'}">${G.lire(u)}</td>`; }).join('')}</tr></table>`;
-    const inf = G.costiInfrastruttura(s0);
-    h += `<p><b>Manutenzione annua:</b> binari ${G.lire(inf.binari)}, strade ${G.lire(inf.strade)}, stazioni ${G.lire(inf.stazioni)}</p>`;
-    h += `<p><b>Valore dell'azienda:</b> ${G.lire(G.valoreAzienda(s0))}</p>`;
-    h += `<p><b>Prestito:</b> ${G.lire(s0.prestito)} su ${G.lire(C.inizio.prestitoMax)} (interesse ${Math.round(C.inizio.interesse * 100)}% l'anno)</p>`;
-    h += `<div class="pulsanti"><button data-az="prestito" data-d="1">🏦 Prendi ${G.lire(C.inizio.passoPrestito)}</button><button data-az="prestito" data-d="-1">↩ Restituisci ${G.lire(C.inizio.passoPrestito)}</button></div>`;
-    if (co.storico.length > 1) h += '<h4>Valore dell\'azienda negli anni</h4>' + grafico(co.storico.map(a => a.valore), '#4caf50');
-    apriFinestra('Finanze', h, true);
-  }
+  // il quadro di gestione sta in gestione.js; qui solo l'apertura sulla scheda dei conti
+  const finestraFinanze = () => G.apriGestione('conti');
+  ui.apriFinestra = (titolo, corpo, larga) => apriFinestra(titolo, corpo, larga);
 
   function finestraAiuto() {
     apriFinestra('Come si gioca', `
@@ -514,7 +496,7 @@
       <table class="elenco"><tr><td>Sposta la mappa</td><td>trascina col tasto destro (o sinistro con 🔍), frecce</td></tr>
       <tr><td>Zoom</td><td>rotellina, tasti + e −</td></tr>
       <tr><td>Strumenti</td><td>I info · B ferrovia · R strada · U autostrada · T stazione (apre le dimensioni) · F autostazione · A aeroporto · X demolisci</td></tr>
-      <tr><td>Finestre</td><td>V mezzi · M mondo · E finanze · H aiuto · G griglia · L livelli della mappa (cosa mostrare) · C vie dei paesi</td></tr>
+      <tr><td>Finestre</td><td>V mezzi · M mondo · E gestione (conti e grafici) · H aiuto · G griglia · L livelli della mappa (cosa mostrare) · C vie dei paesi</td></tr>
       <tr><td>Tempo</td><td>spazio pausa · 1 normale (1 secondo = 5 minuti) · 2 veloce (1 ora al secondo) · 3 velocissimo (1 giorno al secondo) · 4 turbo (1 settimana al secondo)</td></tr>
       <tr><td>Annulla / chiudi</td><td>Esc</td></tr></table>`, true);
   }
@@ -584,8 +566,9 @@
     chiudiPannello,
     chiudiFinestra,
     vaiA: d => G.vaiA(+d.x, +d.y),
-    finestra: d => ({ veicoli: finestraVeicoli, mondo: finestraMondo, finanze: finestraFinanze, aiuto: finestraAiuto, info: finestraInfo, menu: () => finestraMenu(false) })[d.f](),
+    finestra: d => ({ veicoli: finestraVeicoli, mondo: finestraMondo, finanze: () => G.apriGestione(), aiuto: finestraAiuto, info: finestraInfo, menu: () => finestraMenu(false) })[d.f](),
     schedaMondo: d => finestraMondo(d.s),
+    schedaGestione: d => G.apriGestione(d.s),
     apriStazione: d => { const s = st().stazioni[+d.id]; if (!s) return; ui.apriPannello('stazione', +d.id); if (d.vai) { G.vaiA(s.x + 0.5, s.y + 0.5); chiudiFinestra(); } },
     apriCitta: d => { const c = st().citta[+d.id]; ui.apriPannello('citta', +d.id); if (d.vai) { G.vaiA(c.x + 0.5, c.y + 0.5); chiudiFinestra(); } },
     apriIndustria: d => { const k = st().industrie[+d.id]; ui.apriPannello('industria', +d.id); if (d.vai) { G.vaiA(k.x + 1, k.y + 1); chiudiFinestra(); } },
