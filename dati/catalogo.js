@@ -39,8 +39,8 @@ window.CATALOGO = {
   fattoreAerei: 1,
   tempi: {
     passoMinuti: 10,                              // passo della simulazione dei mezzi
-    sostaMinuti: { treno: 10, strada: 3, aereo: 30 }, // sosta minima in stazione
-    caricoOra: { treno: 240, strada: 60, aereo: 120 }, // unità caricate o scaricate in un'ora
+    sostaMinuti: { treno: 10, strada: 3, aereo: 30, nave: 60 }, // sosta minima in stazione
+    caricoOra: { treno: 240, strada: 60, aereo: 120, nave: 300 }, // unità caricate o scaricate in un'ora
     guastoOre: [2, 6],                            // durata di una riparazione
     riprovaOre: 1                                 // un mezzo bloccato riprova a cercare la strada
   },
@@ -107,7 +107,9 @@ window.CATALOGO = {
   stazioni: {
     stazione:  { nome: 'Stazione ferroviaria', costo: 20000,  manutenzione: 1200,  raggio: 3, lato: 1, icona: '🚉', anno: 0 },
     deposito:  { nome: 'Autostazione',         costo: 4000,   manutenzione: 300,   raggio: 2, lato: 1, icona: '🚏', anno: 0 },
-    aeroporto: { nome: 'Aeroporto',            costo: 100000, manutenzione: 10000, raggio: 4, lato: 2, icona: '✈️', anno: 1925 }
+    aeroporto: { nome: 'Aeroporto',            costo: 100000, manutenzione: 10000, raggio: 4, lato: 2, icona: '✈️', anno: 1925 },
+    // il porto va su una casella di terra che tocca il mare o un lago; le navi non hanno bisogno di reti
+    porto:     { nome: 'Porto',                costo: 40000,  manutenzione: 2500,  raggio: 4, lato: 1, icona: '⚓', anno: 0 }
   },
   // dimensioni delle stazioni ferroviarie: sostituiscono i valori della "stazione" qui sopra.
   // lato = caselle per lato (i binari possono attraversarle tutte), carico = rapidità di carico e scarico
@@ -152,7 +154,17 @@ window.CATALOGO = {
     { id: 'viscount', nome: 'Vickers Viscount', tipo: 'aereo', anno: 1955, fine: 1990, kmh: 500, capacita: 60, costo: 300000, esercizio: 30000, colore: '#e0e0e0' },
     { id: 'caravelle', nome: 'Sud Aviation Caravelle', tipo: 'aereo', anno: 1960, fine: 1995, kmh: 750, capacita: 80, costo: 450000, esercizio: 40000, colore: '#f0f0f0' },
     { id: 'dc9', nome: 'McDonnell Douglas DC-9', tipo: 'aereo', anno: 1967, fine: 2010, kmh: 800, capacita: 110, costo: 600000, esercizio: 50000, colore: '#f4f4f4' },
-    { id: 'a320', nome: 'Airbus A320', tipo: 'aereo', anno: 1988, kmh: 830, capacita: 160, costo: 900000, esercizio: 65000, colore: '#ffffff' }
+    { id: 'a320', nome: 'Airbus A320', tipo: 'aereo', anno: 1988, kmh: 830, capacita: 160, costo: 900000, esercizio: 65000, colore: '#ffffff' },
+
+    // navi: "traghetto" porta passeggeri e posta, "cargo" tutte le altre merci (capacità in tonnellate)
+    { id: 'ruote', nome: 'Piroscafo a ruote', tipo: 'nave', classe: 'traghetto', anno: 1820, fine: 1890, kmh: 14, capacita: 120, costo: 35000, esercizio: 6000, colore: '#3a2f2a' },
+    { id: 'brigantino', nome: 'Brigantino da carico', tipo: 'nave', classe: 'cargo', anno: 1820, fine: 1900, kmh: 11, capacita: 150, costo: 22000, esercizio: 3500, colore: '#8a6a44' },
+    { id: 'elica', nome: 'Piroscafo a elica', tipo: 'nave', classe: 'cargo', anno: 1860, fine: 1935, kmh: 17, capacita: 300, costo: 60000, esercizio: 8000, colore: '#2d3a40' },
+    { id: 'postale', nome: 'Piroscafo postale', tipo: 'nave', classe: 'traghetto', anno: 1880, fine: 1950, kmh: 22, capacita: 300, costo: 90000, esercizio: 12000, colore: '#24324a' },
+    { id: 'motonave', nome: 'Motonave da carico', tipo: 'nave', classe: 'cargo', anno: 1920, fine: 1985, kmh: 25, capacita: 600, costo: 150000, esercizio: 15000, colore: '#5a2a24' },
+    { id: 'traghetto', nome: 'Traghetto', tipo: 'nave', classe: 'traghetto', anno: 1950, kmh: 35, capacita: 600, costo: 250000, esercizio: 25000, colore: '#e8e8e8' },
+    { id: 'aliscafo', nome: 'Aliscafo', tipo: 'nave', classe: 'traghetto', anno: 1957, kmh: 65, capacita: 140, costo: 180000, esercizio: 20000, colore: '#d0d8e0' },
+    { id: 'container', nome: 'Nave portacontainer', tipo: 'nave', classe: 'cargo', anno: 1968, kmh: 35, capacita: 1500, costo: 500000, esercizio: 40000, colore: '#1f4f7a' }
   ],
 
   // pezzi per inventare i nomi delle città

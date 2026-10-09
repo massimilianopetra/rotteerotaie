@@ -57,8 +57,13 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
 - **Miniere e pozzi hanno una riserva** che si esaurisce: le industrie chiudono e nel tempo
   vengono scoperti nuovi giacimenti. Le industrie ben servite aumentano la produzione.
 - **Mezzi storici** che compaiono anno per anno: dalla locomotiva a vapore "Leopolda" all'ETR 500,
-  dalla diligenza a cavalli al pullman Gran Turismo, dal Caproni Ca.97 all'Airbus A320.
-  Le autostrade arrivano nel 1955, gli aeroporti nel 1925.
+  dalla diligenza a cavalli al pullman Gran Turismo, dal Caproni Ca.97 all'Airbus A320, dal piroscafo a ruote
+  alla nave portacontainer. Le autostrade arrivano nel 1955, gli aeroporti nel 1925.
+- **Porti e navi** (⚓, tasto `P`): il porto va su una casella di terra che tocca il mare o un lago. Le navi non
+  hanno bisogno di reti: navigano sull'acqua girando attorno a coste e isole (rotta calcolata casella per casella).
+  Traghetti per passeggeri e posta (piroscafo a ruote, piroscafo postale, traghetto, aliscafo), navi da carico per
+  le merci (brigantino, piroscafo a elica, motonave, portacontainer): lente ma capienti. Porti su acque diverse non
+  si collegano.
 - **Tempo realistico**: a velocità normale un secondo vero è 5 minuti di gioco e i mezzi viaggiano alla
   loro velocità vera (una casella è un chilometro): un treno a vapore fa 40 km in poco più di un'ora.
   Per far passare in fretta mesi e anni c'è l'avanti veloce: 1 ora, 1 giorno o 1 settimana al secondo.
@@ -97,7 +102,7 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
 |---|---|
 | Spostare la mappa | trascinare col tasto destro (o sinistro con 🔍), frecce |
 | Zoom | rotellina, tasti `+` e `−` |
-| Strumenti | `I` info · `B` ferrovia · `R` strada · `U` autostrada · `T` stazione (apre il menu delle dimensioni) · `F` autostazione · `A` aeroporto · `X` demolisci |
+| Strumenti | `I` info · `B` ferrovia · `R` strada · `U` autostrada · `T` stazione (apre il menu delle dimensioni) · `F` autostazione · `A` aeroporto · `P` porto · `X` demolisci |
 | Finestre | `V` mezzi · `M` mondo · `E` quadro di gestione · `K` banca · `H` aiuto |
 | Mappa | `L` livelli della mappa (pulsante 🗺️ Mappa) · `C` vie dei paesi · `G` griglia |
 | Tempo | `spazio` pausa · `1` normale (1 s = 5 minuti) · `2` veloce (1 ora al secondo) · `3` velocissimo (1 giorno) · `4` turbo (1 settimana) |

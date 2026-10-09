@@ -439,6 +439,26 @@
     });
   }
 
+  // porto: banchina di pietra con un magazzino e un molo di legno verso l'acqua, un'ancora da vicino
+  function disegnaPorto(st, V, s, x, y) {
+    const { m, ts, ctx } = V, i = s.y * m.W + s.x;
+    ctx.fillStyle = '#9a9184'; ctx.fillRect(x + ts * 0.04, y + ts * 0.04, ts * 0.92, ts * 0.92);
+    // moli verso le caselle d'acqua vicine (al massimo due, i lati prima delle diagonali)
+    let n = 0;
+    for (const d of [0, 2, 4, 6, 1, 3, 5, 7]) {
+      const j = G.vicino(m, i, d);
+      if (j < 0 || m.tipo[j] !== G.T.ACQUA || n >= 2) continue;
+      n++;
+      ctx.save(); ctx.translate(x + ts / 2, y + ts / 2); ctx.rotate(Math.atan2(G.DY[d], G.DX[d]));
+      ctx.fillStyle = '#6e4b2c'; ctx.fillRect(ts * 0.2, -ts * 0.12, ts * 0.75, ts * 0.24);
+      if (ts >= 10) { ctx.fillStyle = '#4a3220'; for (let k = 0; k < 3; k++) ctx.fillRect(ts * (0.32 + k * 0.22), -ts * 0.12, ts * 0.04, ts * 0.24); }
+      ctx.restore();
+    }
+    ctx.fillStyle = '#c9b48a'; ctx.fillRect(x + ts * 0.16, y + ts * 0.18, ts * 0.5, ts * 0.38); // magazzino
+    ctx.fillStyle = '#8c3b2a'; ctx.fillRect(x + ts * 0.16, y + ts * 0.18, ts * 0.5, ts * 0.12);
+    if (ts >= 12) { ctx.font = `${Math.round(ts * 0.36)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('⚓', x + ts * 0.7, y + ts * 0.72); }
+  }
+
   function disegnaStazioni(st, V, ui) {
     const { ts, ox, oy, ctx } = V;
     for (const s of st.stazioni) {
@@ -451,6 +471,8 @@
         ctx.fillStyle = '#2f6db5'; ctx.fillRect(x + b, y + b, l, l);
         ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, ts * 0.06); ctx.strokeRect(x + b, y + b, l, l);
         if (ts >= 12) { ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(ts * 0.45)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('A', x + ts / 2, y + ts / 2 + 1); }
+      } else if (s.tipo === 'porto') {
+        disegnaPorto(st, V, s, x, y);
       } else {
         const s2 = 2 * ts;
         ctx.fillStyle = '#a7ab9f'; ctx.fillRect(x + ts * 0.05, y + ts * 0.05, s2 - ts * 0.1, s2 - ts * 0.1);
@@ -496,6 +518,20 @@
     ctx.restore();
   }
 
+  // nave vista dall'alto: scafo a punta del colore del modello, ponte del colore della merce, scia se naviga
+  function sagomaNave(ctx, x, y, ang, lun, colore, ponte, scia) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+    const l = lun / 2, w = lun * 0.18;
+    if (scia) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = Math.max(1, lun * 0.05);
+      ctx.beginPath(); ctx.moveTo(-l, -w * 0.6); ctx.lineTo(-l * 2.1, -w * 1.8); ctx.moveTo(-l, w * 0.6); ctx.lineTo(-l * 2.1, w * 1.8); ctx.stroke();
+    }
+    ctx.fillStyle = colore; ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(l, 0); ctx.lineTo(l * 0.45, -w); ctx.lineTo(-l, -w); ctx.lineTo(-l, w); ctx.lineTo(l * 0.45, w); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = ponte; ctx.fillRect(-l * 0.75, -w * 0.55, l * 1.05, w * 1.1);
+    ctx.restore();
+  }
+
   function disegnaVeicoli(st, V, ui) {
     const { ts, ox, oy, ctx } = V;
     const fuori = v => v.x < V.x0 - 3 || v.x > V.x1 + 4 || v.y < V.y0 - 3 || v.y > V.y1 + 4;
@@ -514,6 +550,8 @@
         const off = ts * 0.1, px = -Math.sin(v.ang) * off, py = Math.cos(v.ang) * off;
         const x = ox + v.x * ts + px, y = oy + v.y * ts + py;
         rettangolo(ctx, x, y, v.ang, Math.max(3, ts * 0.32), Math.max(2, ts * 0.17), v.classe === 'bus' ? mod.colore : C.merci[v.merce].colore, 'rgba(0,0,0,0.6)');
+      } else if (v.tipo === 'nave') {
+        sagomaNave(ctx, ox + v.x * ts, oy + v.y * ts, v.ang, Math.max(9, ts * 0.85), mod.colore, C.merci[v.merce].colore, v.stato === 'viaggio');
       } else {
         const prog = v.stato === 'viaggio' && v.lunTot > 0 ? Math.min(1, Math.min(v.pos, v.lunTot - v.pos) / 2) : 0;
         const dim = Math.max(12, ts * 0.9) * (1 + prog * 0.3);
@@ -613,7 +651,7 @@
     const ord = G.ordineFermate(v), n = ord.length;
     const chiave = v.id + '|' + st.versioneRete + '|' + ord.map(k => v.fermate[k].s).join(',');
     if (cacheTratti.chiave === chiave) return cacheTratti.tratti;
-    const rete = { treno: 'binario', strada: 'strada' }[v.tipo], visti = new Set(), tratti = [];
+    const rete = { treno: 'binario', strada: 'strada', nave: 'mare' }[v.tipo], visti = new Set(), tratti = [];
     for (let k = 0; k < (n > 1 ? n : 0); k++) {
       const a = st.stazioni[v.fermate[ord[k]].s], b = st.stazioni[v.fermate[ord[(k + 1) % n]].s];
       if (!a || !b || a === b) continue;

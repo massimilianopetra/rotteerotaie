@@ -17,7 +17,7 @@
   };
   const nomeUscita = k => (USCITE[k] ? USCITE[k][0] + ' ' + USCITE[k][1] : esc(k));
   const coloreUscita = k => (USCITE[k] ? USCITE[k][2] : '#9fb2c4');
-  const TIPI = { treno: '🚂 Treni', strada: '🚌 Mezzi su strada', aereo: '✈️ Aerei' };
+  const TIPI = { treno: '🚂 Treni', strada: '🚌 Mezzi su strada', aereo: '✈️ Aerei', nave: '🚢 Navi' };
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const tot = o => G.somma(o || {});
   const segno = n => (n > 0 ? '+' : '');

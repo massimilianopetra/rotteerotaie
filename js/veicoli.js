@@ -1,17 +1,18 @@
-// Veicoli: treni, autobus e camion, aerei. Acquisto, percorso a fermate, viaggio, carico e scarico, guasti.
+// Veicoli: treni, autobus e camion, aerei, navi. Acquisto, percorso a fermate, viaggio, carico e scarico, guasti.
 (function () {
   'use strict';
   const G = window.GIOCO, C = window.CATALOGO;
   const T = G.T;
 
-  const RETE = { treno: 'binario', strada: 'strada', aereo: 'aria' };
-  const TIPO_STAZ = G.TIPO_STAZ = { treno: 'stazione', strada: 'deposito', aereo: 'aeroporto' };
+  const RETE = { treno: 'binario', strada: 'strada', aereo: 'aria', nave: 'mare' };
+  const TIPO_STAZ = G.TIPO_STAZ = { treno: 'stazione', strada: 'deposito', aereo: 'aeroporto', nave: 'porto' };
   const TM = C.tempi, ORA = 1 / 24, MINUTO = 1 / 1440;
   // unità caricate o scaricate in un giorno; le stazioni ferroviarie grandi caricano più in fretta
   const ritmo = (v, s) => TM.caricoOra[v.tipo] * 24 * (s ? G.defStazione(s).carico || 1 : 1);
   const sostaMinima = v => TM.sostaMinuti[v.tipo] * MINUTO;
   // il percorso più breve fino alla stazione: va bene una qualsiasi delle sue caselle toccate dalla rete
   G.percorsoVersoStazione = function (st, da, s, rete) {
+    if (rete === 'mare') return G.cercaRotta(st, da, s); // le navi: sull'acqua fino al porto
     const mask = rete === 'binario' ? st.mondo.mBin : st.mondo.mStr;
     let meglio = null;
     for (const i of G.caselleStazione(st, s)) {
@@ -21,7 +22,7 @@
     }
     return meglio;
   };
-  const NOMI = { treno: 'Treno', bus: 'Autobus', camion: 'Camion', aereo: 'Aereo' };
+  const NOMI = { treno: 'Treno', bus: 'Autobus', camion: 'Camion', aereo: 'Aereo', traghetto: 'Traghetto', cargo: 'Nave' };
 
   G.modello = id => C.veicoli.find(v => v.id === id);
   G.modelliDisponibili = function (st, tipo) {
@@ -30,8 +31,8 @@
   };
   G.merciPermesse = function (mod) {
     const tutte = Object.keys(C.merci);
-    if (mod.tipo === 'aereo' || mod.classe === 'bus') return ['passeggeri', 'posta'];
-    if (mod.classe === 'camion') return tutte.filter(k => k !== 'passeggeri' && k !== 'posta');
+    if (mod.tipo === 'aereo' || mod.classe === 'bus' || mod.classe === 'traghetto') return ['passeggeri', 'posta'];
+    if (mod.classe === 'camion' || mod.classe === 'cargo') return tutte.filter(k => k !== 'passeggeri' && k !== 'posta');
     return tutte;
   };
   G.capacita = function (mod, merce, vagoni) {
@@ -75,7 +76,7 @@
     vagoni = mod.tipo === 'treno' ? Math.max(1, Math.min(mod.vagoni, vagoni | 0)) : 0;
     const prezzo = G.prezzoVeicolo(mod, vagoni);
     if (st.soldi < prezzo) return 'Fondi insufficienti';
-    const classe = mod.tipo === 'strada' ? mod.classe : mod.tipo;
+    const classe = mod.tipo === 'strada' || mod.tipo === 'nave' ? mod.classe : mod.tipo;
     st.contatori[classe] = (st.contatori[classe] || 0) + 1;
     const c = G.centroStazione(s), t0 = G.casellaStazione(st, s), W = st.mondo.W;
     if (mod.tipo !== 'aereo') { c.x = t0 % W + 0.5; c.y = ((t0 / W) | 0) + 0.5; }
@@ -223,7 +224,8 @@
       const caselle = v.tipo === 'treno' ? G.percorsoTreno(st, v.tile, s, v) : G.percorsoVersoStazione(st, v.tile, s, RETE[v.tipo]);
       if (!caselle) {
         v.stato = 'bloccato'; v.timer = TM.riprovaOre * ORA;
-        v.motivo = `Nessun ${v.tipo === 'treno' ? 'binario' : 'collegamento stradale'} fino a ${s.nome}`;
+        v.motivo = v.tipo === 'nave' ? `Nessuna rotta per mare fino a ${s.nome} (è su un'altra acqua?)`
+          : `Nessun ${v.tipo === 'treno' ? 'binario' : 'collegamento stradale'} fino a ${s.nome}`;
         return;
       }
       const W = st.mondo.W;
@@ -306,7 +308,7 @@
     if (v.tipo === 'aereo' || !v.caselle) { v.x = c.x; v.y = c.y; v.tile = G.casellaStazione(st, s); }
     if (!s.primoArrivo) {
       s.primoArrivo = true;
-      const chi = { treno: 'Il primo treno', strada: 'Il primo ' + NOMI[v.classe].toLowerCase(), aereo: 'Il primo aereo' }[v.tipo];
+      const chi = { treno: 'Il primo treno', strada: 'Il primo ' + NOMI[v.classe].toLowerCase(), aereo: 'Il primo aereo', nave: 'La prima nave' }[v.tipo];
       G.notizia(st, `${chi} arriva ${/^[AEIOU]/.test(s.nome) ? 'ad' : 'a'} ${s.nome}: festa in piazza!`, c.x, c.y);
     }
     if (s.servite[v.merce]) s.ultimoRitiro[v.merce] = st.giornoInt;
@@ -391,6 +393,9 @@
       vel = Math.min(mod.kmh, m.tipoStr[v.tile] === 2 ? 130 : 80) / K;
       const t = m.tipo[v.tile];
       if (t === T.COLLINA) vel *= 0.9; else if (t === T.MONTAGNA) vel *= 0.8;
+    } else if (v.tipo === 'nave') {
+      const d = Math.min(v.pos, v.lunTot - v.pos);
+      if (d < 1.5) vel *= 0.4 + 0.6 * d / 1.5; // manovra in porto
     } else {
       vel *= C.fattoreAerei;
       const d = Math.min(v.pos, v.lunTot - v.pos);
@@ -427,7 +432,7 @@
   G.verificaPercorsi = function (st) {
     const m = st.mondo;
     for (const v of st.veicoli) {
-      if (v.tipo === 'aereo' || !v.caselle) continue;
+      if (v.tipo === 'aereo' || v.tipo === 'nave' || !v.caselle) continue; // l'acqua e il cielo non cambiano
       if (v.stato !== 'viaggio' && v.stato !== 'guasto') continue;
       const mask = v.tipo === 'treno' ? m.mBin : m.mStr;
       let ok = true;
