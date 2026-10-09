@@ -848,7 +848,13 @@
     const s0 = st(), rete = ui.strumento;
     if (c.i < 0) return;
     const tr = G.cercaTracciato(s0, ui.trascina.da, c.i, rete);
-    if (!tr) { ui.anteprima = { caselle: [ui.trascina.da, c.i], ok: false }; suggerisci('<span class="rosso">Impossibile passare di qui</span>', e); return; }
+    if (!tr) {
+      // niente linea dritta (coprirebbe l'ostacolo): si segnano in rosso le caselle che bloccano e si dice perché
+      const mt = G.motivoTracciato(s0, ui.trascina.da, c.i, rete);
+      ui.anteprima = { caselle: null, ok: false, blocchi: mt.blocchi, motivo: mt.testo };
+      suggerisci(`<span class="rosso">Impossibile passare di qui</span><br>${esc(mt.testo)}`, e);
+      return;
+    }
     const ok = tr.costo <= s0.soldi;
     ui.anteprima = { caselle: tr.caselle, costo: tr.costo, ok, tr };
     const km = G.kmCasella(s0), lun = km === 1 ? '' : ` (${G.numero(Math.round((tr.caselle.length - 1) * km))} km)`;
@@ -956,8 +962,9 @@
       }
       if (STAZIONI.includes(ui.strumento)) anteprimaStazione(c, e);
       else if (RETI.includes(ui.strumento) && c.i >= 0) {
-        const t = G.NOMI_TERRENO[st().mondo.tipo[c.i]];
-        suggerisci(`${C.reti[ui.strumento].nome} · ${t}: ${isFinite(C.moltTerreno[t]) ? G.lire(C.reti[ui.strumento].costo * C.moltTerreno[t]) + ' a casella' : 'impossibile'}<br><span class="sotto">Tieni premuto e trascina</span>`, e);
+        const t = G.NOMI_TERRENO[st().mondo.tipo[c.i]], mc = G.motivoCasella(st(), c.i, ui.strumento);
+        const costo = G.costoCasella(st(), c.i, ui.strumento);
+        suggerisci(`${C.reti[ui.strumento].nome} · ${t}: ${mc ? `<span class="rosso">${esc(mc)}</span>` : costo === 0 ? 'già costruita, gratis' : G.lire(costo) + ' a casella'}<br><span class="sotto">Tieni premuto e trascina</span>`, e);
       } else suggerisci('', e);
     });
     cv.addEventListener('pointerup', e => {
@@ -973,7 +980,7 @@
       if (ui.trascina && !ui.trascina.demolisci && ui.anteprima && ui.anteprima.tr) {
         const e2 = G.costruisciTracciato(st(), ui.anteprima.tr, ui.strumento);
         if (e2) G.avviso(e2, true); else G.avviso(`Costruito: ${G.lire(ui.anteprima.tr.costo)}`);
-      }
+      } else if (ui.trascina && ui.anteprima && ui.anteprima.motivo) G.avviso(ui.anteprima.motivo, true);
       ui.trascina = null; ui.anteprima = null;
       suggerisci('', e);
     });
