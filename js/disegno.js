@@ -128,13 +128,62 @@
     }
   }
 
+  // viadotti: sotto la rete un impalcato di pietra con i piloni (prima di binari e strade)
+  function disegnaViadotti(V) {
+    const { m, ts, ox, oy, ctx } = V;
+    const via = (op, i, j) => op[i] === G.OPERA.VIADOTTO || op[j] === G.OPERA.VIADOTTO;
+    const reti = [];
+    if (V.vis.ferrovie) reti.push([m.mBin, m.operaBin]);
+    if (V.vis.strade) reti.push([m.mStr, m.operaStr]);
+    for (const [mask, op] of reti) {
+      const r = percorsiRete(V, mask, null, (i, j) => !via(op, i, j));
+      if (!r.n1) continue;
+      ctx.lineCap = 'butt';
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = Math.max(4, ts * 0.86);
+      ctx.save(); ctx.translate(ts * 0.1, ts * 0.16); ctx.stroke(r.p1); ctx.restore(); // ombra sul terreno
+      ctx.strokeStyle = '#463e35'; ctx.lineWidth = Math.max(4, ts * 0.86); ctx.stroke(r.p1); // parapetti
+      ctx.strokeStyle = '#b9ab94'; ctx.lineWidth = Math.max(2.5, ts * 0.68); ctx.stroke(r.p1); // impalcato
+      if (ts >= 10) { // piloni sotto l'impalcato
+        ctx.fillStyle = '#463e35';
+        for (let y = V.y0; y <= V.y1; y++) for (let x = V.x0; x <= V.x1; x++) {
+          const i = y * m.W + x;
+          if (mask[i] && op[i] === G.OPERA.VIADOTTO) ctx.fillRect(ox + (x + 0.5) * ts - ts * 0.13, oy + (y + 0.5) * ts + ts * 0.43, ts * 0.26, ts * 0.14);
+        }
+      }
+      ctx.lineCap = 'round';
+    }
+  }
+
+  // gallerie: imbocco di pietra dove la rete entra sottoterra
+  function disegnaImbocchi(V, mask, op) {
+    const { m, ts, ox, oy, ctx } = V;
+    if (ts < 6) return;
+    for (let y = V.y0; y <= V.y1; y++) for (let x = V.x0; x <= V.x1; x++) {
+      const i = y * m.W + x, mk = mask[i];
+      if (!mk || op[i] !== G.OPERA.GALLERIA) continue;
+      let fuori = false;
+      for (let d = 0; d < 8 && !fuori; d++) if ((mk >> d) & 1) { const j = G.vicino(m, i, d); if (j >= 0 && op[j] !== G.OPERA.GALLERIA) fuori = true; }
+      if (!fuori) continue;
+      const cx = ox + (x + 0.5) * ts, cy = oy + (y + 0.5) * ts;
+      ctx.fillStyle = '#7a7266'; ctx.beginPath(); ctx.arc(cx, cy, ts * 0.32, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#16120e'; ctx.beginPath(); ctx.arc(cx, cy, ts * 0.21, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  // tratto in galleria: entrambe le caselle sottoterra
+  const inGalleria = op => (i, j) => op[i] === G.OPERA.GALLERIA && op[j] === G.OPERA.GALLERIA;
+
   function disegnaStrade(V) {
     const { m, ts, ctx } = V;
     // le vie comunali non si disegnano da lontano (stanno nell'immagine dell'abitato) né quando sono nascoste;
-    // le strade del giocatore quando è nascosto il loro livello
-    const vie = !V.lontano && V.vis.vie, strade = V.vis.strade;
-    const r = percorsiRete(V, m.mStr, (i, j) => m.tipoStr[i] === 2 && m.tipoStr[j] === 2,
-      vie && strade ? null : (i, j) => (m.strCitta[i] && m.strCitta[j] ? !vie : !strade));
+    // le strade del giocatore quando è nascosto il loro livello; i tratti in galleria a parte, tratteggiati
+    const vie = !V.lontano && V.vis.vie, strade = V.vis.strade, gal = inGalleria(m.operaStr);
+    const nascosta = (i, j) => (m.strCitta[i] && m.strCitta[j] ? !vie : !strade);
+    const rg = percorsiRete(V, m.mStr, null, (i, j) => !gal(i, j) || nascosta(i, j));
+    if (rg.n1) {
+      ctx.strokeStyle = 'rgba(40,38,34,0.55)'; ctx.lineWidth = Math.max(1.2, ts * 0.16); ctx.lineCap = 'butt';
+      ctx.setLineDash([Math.max(3, ts * 0.25), Math.max(3, ts * 0.2)]); ctx.stroke(rg.p1); ctx.setLineDash([]);
+    }
+    const r = percorsiRete(V, m.mStr, (i, j) => m.tipoStr[i] === 2 && m.tipoStr[j] === 2, (i, j) => gal(i, j) || nascosta(i, j));
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     if (r.n1) {
       ctx.strokeStyle = '#5f5b52'; ctx.lineWidth = Math.max(1.6, ts * 0.36); ctx.stroke(r.p1);
@@ -148,11 +197,18 @@
         ctx.setLineDash([ts * 0.18, ts * 0.18]); ctx.lineCap = 'butt'; ctx.stroke(r.p2); ctx.setLineDash([]); ctx.lineCap = 'round';
       }
     }
+    if (strade) disegnaImbocchi(V, m.mStr, m.operaStr);
   }
 
   function disegnaBinari(V) {
     const { m, ts, ctx } = V;
-    const r = percorsiRete(V, m.mBin, null);
+    // p1 i binari all'aperto, p2 quelli in galleria (tratteggiati, si vedono "in trasparenza")
+    const r = percorsiRete(V, m.mBin, inGalleria(m.operaBin));
+    if (r.n2) {
+      ctx.lineCap = 'butt'; ctx.strokeStyle = 'rgba(45,32,22,0.6)'; ctx.lineWidth = Math.max(1.4, ts * 0.16);
+      ctx.setLineDash([Math.max(3, ts * 0.22), Math.max(3, ts * 0.18)]); ctx.stroke(r.p2); ctx.setLineDash([]); ctx.lineCap = 'round';
+    }
+    if (r.n2 || r.n1) disegnaImbocchi(V, m.mBin, m.operaBin);
     if (!r.n1) return;
     if (ts < 10) {
       ctx.lineCap = 'round';
@@ -678,6 +734,7 @@
       ctx.stroke();
     }
     disegnaPonti(V);
+    disegnaViadotti(V);
     disegnaStrade(V);
     if (vis.stazioni) disegnaBasiStazioni(st, V);
     if (vis.ferrovie) disegnaBinari(V);

@@ -362,14 +362,31 @@
     pianifica(st, v);
   }
 
+  // pendenza (‰, positiva in salita) del tratto che il treno sta percorrendo; sulle linee costruite prima delle
+  // quote si usa il terreno, ma senza superare la pendenza massima (non erano state progettate così)
+  G.pendenzaTreno = function (st, v) {
+    if (!v.caselle || v.seg + 1 >= v.caselle.length) return 0;
+    const a = v.caselle[v.seg], b = v.caselle[v.seg + 1], m = st.mondo;
+    const L = G.kmCasella(st) * 1000 * G.LUN[Math.max(0, G.direzione(m, a, b))];
+    const p = (G.quotaRete(st, b, 'binario') - G.quotaRete(st, a, 'binario')) / L * 1000;
+    const max = C.opere.pendenzaMax.binario;
+    return m.quotaBin[a] === -32768 || m.quotaBin[b] === -32768 ? Math.max(-max, Math.min(max, p)) : p;
+  };
+  // in salita si rallenta: il vapore più delle elettriche e delle diesel, un treno lungo più di uno corto;
+  // in discesa si frena un po'
+  G.fattorePendenza = function (mod, v, p) {
+    if (p <= 0) return Math.max(0.8, 1 + p / 150);
+    const peso = 0.5 + 0.5 * (v.vagoni || 0) / (mod.vagoni || 1);
+    return Math.max(0.25, 1 - p * peso / (/vapore/i.test(mod.nome) ? C.opere.salitaVapore : C.opere.salitaElettrica));
+  };
+
   function velocita(st, v) {
     // caselle al giorno: km/h × 24 ore ÷ km per casella
     const mod = G.modello(v.modello), m = st.mondo, K = G.kmCasella(st) / 24;
     let vel = mod.kmh / K;
     if (v.tipo === 'treno') {
       vel *= 1 - 0.3 * v.vagoni / mod.vagoni;
-      const t = m.tipo[v.tile];
-      if (t === T.COLLINA) vel *= 0.85; else if (t === T.MONTAGNA) vel *= 0.65;
+      vel *= G.fattorePendenza(mod, v, G.pendenzaTreno(st, v));
     } else if (v.tipo === 'strada') {
       vel = Math.min(mod.kmh, m.tipoStr[v.tile] === 2 ? 130 : 80) / K;
       const t = m.tipo[v.tile];

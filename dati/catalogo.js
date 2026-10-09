@@ -91,6 +91,16 @@ window.CATALOGO = {
   },
   moltTerreno: { pianura: 1, collina: 2, montagna: 4, fiume: 5, acqua: Infinity },
   costoBosco: 300,
+  // Pendenze, gallerie e viadotti. La linea segue il terreno ma non supera la pendenza massima (in ‰: metri di
+  // dislivello ogni km). Dove passa più di sogliaMetri sotto il terreno si scava una galleria, sopra si alza un
+  // viadotto; per scarti minori trincee e rilevati costano scavoAlMetro per metro e per km. galleria e viadotto
+  // moltiplicano il costo al km della rete (al posto del terreno). In salita i treni rallentano: a "salitaVapore" ‰
+  // una locomotiva a vapore a pieno carico si fermerebbe (le elettriche e le diesel reggono "salitaElettrica" ‰).
+  opere: {
+    pendenzaMax: { binario: 35, strada: 70, autostrada: 45 },
+    galleria: 10, viadotto: 6, sogliaMetri: 25, scavoAlMetro: 60,
+    salitaVapore: 70, salitaElettrica: 150
+  },
   costoDemolizione: 300,
   costoCasa: 1500, // per livello, per abbattere una casa
 

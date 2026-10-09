@@ -5,7 +5,8 @@
   const cv = document.getElementById('mappa'), ctx = cv.getContext('2d');
   const mini = document.getElementById('mini');
   const CHIAVE = 'rotaie-e-rotte-salvataggio';
-  const GRIGLIE = ['tipo', 'bosco', 'occ', 'rif', 'liv', 'cittaDi', 'mBin', 'mStr', 'tipoStr', 'strCitta', 'copertura'];
+  const GRIGLIE = ['tipo', 'bosco', 'occ', 'rif', 'liv', 'cittaDi', 'mBin', 'mStr', 'tipoStr', 'strCitta', 'copertura',
+    'operaBin', 'operaStr', 'quotaBin', 'quotaStr'];
 
   function ridimensiona() {
     const dpr = window.devicePixelRatio || 1;
@@ -248,7 +249,8 @@
     } catch (e) { fatto('Salvataggio illeggibile'); return; }
     const prosegui = () => {
       const m = G.generaTerreno(dati.opz);
-      for (const k of GRIGLIE) m[k] = testoInGriglia(dati.griglie[k], m[k].constructor, m.N);
+      // le partite vecchie non hanno le griglie più nuove (gallerie e quote): restano quelle vuote
+      for (const k of GRIGLIE) if (dati.griglie[k]) m[k] = testoInGriglia(dati.griglie[k], m[k].constructor, m.N);
       const st = Object.assign(G.statoVuoto(dati.opz, m), dati.stato);
       if (dati.stato.oraInt === undefined) st.oraInt = Math.floor(st.giorno * 24);
       st.posto = posto;
