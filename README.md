@@ -23,7 +23,7 @@ Nel menu «Mondo» si può scegliere, invece di un mondo inventato, una mappa ve
 
 | Mappa | Caselle | Una casella | Località |
 |---|---|---|---|
-| Italia | 551 × 662 | 2 km | città e paesi con più di 500 abitanti |
+| Italia | 551 × 662 | 2 km | città e paesi con più di 5.000 abitanti (1.077) |
 | Europa | 787 × 710 | 6 km | tutte le città (1.220, con Anatolia e Nordafrica) |
 
 Ogni mappa è un file a sé (`dati/mappe/italia.js` e `dati/mappe/europa.js`, 1–1,5 MB) che il gioco carica **solo quando la
@@ -81,7 +81,7 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
 | Spostare la mappa | trascinare col tasto destro (o sinistro con 🔍), frecce |
 | Zoom | rotellina, tasti `+` e `−` |
 | Strumenti | `I` info · `B` ferrovia · `R` strada · `U` autostrada · `T` stazione (apre il menu delle dimensioni) · `F` autostazione · `A` aeroporto · `X` demolisci |
-| Finestre | `V` mezzi · `M` mondo · `E` finanze · `H` aiuto · `G` griglia |
+| Finestre | `V` mezzi · `M` mondo · `E` finanze · `H` aiuto · `G` griglia · `C` mostra/nascondi le vie dei paesi (anche col pulsante 🏘️ Vie) |
 | Tempo | `spazio` pausa · `1` normale (1 s = 5 minuti) · `2` veloce (1 ora al secondo) · `3` velocissimo (1 giorno) · `4` turbo (1 settimana) |
 | Annulla / chiudi | `Esc` |
 

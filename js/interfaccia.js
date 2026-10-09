@@ -514,7 +514,7 @@
       <table class="elenco"><tr><td>Sposta la mappa</td><td>trascina col tasto destro (o sinistro con 🔍), frecce</td></tr>
       <tr><td>Zoom</td><td>rotellina, tasti + e −</td></tr>
       <tr><td>Strumenti</td><td>I info · B ferrovia · R strada · U autostrada · T stazione (apre le dimensioni) · F autostazione · A aeroporto · X demolisci</td></tr>
-      <tr><td>Finestre</td><td>V mezzi · M mondo · E finanze · H aiuto · G griglia</td></tr>
+      <tr><td>Finestre</td><td>V mezzi · M mondo · E finanze · H aiuto · G griglia · C mostra/nascondi le vie dei paesi</td></tr>
       <tr><td>Tempo</td><td>spazio pausa · 1 normale (1 secondo = 5 minuti) · 2 veloce (1 ora al secondo) · 3 velocissimo (1 giorno al secondo) · 4 turbo (1 settimana al secondo)</td></tr>
       <tr><td>Annulla / chiudi</td><td>Esc</td></tr></table>`, true);
   }
@@ -674,7 +674,8 @@
       }), 30);
     },
     menuIniziale: () => finestraMenu(true),
-    griglia: () => { ui.griglia = !ui.griglia; }
+    griglia: () => { ui.griglia = !ui.griglia; },
+    vieComunali: () => mostraVieComunali(ui.nascondiVie)
   };
   const veicoloSel = () => ui.selVeicolo && st() && st().veicoli.find(k => k.id === ui.selVeicolo);
 
@@ -872,13 +873,28 @@
       const f = { v: 'veicoli', m: 'mondo', e: 'finanze', h: 'aiuto' }[k.toLowerCase()];
       if (f) { AZIONI.finestra({ f }); return; }
       if (k.toLowerCase() === 'g') ui.griglia = !ui.griglia;
+      if (k.toLowerCase() === 'c') mostraVieComunali(ui.nascondiVie);
     });
     window.addEventListener('keyup', e => ui.tasti.delete(e.key));
     window.addEventListener('blur', () => ui.tasti.clear());
   }
 
   // ---------------------------------------------------------------- avvio
+  // vie comunali visibili o nascoste (tasto C): sulle mappe reali rendono la mappa molto fitta.
+  // La scelta si ricorda nel browser.
+  const CHIAVE_VIE = 'rotaie-e-rotte-nascondi-vie';
+  function mostraVieComunali(si) {
+    ui.nascondiVie = !si;
+    G.disegno.abitatoSporco = true; // l'immagine dell'abitato si rifà con o senza vie
+    const b = $('#vieComunali');
+    if (b) { b.classList.toggle('attivo', ui.nascondiVie); b.title = (ui.nascondiVie ? 'Mostra' : 'Nascondi') + ' le vie dei paesi (C)'; }
+    try { localStorage.setItem(CHIAVE_VIE, ui.nascondiVie ? '1' : '0'); } catch (e) { /* niente: vale solo per ora */ }
+  }
+
   ui.prepara = function () {
+    let nascoste = false;
+    try { nascoste = localStorage.getItem(CHIAVE_VIE) === '1'; } catch (e) { /* si parte con le vie visibili */ }
+    mostraVieComunali(!nascoste);
     $('#attrezzi').innerHTML = STRUMENTI.map(s => `<button data-az="strumento" data-id="${s.id}" title="${s.nome} (${s.tasto})">${s.icona}</button>`).join('');
     aggiornaPulsanteStazione();
     // il menu delle dimensioni si chiude cliccando altrove

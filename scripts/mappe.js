@@ -31,12 +31,12 @@ const AGENTE = 'RotaieERotte/1.1 (gioco scolastico; https://github.com/massimili
 const MAPPE = {
   italia: {
     nome: 'Italia',
-    descrizione: 'L\'Italia vera, dalle Alpi a Lampedusa: tutte le città e i paesi con più di 500 abitanti.',
+    descrizione: 'L\'Italia vera, dalle Alpi a Lampedusa: le città e i paesi con più di 5.000 abitanti.',
     centro: [42, 12.5], riquadro: { sud: 35.4, nord: 47.15, ovest: 6.5, est: 18.65 }, km: 2, zoom: 7,
     // regioni (codici ISO 3166-2) più San Marino e Vaticano: una richiesta piccola per ciascuna
     aree: ['IT-21', 'IT-23', 'IT-25', 'IT-32', 'IT-34', 'IT-36', 'IT-42', 'IT-45', 'IT-52', 'IT-55', 'IT-57',
       'IT-62', 'IT-65', 'IT-67', 'IT-72', 'IT-75', 'IT-77', 'IT-78', 'IT-82', 'IT-88', 'SM', 'VA'],
-    luoghi: 'city|town|village', minAbitanti: 500, distanzaMin: 2,
+    luoghi: 'city|town|village', minAbitanti: 5000, distanzaMin: 3,
     laghi: ['Lago di Garda', 'Lago Maggiore', 'Lago di Como', "Lago d'Iseo", 'Lago di Lugano', "Lago d'Orta", 'Lago di Varese',
       'Lago Trasimeno', 'Lago di Bolsena', 'Lago di Bracciano', 'Lago di Vico', 'Lago di Lesina', 'Lago di Varano',
       'Lago Omodeo', 'Lago di Caldonazzo', 'Lago di Santa Croce', 'Lago del Salto', 'Lago di Campotosto', 'Lago di Bilancino',

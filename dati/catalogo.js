@@ -14,7 +14,7 @@ window.CATALOGO = {
   // Lì una casella misura "km" chilometri: costi delle reti, manutenzione, velocità e pagamenti ne tengono conto.
   mappeReali: [
     { id: 'italia', nome: 'Italia', file: 'dati/mappe/italia.js', km: 2,
-      descrizione: 'L\'Italia vera da OpenStreetMap: tutte le città e i paesi con più di 500 abitanti, rilievi, fiumi e laghi. Una casella = 2 km.' },
+      descrizione: 'L\'Italia vera da OpenStreetMap: le città e i paesi con più di 5.000 abitanti, rilievi, fiumi e laghi. Una casella = 2 km.' },
     { id: 'europa', nome: 'Europa', file: 'dati/mappe/europa.js', km: 6,
       descrizione: 'L\'Europa vera da OpenStreetMap, dall\'Atlantico a Mosca e dalla Scandinavia al Mediterraneo (con Anatolia e Nordafrica): tutte le città. Una casella = 6 km.' }
   ],
