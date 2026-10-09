@@ -172,7 +172,7 @@
       <span class="icona">${ic}</span><span><b>${nome}</b><span class="sotto">${testo}</span></span></button>`;
     menu.innerHTML = `<div class="titolo">${M.titolo}</div>` +
       voce('normale', M.icona, M.normale, `Segue il terreno, sale al massimo del ${O.pendenzaMax[rete]}‰.<br>Sulle valli fa da sola i viadotti (×${O.viadotto}); dove servirebbe una galleria non si costruisce.`) +
-      voce('galleria', '🚇', 'Galleria', `Dritta e in piano, alla quota dell'imbocco.<br>Trascina dall'imbocco all'uscita, dall'altra parte del monte: l'uscita deve stare alla stessa quota (±${O.sogliaMetri} m). ×${O.galleria} il costo.`);
+      voce('galleria', '🚇', 'Galleria', `Dritta, dalla quota dell'imbocco a quella dell'uscita: può salire o scendere fino al ${O.pendenzaMax[rete]}‰.<br>Trascina dall'imbocco all'uscita, dall'altra parte del monte; sopra servono almeno ${O.sogliaMetri} m di monte. ×${O.galleria} il costo.`);
     const r = b.getBoundingClientRect();
     menu.classList.remove('nascosto');
     menu.style.top = Math.max(50, Math.min(r.top, window.innerHeight - menu.offsetHeight - 10)) + 'px';
@@ -602,7 +602,7 @@
       <b>${O.pendenzaMax.binario}‰</b> per la ferrovia (${O.pendenzaMax.binario} m ogni km), <b>${O.pendenzaMax.strada}‰</b> per la strada e
       <b>${O.pendenzaMax.autostrada}‰</b> per l'autostrada. Il gioco disegna da solo il profilo della linea: sopra le valli fa i viadotti.
       Dove servirebbe una galleria la <b>ferrovia</b> e l'<b>autostrada non si costruiscono</b>: la galleria la scavi tu con 🚇 Galleria
-      (menu della ferrovia, tasto B, o dell'autostrada, tasto U), dritta e in piano alla quota dell'imbocco. Le strade normali invece fanno ancora le gallerie da sole.</p>
+      (menu della ferrovia, tasto B, o dell'autostrada, tasto U), dritta, che sale o scende al massimo con la stessa pendenza della rete. Le strade normali invece fanno ancora le gallerie da sole.</p>
       <table class="elenco"><tr><td>🚇 <b>Galleria</b></td><td>la linea passa più di ${O.sogliaMetri} m sotto il terreno</td><td class="num">×${O.galleria} il costo al km della rete</td></tr>
       <tr><td>🌉 <b>Viadotto</b></td><td>la linea passa più di ${O.sogliaMetri} m sopra il terreno</td><td class="num">×${O.viadotto} il costo al km</td></tr>
       <tr><td>⛏️ Trincea o rilevato</td><td>scarti più piccoli</td><td class="num">${G.lire(O.scavoAlMetro * km)} per metro a casella</td></tr></table>
@@ -697,8 +697,9 @@
       (${C.opere.pendenzaMax.binario} m ogni km). Sopra le valli fa da sola i <b>viadotti</b> 🌉. Se per passare dovrebbe forare un monte,
       <b>non si costruisce</b>: le caselle troppo ripide diventano rosse. Gira attorno al monte oppure scava una galleria.</li>
       <li><b>🚇 Galleria</b>: la scavi tu. Trascina dall'<b>imbocco</b> fino all'<b>uscita</b> dall'altra parte del monte: la galleria è
-      <b>dritta</b> e <b>in piano</b>, alla quota dell'imbocco. Sopra deve esserci sempre almeno ${C.opere.sogliaMetri} m di monte e l'uscita deve
-      stare alla stessa quota (±${C.opere.sogliaMetri} m): conviene partire da un fondovalle e arrivare nel fondovalle di là. Costa
+      <b>dritta</b> e va dalla quota dell'imbocco a quella dell'uscita: può <b>salire o scendere</b> al massimo del ${C.opere.pendenzaMax.binario}‰
+      (l'autostrada del ${C.opere.pendenzaMax.autostrada}‰), come la linea all'aperto. Sopra deve esserci almeno ${C.opere.sogliaMetri} m di monte (vicino agli imbocchi
+      basta stare sotto il terreno). Se la linea dritta ripassa sopra una valle, spezzala in due gallerie. Costa
       ${C.opere.galleria} volte il binario. Poi collega i due imbocchi alle linee con la ferrovia normale.</li></ul>
       <ul>
       <li>In <b>salita</b> i treni rallentano (il vapore molto più delle elettriche), quindi una galleria in piano può far guadagnare tempo.</li>
@@ -1006,10 +1007,11 @@
     }
     if (galleria) {
       const ok = tr.costo <= s0.soldi, km = G.kmCasella(s0), Hm = G.metriTerreno(s0.mondo);
-      const sopra = Math.max(...tr.caselle.slice(1, -1).map(i => Hm[i])) - tr.quota;
+      const p = tr.profilo, sopra = Math.max(...tr.caselle.slice(1, -1).map((i, k) => Hm[i] - p.quote[k + 1]));
+      const pend = Math.round(p.pendenza), quote = pend ? `da ${G.numero(Math.round(tr.quota))} m a ${G.numero(Math.round(p.quotaUscita))} m · pendenza ${pend}‰ <span class="sotto">(limite ${C.opere.pendenzaMax[rete]}‰)</span>` : `in piano a ${G.numero(Math.round(tr.quota))} m`;
       ui.anteprima = { caselle: tr.caselle, costo: tr.costo, ok, tr };
       suggerisci(`🚇 Galleria: <b class="${ok ? '' : 'rosso'}">${G.lire(tr.costo)}</b> · ${tr.caselle.length - 2} caselle sottoterra` +
-        `${km === 1 ? '' : ` (${G.numero(Math.round((tr.caselle.length - 2) * km))} km)`}<br>in piano a ${G.numero(Math.round(tr.quota))} m · fino a ${G.numero(Math.round(sopra))} m di monte sopra`, e);
+        `${km === 1 ? '' : ` (${G.numero(Math.round((tr.caselle.length - 2) * km))} km)`}<br>${quote} · fino a ${G.numero(Math.round(sopra))} m di monte sopra`, e);
       return;
     }
     if (!tr) {

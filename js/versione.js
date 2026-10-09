@@ -1,8 +1,8 @@
 // File generato da scripts/versione.js: non modificarlo a mano.
 window.VERSIONE = {
   "versione": "1.3.0",
-  "build": 29,
-  "commit": "1e11969",
+  "build": 30,
+  "commit": "8093ce7",
   "modifiche": false,
-  "data": "2026-10-09 21:07"
+  "data": "2026-10-09 21:11"
 };
