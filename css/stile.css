@@ -37,6 +37,8 @@ table.elenco th.ordina:hover { color: var(--testo); }
 table.elenco th.ordina.attiva { color: var(--accento); }
 th.ordina .freccia { margin-left: 4px; font-size: 10px; opacity: 0.45; }
 th.ordina.attiva .freccia { opacity: 1; }
+table.legendaMappa td:first-child { width: 70px; }
+table.legendaMappa svg { width: 60px; height: 16px; display: block; }
 .pallinoG { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
 /* banca */
 .consiglioBanca { margin: 10px 0; padding: 8px 10px; font-size: 13px; background: rgba(242, 177, 52, 0.08);
