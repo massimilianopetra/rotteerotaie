@@ -106,6 +106,58 @@
     return c;
   };
 
+  // perché la rete non può passare da una casella (null se può passare)
+  G.motivoCasella = function (st, i, rete) {
+    const m = st.mondo;
+    if (i < 0) return 'fuori dalla mappa';
+    if (m.tipo[i] === T.ACQUA) return 'c\'è acqua (mare o lago): non si costruisce';
+    const o = m.occ[i];
+    if (o === OCC.CASA) {
+      const c = st.citta[m.cittaDi[i]];
+      return `c'è una casa${c ? ' di ' + c.nome : ''}: prima va demolita (💥 Demolisci, ${G.lire(C.costoCasa * m.liv[i])})`;
+    }
+    if (o === OCC.INDUSTRIA) {
+      const k = st.industrie[m.rif[i]];
+      return `c'è ${k ? k.nome : 'un\'industria'}: le industrie non si attraversano`;
+    }
+    if (o === OCC.STAZIONE) {
+      const s = st.stazioni[m.rif[i]];
+      if (rete === 'binario' && s.tipo !== 'stazione') return `c'è ${s.nome} (${G.nomeTipoStazione(s).toLowerCase()}): i binari passano solo nelle stazioni ferroviarie`;
+      if (rete !== 'binario' && s.tipo !== 'deposito') return `c'è ${s.nome} (${G.nomeTipoStazione(s).toLowerCase()}): le strade passano solo nelle autostazioni`;
+    }
+    return null;
+  };
+
+  // Il tracciato fra a e b non si trova: perché? { testo, blocchi: caselle da segnare in rosso }
+  G.motivoTracciato = function (st, a, b, rete) {
+    const ma = G.motivoCasella(st, a, rete), mb = G.motivoCasella(st, b, rete);
+    if (ma) return { testo: 'Non si parte da qui: ' + ma, blocchi: [a] };
+    if (mb) return { testo: 'Non si arriva qui: ' + mb, blocchi: [b] };
+    // uno dei due punti è chiuso tutto intorno? si esplora un po' attorno a ciascuno
+    const m = st.mondo, W = m.W;
+    const chiuso = (da, max) => {
+      const visti = new Set([da]), coda = [da], bordo = new Set();
+      while (coda.length) {
+        const i = coda.pop();
+        for (let d = 0; d < 8; d++) {
+          const j = G.vicino(m, i, d);
+          if (j < 0 || visti.has(j)) continue;
+          if (G.motivoCasella(st, j, rete)) { bordo.add(j); continue; }
+          visti.add(j); coda.push(j);
+          if (visti.size > max) return null; // c'è spazio: non è chiuso
+        }
+      }
+      return [...bordo];
+    };
+    const ba = chiuso(a, 4000);
+    if (ba) return { testo: 'La partenza è chiusa tutto intorno da case, industrie o acqua: demolisci una casa per aprire un varco', blocchi: ba.slice(0, 300) };
+    const bb = chiuso(b, 4000);
+    if (bb) return { testo: 'L\'arrivo è chiuso tutto intorno da case, industrie o acqua: demolisci una casa per aprire un varco', blocchi: bb.slice(0, 300) };
+    const dist = Math.max(Math.abs(a % W - b % W), Math.abs(((a / W) | 0) - ((b / W) | 0)));
+    if (dist > 120) return { testo: 'Tratto troppo lungo o tortuoso da calcolare in una volta: costruiscilo in più pezzi', blocchi: [] };
+    return { testo: 'Fra i due punti c\'è una barriera di acqua, case o industrie: prova un altro giro o costruisci in più pezzi', blocchi: [] };
+  };
+
   function giaCollegati(m, i, d, rete) {
     if (rete === 'binario') return (m.mBin[i] >> d) & 1;
     if (!((m.mStr[i] >> d) & 1)) return 0;
