@@ -494,8 +494,7 @@
     return h;
   }
 
-  // il quadro di gestione sta in gestione.js; qui solo l'apertura sulla scheda dei conti
-  const finestraFinanze = () => G.apriGestione('conti');
+  // il quadro di gestione sta in gestione.js e la banca in banca.js: usano questa per aprire la finestra
   ui.apriFinestra = (titolo, corpo, larga) => apriFinestra(titolo, corpo, larga);
 
   // l'aiuto a schede: come si gioca, quanto costa costruire, come leggere i conti, comandi
@@ -545,7 +544,15 @@
       carbone e ferro possono aspettare. Si paga solo dove la merce è accettata.</p>
       <h4>🔴 Costi</h4>
       <p>Sono le spese che si pagano <b>sempre</b>, anche con i mezzi fermi: l'<b>esercizio</b> dei mezzi, la <b>manutenzione</b> di
-      binari, strade e stazioni e gli <b>interessi</b> del prestito (${Math.round(C.inizio.interesse * 100)}% l'anno). Si pagano un dodicesimo al mese.</p>
+      binari, strade e stazioni e gli <b>interessi</b> dei prestiti. Si pagano un dodicesimo al mese.</p>
+      <h4>🏦 La banca (tasto K)</h4>
+      <p>Puoi chiedere un prestito fino al tuo <b>fido</b> (il valore dell'azienda, almeno ${G.lire(C.banca.fidoMin)}) e restituirlo quando vuoi.
+      Il <b>tasso di riferimento</b> cambia ogni mese: segue a grandi linee la storia dei tassi italiani (bassi nell'Ottocento, altissimi
+      intorno al 1980, quasi zero intorno al 2015) con un po' di caso e qualche scossa. Al riferimento si aggiunge lo <b>spread</b>, il tuo
+      rischio: sale se hai tanto debito rispetto a quello che possiedi, se la cassa è in rosso o se sei in perdita (rating da AAA a D).
+      Il prestito <b>variabile</b> segue il tasso mese per mese; il <b>fisso</b> costa un po' di più ma resta uguale per sempre
+      (restituirlo prima costa una penale dell'${Math.round(C.banca.penaleFisso * 100)}%). Strategia: fisso quando i tassi stanno per salire, variabile quando scendono.
+      Il prestito non è un ricavo: porta soldi in cassa ma anche debito, quindi non cambia il valore dell'azienda.</p>
       <h4>📈 Profitto</h4>
       <p><b>Profitto = ricavi − costi.</b> Dice se la compagnia guadagna: è il numero in alto a sinistra («Profitto» dell'anno).
       Se è negativo stai perdendo soldi ogni mese.</p>
@@ -567,7 +574,7 @@
     return `<table class="elenco"><tr><td>Sposta la mappa</td><td>trascina col tasto destro (o sinistro con 🔍), frecce</td></tr>
       <tr><td>Zoom</td><td>rotellina, tasti + e −</td></tr>
       <tr><td>Strumenti</td><td>I info · B ferrovia · R strada · U autostrada · T stazione (apre le dimensioni) · F autostazione · A aeroporto · X demolisci</td></tr>
-      <tr><td>Finestre</td><td>V mezzi · M mondo · E gestione (conti e grafici) · H aiuto · G griglia · L livelli della mappa (cosa mostrare) · C vie dei paesi</td></tr>
+      <tr><td>Finestre</td><td>V mezzi · M mondo · E gestione (conti e grafici) · K banca · H aiuto · G griglia · L livelli della mappa (cosa mostrare) · C vie dei paesi</td></tr>
       <tr><td>Tempo</td><td>spazio pausa · 1 normale (1 secondo = 5 minuti) · 2 veloce (1 ora al secondo) · 3 velocissimo (1 giorno al secondo) · 4 turbo (1 settimana al secondo)</td></tr>
       <tr><td>Annulla / chiudi</td><td>Esc</td></tr></table>
       <p class="sotto">Le partite si salvano dal pulsante 💾 Partita: nel browser oppure su file.</p>`;
@@ -691,7 +698,7 @@
     chiudiPannello,
     chiudiFinestra,
     vaiA: d => G.vaiA(+d.x, +d.y),
-    finestra: d => ({ veicoli: finestraVeicoli, mondo: finestraMondo, finanze: () => G.apriGestione(), aiuto: () => finestraAiuto(d.s), info: finestraInfo, menu: () => finestraMenu(false) })[d.f](),
+    finestra: d => ({ veicoli: finestraVeicoli, mondo: finestraMondo, finanze: () => G.apriGestione(), banca: () => G.apriBanca(), aiuto: () => finestraAiuto(d.s), info: finestraInfo, menu: () => finestraMenu(false) })[d.f](),
     schedaMondo: d => finestraMondo(d.s),
     schedaAiuto: d => finestraAiuto(d.s),
     schedaGestione: d => G.apriGestione(d.s),
@@ -759,7 +766,9 @@
       const e = G.demolisciStazione(st(), +d.id);
       if (e) G.avviso(e, true); else chiudiPannello();
     },
-    prestito: d => { const e = +d.d > 0 ? G.prendiPrestito(st()) : G.rendiPrestito(st()); if (e) G.avviso(e, true); finestraFinanze(); },
+    // la banca sta in banca.js
+    chiediPrestito: d => G.azioniBanca.chiediPrestito(d),
+    restituisci: d => G.azioniBanca.restituisci(d),
     salva: () => { const e = G.salvaPartita(st()); G.avviso(e || 'Partita salvata', !!e); if (!e) finestraMenu(false); },
     salvaNuova: () => { const e = G.salvaPartita(st(), true); G.avviso(e || 'Salvata come nuova partita', !!e); if (!e) finestraMenu(false); },
     salvaFile: () => { const e = G.salvaSuFile(st()); G.avviso(e || 'File della partita creato: lo trovi nei Download', !!e); },
@@ -1012,7 +1021,7 @@
       if (k === '-') { zoom(0.8); return; }
       const t = STRUMENTI.find(s => s.tasto.toLowerCase() === k.toLowerCase());
       if (t) { AZIONI.strumento({ id: t.id }); return; }
-      const f = { v: 'veicoli', m: 'mondo', e: 'finanze', h: 'aiuto' }[k.toLowerCase()];
+      const f = { v: 'veicoli', m: 'mondo', e: 'finanze', k: 'banca', h: 'aiuto' }[k.toLowerCase()];
       if (f) { AZIONI.finestra({ f }); return; }
       if (k.toLowerCase() === 'g') impostaLivello('griglia', !ui.livelli.griglia);
       if (k.toLowerCase() === 'c') impostaLivello('vie', !ui.livelli.vie);
@@ -1145,7 +1154,7 @@
       $('#azienda').textContent = s0.opz.nome;
       const soldi = $('#soldi');
       soldi.textContent = G.lire(s0.soldi); soldi.classList.toggle('rosso', s0.soldi < 0);
-      $('#prestito').textContent = s0.prestito ? 'debito ' + G.lire(s0.prestito) : '';
+      $('#prestito').textContent = s0.prestito ? `debito ${G.lire(s0.prestito)} · interessi ${G.lire(G.interessiMese(s0))}/mese` : '';
       $('#data').textContent = G.testoData(s0) + ' · ' + G.testoOra(s0);
     }, 250);
     setInterval(() => { if (ui.pannello && !ui.mouseSuPannello) disegnaPannello(); }, 1000);

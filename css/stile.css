@@ -31,6 +31,11 @@ button.mini { padding: 0 6px; font-size: 11px; }
 .spiegaConti b { font-weight: 700; }
 table.conti tr.totale td .sotto { font-weight: 400; }
 table.contiMezzo { width: 100%; }
+/* banca */
+.consiglioBanca { margin: 10px 0; padding: 8px 10px; font-size: 13px; background: rgba(242, 177, 52, 0.08);
+  border-left: 3px solid var(--accento); border-radius: 4px; }
+td.azioniBanca { white-space: nowrap; text-align: right; }
+td.azioniBanca button { padding: 3px 8px; }
 table.contiMezzo tr.totale td { font-weight: 700; border-top: 1px solid var(--bordo); }
 .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .sotto { color: var(--tenue); font-size: 12px; }
