@@ -132,7 +132,19 @@ Il tracciato proposto è il **più economico**, non il più corto: gira attorno 
 
 - Dove la rete c'è già non si paga; le strade comunali delle città sono gratis; l'autostrada sopra una strada costa il 40% in meno.
 - Case e industrie non si attraversano. Demolire un pezzo di rete o una stazione costa L. 300, una casa L. 1.500 per piano.
-- Conta solo il tipo di terreno: la pendenza non costa di più e non rallenta i treni; una casella in diagonale costa come una diritta.
+- Una casella in diagonale costa come una diritta.
+
+### Pendenze, gallerie e viadotti
+
+Ogni casella ha una quota in metri (sulle mappe reali è quella vera). Una linea non sale né scende più di **35‰** la
+ferrovia, **70‰** la strada e **45‰** l'autostrada: il gioco calcola da solo il profilo della linea, che segue il terreno
+finché può. Dove passa più di 25 m **sotto** il terreno scava una **galleria** (×10 il costo al km della rete), dove passa
+più di 25 m **sopra** costruisce un **viadotto** (×6); gli scarti minori sono trincee e rilevati pagati a metro.
+L'anteprima mostra gallerie, viadotti e pendenza massima, e la ricerca del tracciato ne tiene conto (spesso conviene
+girare attorno a un monte). I treni **rallentano in salita**: il vapore pieno al 35‰ va a circa metà velocità, elettriche
+e diesel reggono il doppio, i treni corti salgono meglio. Sulla mappa le gallerie sono tratteggiate con gli imbocchi,
+i viadotti hanno impalcato e piloni. Esempi sull'Italia: Milano–Torino tutta in pianura; Genova–Alessandria con una
+galleria di 10 km sotto l'Appennino.
 - **Manutenzione** all'anno, uguale su ogni terreno: ferrovia L. 50 al km, strada L. 10, autostrada L. 100; poi quella delle stazioni
   (da L. 500 per una fermata a L. 10.000 per un aeroporto).
 - Tutti i numeri stanno in `dati/catalogo.js` (`reti`, `moltTerreno`, `costoBosco`). Nel gioco: aiuto (`H`), scheda «Costi».

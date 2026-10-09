@@ -25,7 +25,11 @@
       mStr: new Uint8Array(N),     // strade: idem
       tipoStr: new Uint8Array(N),  // 1 strada, 2 autostrada
       strCitta: new Uint8Array(N), // strada comunale (gratis, non demolibile)
-      copertura: new Uint8Array(N) // quante stazioni coprono la casella
+      copertura: new Uint8Array(N), // quante stazioni coprono la casella
+      // pendenze: opera della rete (0 in superficie, 1 galleria, 2 viadotto) e sua quota in metri
+      // (-32768 = mai calcolata: si usa quella del terreno, come per le reti costruite prima)
+      operaBin: new Uint8Array(N), operaStr: new Uint8Array(N),
+      quotaBin: new Int16Array(N).fill(-32768), quotaStr: new Int16Array(N).fill(-32768)
     };
   };
 

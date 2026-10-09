@@ -297,6 +297,13 @@
     let h = `<h3>${{ treno: '🚂', bus: '🚌', camion: '🚚', aereo: '✈️' }[v.classe]} ${esc(v.nome)}</h3>`;
     h += `<div class="sotto">${esc(mod.nome)}${v.vagoni ? ` · ${v.vagoni} vagoni` : ''} · ${mod.kmh} km/h · ${v.eta} anni</div>`;
     h += `<p class="${v.stato === 'bloccato' || v.stato === 'guasto' ? 'rosso' : ''}"><b>Stato:</b> ${esc(G.statoVeicolo(s0, v))}</p>`;
+    if (v.tipo === 'treno' && v.stato === 'viaggio') {
+      const p = G.pendenzaTreno(s0, v), f = G.fattorePendenza(mod, v, p), q = Math.round(Math.abs(p));
+      const op = v.caselle && G.operaRete(s0, v.caselle[v.seg], 'binario');
+      h += `<p class="sotto">${q < 1 ? '➡ In piano' : p > 0 ? `↗ In salita ${q}‰` : `↘ In discesa ${q}‰`}` +
+        `${op === G.OPERA.GALLERIA ? ' · 🚇 in galleria' : op === G.OPERA.VIADOTTO ? ' · 🌉 sul viadotto' : ''}` +
+        `${f < 0.995 ? ` · velocità ${Math.round(f * 100)}%` : ''}</p>`;
+    }
     h += `<p><b>Carico:</b> ${pallino(v.merce)}${G.numero(Math.floor(v.qta))} / ${G.numero(v.cap)} ${C.merci[v.merce].unita} di ${nomeMerce(v.merce).toLowerCase()} ${barra(v.qta / v.cap, C.merci[v.merce].colore)}</p>`;
     // conti del mezzo: ricavi − costi = profitto, quest'anno e l'anno scorso; il prezzo d'acquisto a parte
     const cl = n => (n < 0 ? 'rosso' : 'verde'), ripagato = v.prezzo > 0 ? Math.max(0, v.profittoTot / v.prezzo) : 0;
@@ -352,7 +359,7 @@
 
   function htmlCasella(s0, i) {
     const m = s0.mondo, x = i % m.W, y = (i / m.W) | 0, t = G.NOMI_TERRENO[m.tipo[i]];
-    let h = `<h3>📍 Casella ${x}, ${y}</h3><p><b>Terreno:</b> ${t}${m.bosco[i] ? ', bosco' : ''}</p>`;
+    let h = `<h3>📍 Casella ${x}, ${y}</h3><p><b>Terreno:</b> ${t}${m.bosco[i] ? ', bosco' : ''} · quota ${G.numero(G.metriTerreno(m)[i])} m</p>`;
     if (m.tipo[i] !== G.T.ACQUA) {
       const km = G.kmCasella(s0), bosco = m.bosco[i] ? C.costoBosco * km : 0, costo = r => C.reti[r].costo * C.moltTerreno[t] * km + bosco;
       h += `<p><b>Costo per casella</b> (${G.numero(km)} km${C.moltTerreno[t] > 1 ? `, terreno ×${C.moltTerreno[t]}` : ''}${bosco ? ', bosco da tagliare' : ''}): ferrovia ${G.lire(costo('binario'))}, strada ${G.lire(costo('strada'))}</p>`;
@@ -361,8 +368,15 @@
     }
     const c = G.cittaVicina(s0, x, y);
     if (c) h += `<p><b>Città più vicina:</b> <span class="link" data-az="apriCitta" data-id="${c.id}">${esc(c.nome)}</span></p>`;
-    if (m.mBin[i]) h += '<p>🛤️ Binario</p>';
-    if (m.mStr[i]) h += `<p>${m.tipoStr[i] === 2 ? '🚧 Autostrada' : m.strCitta[i] ? '🛣️ Strada comunale' : '🛣️ Strada'}</p>`;
+    // la rete nella casella, con l'opera (galleria o viadotto) e la quota a cui passa
+    const opera = (rete, op) => {
+      const q = G.quotaRete(s0, i, rete), d = Math.round(q - G.metriTerreno(m)[i]);
+      if (op === G.OPERA.GALLERIA) return ` in galleria, a ${G.numero(q)} m (${G.numero(-d)} m sotto il terreno)`;
+      if (op === G.OPERA.VIADOTTO) return ` su un viadotto, a ${G.numero(q)} m (${G.numero(d)} m sopra il terreno)`;
+      return Math.abs(d) >= 3 ? ` in ${d < 0 ? 'trincea' : 'rilevato'} di ${G.numero(Math.abs(d))} m` : '';
+    };
+    if (m.mBin[i]) h += `<p>🛤️ Binario${opera('binario', m.operaBin[i])}</p>`;
+    if (m.mStr[i]) h += `<p>${m.tipoStr[i] === 2 ? '🚧 Autostrada' : m.strCitta[i] ? '🛣️ Strada comunale' : '🛣️ Strada'}${m.strCitta[i] ? '' : opera('strada', m.operaStr[i])}</p>`;
     return h;
   }
 
@@ -556,8 +570,21 @@
       <li>L'<b>autostrada</b> costruita sopra una strada costa il 40% in meno.</li>
       <li>Case e industrie non si attraversano: prima vanno demolite (una casa costa ${G.lire(C.costoCasa)} per piano).</li>
       <li>Demolire un pezzo di rete o una stazione costa ${G.lire(C.costoDemolizione)}.</li>
-      <li>Conta solo il tipo di terreno: la <b>pendenza</b> non costa di più e i treni vanno alla stessa velocità in salita.
-      Una casella in diagonale costa come una diritta.</li></ul>`;
+      <li>Una casella in diagonale costa come una diritta.</li></ul>`;
+    const O = C.opere;
+    h += `<h4>Pendenze, gallerie e viadotti</h4>
+      <p>Ogni casella ha una quota in metri (la vedi passandoci sopra). Una linea non può salire o scendere più di
+      <b>${O.pendenzaMax.binario}‰</b> per la ferrovia (${O.pendenzaMax.binario} m ogni km), <b>${O.pendenzaMax.strada}‰</b> per la strada e
+      <b>${O.pendenzaMax.autostrada}‰</b> per l'autostrada. Il gioco disegna da solo il profilo della linea: dove il terreno è troppo ripido
+      la linea passa sotto il terreno o sopra di esso.</p>
+      <table class="elenco"><tr><td>🚇 <b>Galleria</b></td><td>la linea passa più di ${O.sogliaMetri} m sotto il terreno</td><td class="num">×${O.galleria} il costo al km della rete</td></tr>
+      <tr><td>🌉 <b>Viadotto</b></td><td>la linea passa più di ${O.sogliaMetri} m sopra il terreno</td><td class="num">×${O.viadotto} il costo al km</td></tr>
+      <tr><td>⛏️ Trincea o rilevato</td><td>scarti più piccoli</td><td class="num">${G.lire(O.scavoAlMetro * km)} per metro a casella</td></tr></table>
+      <p>Mentre trascini vedi quante gallerie e viadotti servono e la pendenza più forte. La ricerca del tracciato ne tiene conto:
+      spesso conviene girare attorno a un monte invece di forarlo. In galleria e sul viadotto il bosco non si taglia.</p>
+      <p><b>I treni rallentano in salita</b>: un treno a vapore pieno al ${O.pendenzaMax.binario}‰ va a circa metà velocità, le
+      locomotive elettriche e diesel reggono il doppio della pendenza e un treno corto sale meglio di uno lungo. In discesa si frena
+      un poco. Il pannello del treno mostra se sta salendo e di quanto rallenta.</p>`;
     h += '<h4>Manutenzione (ogni anno, pagata un dodicesimo al mese)</h4><table class="elenco">';
     for (const r of reti) h += `<tr><td>${C.reti[r].nome}</td><td class="num">${G.lire(C.reti[r].manutenzione)} al km</td></tr>`;
     h += '</table><p class="sotto">La manutenzione delle reti non dipende dal terreno: un km in montagna costa come uno in pianura.</p>';
@@ -900,7 +927,17 @@
     const ok = tr.costo <= s0.soldi;
     ui.anteprima = { caselle: tr.caselle, costo: tr.costo, ok, tr };
     const km = G.kmCasella(s0), lun = km === 1 ? '' : ` (${G.numero(Math.round((tr.caselle.length - 1) * km))} km)`;
-    suggerisci(`${C.reti[rete].nome}: <b class="${ok ? '' : 'rosso'}">${G.lire(tr.costo)}</b> · ${tr.caselle.length} caselle${lun}`, e);
+    // le opere e la pendenza più forte del tracciato
+    const p = tr.profilo, opere = [];
+    if (p) {
+      const kmTesto = x => (km === 1 ? '' : ` (${G.numero(x)} km)`);
+      if (p.gallerie) opere.push(`🚇 ${p.gallerie} ${p.gallerie === 1 ? 'galleria' : 'gallerie'}${kmTesto(p.kmGallerie)}`);
+      if (p.viadotti) opere.push(`🌉 ${p.viadotti} ${p.viadotti === 1 ? 'viadotto' : 'viadotti'}${kmTesto(p.kmViadotti)}`);
+      const max = C.opere.pendenzaMax[rete], pend = Math.round(p.pendenza);
+      opere.push(`pendenza massima <b class="${pend > max ? 'rosso' : ''}">${pend}‰</b> <span class="sotto">(limite ${max}‰)</span>`);
+    }
+    suggerisci(`${C.reti[rete].nome}: <b class="${ok ? '' : 'rosso'}">${G.lire(tr.costo)}</b> · ${tr.caselle.length} caselle${lun}` +
+      (opere.length ? '<br>' + opere.join(' · ') : ''), e);
   }
 
   function anteprimaStazione(c, e) {
@@ -1006,7 +1043,7 @@
       else if (RETI.includes(ui.strumento) && c.i >= 0) {
         const t = G.NOMI_TERRENO[st().mondo.tipo[c.i]], mc = G.motivoCasella(st(), c.i, ui.strumento);
         const costo = G.costoCasella(st(), c.i, ui.strumento);
-        suggerisci(`${C.reti[ui.strumento].nome} · ${t}: ${mc ? `<span class="rosso">${esc(mc)}</span>` : costo === 0 ? 'già costruita, gratis' : G.lire(costo) + ' a casella'}<br><span class="sotto">Tieni premuto e trascina</span>`, e);
+        suggerisci(`${C.reti[ui.strumento].nome} · ${t}, ${G.numero(G.metriTerreno(st().mondo)[c.i])} m: ${mc ? `<span class="rosso">${esc(mc)}</span>` : costo === 0 ? 'già costruita, gratis' : G.lire(costo) + ' a casella'}<br><span class="sotto">Tieni premuto e trascina</span>`, e);
       } else suggerisci('', e);
     });
     cv.addEventListener('pointerup', e => {
