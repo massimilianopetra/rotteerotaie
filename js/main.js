@@ -165,45 +165,120 @@
   }
   G._prove = { comprimi, decomprimi, impacca, spacchetta }; // per le prove in Node
 
-  G.salvaPartita = function (st) {
+  // la partita intera in un testo (lo stesso nel browser e nei file)
+  function testoPartita(st) {
     const griglie = {};
     for (const k of GRIGLIE) griglie[k] = grigliaInTesto(st.mondo[k]);
     const stato = {};
     for (const k of ['citta', 'industrie', 'stazioni', 'soldi', 'prestito', 'giorno', 'giornoInt', 'oraInt', 'versioneRete',
       'conti', 'notizie', 'contatori', 'valoreInfra', 'mesiInRosso', 'industrieIniziali']) stato[k] = st[k];
     stato.veicoli = st.veicoli.map(v => Object.assign({}, v, { punti: null, lun: null, caselle: null, pr: [] }));
+    return 'Z1' + comprimi(JSON.stringify({ versione: 2, opz: st.opz, stato, griglie }));
+  }
+
+  // Più partite nel browser: un elenco (ELENCO) e una chiave per ciascuna (PREFISSO + id).
+  // La partita in corso ricorda in quale posto sta (st.posto): «Salva» e il salvataggio automatico scrivono lì.
+  const ELENCO = 'rotaie-e-rotte-elenco', PREFISSO = 'rotaie-e-rotte-partita-';
+  function leggiElenco() {
+    let el = [];
+    try { el = JSON.parse(localStorage.getItem(ELENCO) || '[]'); } catch (e) { return []; }
+    // il vecchio salvataggio unico diventa il primo dell'elenco
     try {
-      localStorage.setItem(CHIAVE, 'Z1' + comprimi(JSON.stringify({ versione: 2, opz: st.opz, stato, griglie })));
+      const vecchio = localStorage.getItem(CHIAVE);
+      if (vecchio) {
+        const id = 'v' + Date.now();
+        localStorage.setItem(PREFISSO + id, vecchio);
+        el.unshift({ id, nome: 'Partita salvata', quando: Date.now() });
+        localStorage.setItem(ELENCO, JSON.stringify(el));
+        localStorage.removeItem(CHIAVE);
+      }
+    } catch (e) { /* si riproverà la prossima volta */ }
+    return el;
+  }
+  const scriviElenco = el => localStorage.setItem(ELENCO, JSON.stringify(el));
+  // le partite salvate, dalla più recente
+  G.elencoSalvataggi = () => leggiElenco().sort((a, b) => b.quando - a.quando);
+  G.esisteSalvataggio = () => G.elencoSalvataggi().length > 0;
+
+  // nuova = true: in un posto nuovo anche se la partita ne ha già uno
+  G.salvaPartita = function (st, nuova) {
+    try {
+      const el = leggiElenco();
+      let voce = !nuova && st.posto && el.find(v => v.id === st.posto);
+      if (!voce) {
+        voce = { id: Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36) };
+        el.push(voce);
+      }
+      Object.assign(voce, { nome: st.opz.nome, mappa: st.opz.nomeMappa || '', data: G.testoData(st), soldi: st.soldi, quando: Date.now() });
+      localStorage.setItem(PREFISSO + voce.id, testoPartita(st));
+      scriviElenco(el);
+      st.posto = voce.id;
       return null;
     } catch (e) {
-      return 'Impossibile salvare: ' + e.message;
+      return /quota/i.test(e.name + e.message)
+        ? 'Spazio del browser esaurito: elimina qualche vecchia partita oppure usa «Salva su file»'
+        : 'Impossibile salvare: ' + e.message;
     }
   };
   G.salvaAutomatico = st => G.salvaPartita(st);
 
-  G.esisteSalvataggio = function () {
-    try { return !!localStorage.getItem(CHIAVE); } catch (e) { return false; }
+  G.eliminaSalvataggio = function (id) {
+    try {
+      localStorage.removeItem(PREFISSO + id);
+      scriviElenco(leggiElenco().filter(v => v.id !== id));
+      if (G.st && G.st.posto === id) G.st.posto = null;
+    } catch (e) { /* niente da fare */ }
   };
 
   // fatto(errore): sulle mappe reali bisogna prima caricare il file della mappa, quindi la risposta arriva dopo
-  G.caricaPartita = function (fatto) {
+  G.caricaPartita = function (id, fatto) {
+    let t = null;
+    try { t = localStorage.getItem(PREFISSO + id); } catch (e) { /* sotto */ }
+    if (!t) { fatto('Partita salvata non trovata'); return; }
+    caricaDaTesto(t, id, fatto);
+  };
+
+  // posto = dove salvare d'ora in poi (null per le partite aperte da file: la prima volta se ne crea uno)
+  function caricaDaTesto(t, posto, fatto) {
     let dati;
     try {
-      const t = localStorage.getItem(CHIAVE);
-      dati = t && JSON.parse(t.startsWith('Z1') ? decomprimi(t.slice(2)) : t);
+      t = t.trim();
+      dati = JSON.parse(t.startsWith('Z1') ? decomprimi(t.slice(2)) : t);
+      if (!dati || !dati.opz || !dati.griglie) throw new Error();
     } catch (e) { fatto('Salvataggio illeggibile'); return; }
-    if (!dati) { fatto('Nessuna partita salvata'); return; }
     const prosegui = () => {
       const m = G.generaTerreno(dati.opz);
       for (const k of GRIGLIE) m[k] = testoInGriglia(dati.griglie[k], m[k].constructor, m.N);
       const st = Object.assign(G.statoVuoto(dati.opz, m), dati.stato);
       if (dati.stato.oraInt === undefined) st.oraInt = Math.floor(st.giorno * 24);
+      st.posto = posto;
       avvia(st);
       G.riprendiVeicoli(st);
       fatto(null);
     };
     if (dati.opz.mappa) G.caricaMappaReale(dati.opz.mappa, e => (e ? fatto(e) : prosegui()));
     else prosegui();
+  }
+
+  // ---------------------------------------------------------------- partite su file
+  // Si scarica un file .rotaie (va nella cartella Download del browser) e lo si riapre con la scelta dei file:
+  // niente fetch, quindi funziona anche aprendo index.html dal disco.
+  G.salvaSuFile = function (st) {
+    try {
+      const nome = `${st.opz.nome} ${G.testoData(st)}`.replace(/[\\/:*?"<>|]+/g, '').trim() + '.rotaie';
+      const url = URL.createObjectURL(new Blob([testoPartita(st)], { type: 'application/octet-stream' }));
+      const a = document.createElement('a');
+      a.href = url; a.download = nome;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      return null;
+    } catch (e) { return 'Impossibile creare il file: ' + e.message; }
+  };
+  G.caricaDaFile = function (file, fatto) {
+    const r = new FileReader();
+    r.onload = () => caricaDaTesto(String(r.result), null, fatto);
+    r.onerror = () => fatto('Impossibile leggere il file');
+    r.readAsText(file);
   };
 
   // ---------------------------------------------------------------- avvio

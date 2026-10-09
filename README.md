@@ -79,7 +79,8 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
   degli ultimi 12 mesi, margine, valore dell'azienda, rete, passeggeri), grafici mese per mese di entrate e uscite, cassa e
   valore, da dove arrivano e dove vanno i soldi; schede con il conto economico e i prestiti, i mezzi migliori e peggiori,
   le merci. In alto è sempre visibile l'utile dell'anno con l'andamento della cassa negli ultimi 12 mesi.
-- **Salvataggio** nel browser (anche automatico ogni 1° gennaio).
+- **Salvataggio** di più partite nel browser (anche automatico ogni 1° gennaio) e su file `.rotaie`
+  («Salva su file» lo scarica nei Download, «Apri da file» lo riapre: per fare copie o cambiare computer).
 
 ## Comandi
 
