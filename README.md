@@ -75,10 +75,12 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
 - **Livelli della mappa** (🗺️ Mappa, tasto `L`): si sceglie cosa vedere (case, vie dei paesi, strade, ferrovie, stazioni,
   industrie, mezzi, nomi, griglia, terreno attenuato) oppure una vista pronta: Tutto, Solo ferrovia, Reti e stazioni,
   Industrie e merci. Con un attrezzo in mano si vede sempre ciò che serve. La scelta si ricorda nel browser.
-- **Quadro di gestione** (📊 Gestione, tasto `E`, oppure clic sull'utile in alto): indicatori (cassa, utile, ricavi e costi
-  degli ultimi 12 mesi, margine, valore dell'azienda, rete, passeggeri), grafici mese per mese di entrate e uscite, cassa e
-  valore, da dove arrivano e dove vanno i soldi; schede con il conto economico e i prestiti, i mezzi migliori e peggiori,
-  le merci. In alto è sempre visibile l'utile dell'anno con l'andamento della cassa negli ultimi 12 mesi.
+- **Quadro di gestione** (📊 Gestione, tasto `E`, oppure clic sul profitto in alto): indicatori (cassa, profitto, ricavi, costi
+  e investimenti degli ultimi 12 mesi, margine, valore dell'azienda, rete, passeggeri), grafici mese per mese di ricavi, costi
+  e investimenti, cassa e valore, da dove arrivano e dove vanno i soldi; schede con il conto economico (ricavi − costi = profitto,
+  poi gli investimenti e il saldo di cassa) e i prestiti, ricavi/costi/profitto dei mezzi, le merci. In alto è sempre visibile
+  il profitto dell'anno con l'andamento della cassa negli ultimi 12 mesi.
+- **Aiuto a schede** (tasto `H`): come si gioca, costi di costruzione e manutenzione, soldi e profitti, comandi.
 - **Salvataggio** di più partite nel browser (anche automatico ogni 1° gennaio) e su file `.rotaie`
   («Salva su file» lo scarica nei Download, «Apri da file» lo riapre: per fare copie o cambiare computer).
 
@@ -103,6 +105,46 @@ Per costruire una linea: tieni premuto il tasto sinistro e trascina; prima di la
 2. Mettine un'altra in una seconda città e collegale con 🛤️. Il binario deve passare **sopra** una casella della
    stazione (o finirci): passarle accanto non basta.
 3. Clicca su una stazione → «Compra un treno» → «Aggiungi fermate» → clicca sull'altra stazione.
+
+## Quanto costa costruire
+
+Le reti si pagano casella per casella: **costo della rete × moltiplicatore del terreno × km della casella**
+(1 km sulle mappe inventate, 2 sull'Italia, 6 sull'Europa), più il taglio del bosco se c'è.
+Il tracciato proposto è il **più economico**, non il più corto: gira attorno alle montagne e passa i fiumi dove conviene.
+
+| Terreno | × | Ferrovia | Strada | Autostrada |
+|---|---|---|---|---|
+| Pianura | ×1 | L. 1.500 | L. 400 | L. 3.000 |
+| Collina | ×2 | L. 3.000 | L. 800 | L. 6.000 |
+| Montagna | ×4 | L. 6.000 | L. 1.600 | L. 12.000 |
+| Fiume (ponte) | ×5 | L. 7.500 | L. 2.000 | L. 15.000 |
+| Bosco | in più | L. 300 | L. 300 | L. 300 |
+| Mare e laghi | — | non si costruisce | | |
+
+(prezzi per casella sulle mappe inventate)
+
+- Dove la rete c'è già non si paga; le strade comunali delle città sono gratis; l'autostrada sopra una strada costa il 40% in meno.
+- Case e industrie non si attraversano. Demolire un pezzo di rete o una stazione costa L. 300, una casa L. 1.500 per piano.
+- Conta solo il tipo di terreno: la pendenza non costa di più e non rallenta i treni; una casella in diagonale costa come una diritta.
+- **Manutenzione** all'anno, uguale su ogni terreno: ferrovia L. 50 al km, strada L. 10, autostrada L. 100; poi quella delle stazioni
+  (da L. 500 per una fermata a L. 10.000 per un aeroporto).
+- Tutti i numeri stanno in `dati/catalogo.js` (`reti`, `moltTerreno`, `costoBosco`). Nel gioco: aiuto (`H`), scheda «Costi».
+
+## Soldi: ricavi, costi, profitto
+
+| Parola | Che cos'è |
+|---|---|
+| **Ricavi** | quanto si incassa dalle consegne: unità × prezzo della merce × distanza in linea d'aria, meno se il viaggio è troppo lento |
+| **Costi** | le spese di ogni mese: esercizio dei mezzi, manutenzione di reti e stazioni, interessi del prestito |
+| **Profitto** | ricavi − costi: dice se la compagnia guadagna (è il numero in alto) |
+| **Investimenti** | costruzioni e acquisto di mezzi (meno le vendite): si pagano una volta e restano nel valore dell'azienda, quindi non abbassano il profitto |
+| **Cassa** | cresce del profitto e cala degli investimenti |
+| **Valore dell'azienda** | cassa + valore dei mezzi + metà del costo della rete − debito |
+
+Per ogni mezzo il gioco mostra ricavi, costi (il suo esercizio, +4% per anno di età) e profitto, quest'anno e l'anno scorso,
+più «Prezzo già ripagato» (il profitto da quando è stato comprato rispetto al prezzo). Manutenzione e interessi sono di tutta la
+compagnia, quindi la somma dei profitti dei mezzi è più alta del profitto della compagnia. Nel gioco: aiuto (`H`), scheda
+«Soldi e profitti», e il quadro di gestione (`E`).
 
 ## Versione e build
 

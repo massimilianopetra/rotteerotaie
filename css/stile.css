@@ -23,6 +23,15 @@ button.mini { padding: 0 6px; font-size: 11px; }
 .nascosto { display: none !important; }
 .rosso { color: var(--rosso); }
 .verde { color: var(--verde); }
+.giallo { color: var(--accento); }
+.viola { color: #a896dc; }
+/* le parole dei conti (ricavi, costi, profitto, investimenti) */
+.spiegaConti { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 10px 0; padding: 8px 10px; font-size: 12px;
+  color: var(--tenue); background: #0f1821; border-radius: 6px; }
+.spiegaConti b { font-weight: 700; }
+table.conti tr.totale td .sotto { font-weight: 400; }
+table.contiMezzo { width: 100%; }
+table.contiMezzo tr.totale td { font-weight: 700; border-top: 1px solid var(--bordo); }
 .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .sotto { color: var(--tenue); font-size: 12px; }
 .nota { color: var(--tenue); font-size: 12px; margin: 6px 0; }

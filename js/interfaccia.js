@@ -298,10 +298,16 @@
     h += `<div class="sotto">${esc(mod.nome)}${v.vagoni ? ` · ${v.vagoni} vagoni` : ''} · ${mod.kmh} km/h · ${v.eta} anni</div>`;
     h += `<p class="${v.stato === 'bloccato' || v.stato === 'guasto' ? 'rosso' : ''}"><b>Stato:</b> ${esc(G.statoVeicolo(s0, v))}</p>`;
     h += `<p><b>Carico:</b> ${pallino(v.merce)}${G.numero(Math.floor(v.qta))} / ${G.numero(v.cap)} ${C.merci[v.merce].unita} di ${nomeMerce(v.merce).toLowerCase()} ${barra(v.qta / v.cap, C.merci[v.merce].colore)}</p>`;
-    h += `<table><tr><td>Profitto quest'anno</td><td class="num ${v.profittoAnno < 0 ? 'rosso' : 'verde'}">${G.lire(v.profittoAnno)}</td></tr>
-      <tr><td>Profitto anno scorso</td><td class="num ${v.profittoScorso < 0 ? 'rosso' : 'verde'}">${G.lire(v.profittoScorso)}</td></tr>
-      <tr><td>Costo annuo</td><td class="num">${G.lire(G.esercizioVeicolo(v))}</td></tr>
-      <tr><td>Valore</td><td class="num">${G.lire(G.valoreVeicolo(v))}</td></tr>
+    // conti del mezzo: ricavi − costi = profitto, quest'anno e l'anno scorso; il prezzo d'acquisto a parte
+    const cl = n => (n < 0 ? 'rosso' : 'verde'), ripagato = v.prezzo > 0 ? Math.max(0, v.profittoTot / v.prezzo) : 0;
+    h += `<table class="contiMezzo"><tr><th></th><th class="num">${s0.conti.anno}</th><th class="num">anno scorso</th></tr>
+      <tr><td title="Quanto ha incassato con le consegne">🟢 Ricavi</td><td class="num verde">${G.lire(v.ricaviAnno)}</td><td class="num sotto">${G.lire(v.ricaviScorso)}</td></tr>
+      <tr><td title="Esercizio del mezzo: si paga un dodicesimo al mese">🔴 Costi</td><td class="num">${G.lire(-v.costiAnno)}</td><td class="num sotto">${G.lire(-v.costiScorso)}</td></tr>
+      <tr class="totale"><td title="Ricavi − costi">📈 Profitto</td><td class="num ${cl(v.profittoAnno)}">${G.lire(v.profittoAnno)}</td><td class="num ${cl(v.profittoScorso)}">${G.lire(v.profittoScorso)}</td></tr></table>`;
+    h += `<table><tr><td>Costo annuo (esercizio)</td><td class="num">${G.lire(G.esercizioVeicolo(v))}</td></tr>
+      <tr><td title="Investimento: non entra nel profitto">Prezzo d'acquisto</td><td class="num">${G.lire(v.prezzo)}</td></tr>
+      <tr><td title="Profitto da quando l'hai comprato, rispetto al prezzo">Prezzo già ripagato</td><td class="num ${ripagato >= 1 ? 'verde' : ''}">${Math.round(ripagato * 100)}%${ripagato >= 1 ? ' ✔' : ''}</td></tr>
+      <tr><td title="Quanto ricaveresti vendendolo oggi">Valore se lo vendi</td><td class="num">${G.lire(G.valoreVeicolo(v))}</td></tr>
       <tr><td>Guasti</td><td class="num">${v.guasti}</td></tr></table>`;
     h += '<h4>Percorso</h4>';
     if (ui.percorso) h += '<div class="banda">Clicca sulle stazioni da aggiungere al percorso. <b>Esc</b> o il pulsante qui sotto per finire.</div>';
@@ -340,8 +346,10 @@
     const m = s0.mondo, x = i % m.W, y = (i / m.W) | 0, t = G.NOMI_TERRENO[m.tipo[i]];
     let h = `<h3>📍 Casella ${x}, ${y}</h3><p><b>Terreno:</b> ${t}${m.bosco[i] ? ', bosco' : ''}</p>`;
     if (m.tipo[i] !== G.T.ACQUA) {
-      h += `<p><b>Costo per casella:</b> ferrovia ${G.lire(C.reti.binario.costo * C.moltTerreno[t])}, strada ${G.lire(C.reti.strada.costo * C.moltTerreno[t])}</p>`;
+      const km = G.kmCasella(s0), bosco = m.bosco[i] ? C.costoBosco * km : 0, costo = r => C.reti[r].costo * C.moltTerreno[t] * km + bosco;
+      h += `<p><b>Costo per casella</b> (${G.numero(km)} km${C.moltTerreno[t] > 1 ? `, terreno ×${C.moltTerreno[t]}` : ''}${bosco ? ', bosco da tagliare' : ''}): ferrovia ${G.lire(costo('binario'))}, strada ${G.lire(costo('strada'))}</p>`;
       if (m.tipo[i] === G.T.FIUME) h += '<div class="nota">Sul fiume serve un ponte: costa di più.</div>';
+      h += '<div class="nota">Tutti i costi nell\'aiuto (H), scheda «Costi».</div>';
     }
     const c = G.cittaVicina(s0, x, y);
     if (c) h += `<p><b>Città più vicina:</b> <span class="link" data-az="apriCitta" data-id="${c.id}">${esc(c.nome)}</span></p>`;
@@ -422,14 +430,16 @@
     let h = '';
     if (!s0.veicoli.length) h = '<p>Non hai ancora mezzi. Costruisci due stazioni collegate, poi clicca su una stazione e premi «Compra».</p>';
     else {
-      h = '<table class="elenco"><tr><th>Mezzo</th><th>Merce</th><th>Stato</th><th>Profitto anno</th><th>Anno scorso</th><th>Età</th></tr>';
+      const a = s0.conti.anno;
+      h = `<table class="elenco"><tr><th>Mezzo</th><th>Merce</th><th>Stato</th><th class="num">Ricavi ${a}</th><th class="num">Costi ${a}</th><th class="num">Profitto ${a}</th><th class="num">Profitto anno scorso</th><th class="num">Età</th></tr>`;
       for (const v of [...s0.veicoli].sort((a, b) => b.profittoAnno - a.profittoAnno)) {
         h += `<tr class="link" data-az="apriVeicolo" data-id="${v.id}"><td>${esc(v.nome)}<div class="sotto">${esc(G.modello(v.modello).nome)}</div></td>
           <td>${pallino(v.merce)}${nomeMerce(v.merce)}</td><td>${esc(G.statoVeicolo(s0, v))}</td>
-          <td class="num ${v.profittoAnno < 0 ? 'rosso' : 'verde'}">${G.lire(v.profittoAnno)}</td>
+          <td class="num verde">${G.lire(v.ricaviAnno)}</td><td class="num">${G.lire(-v.costiAnno)}</td>
+          <td class="num ${v.profittoAnno < 0 ? 'rosso' : 'verde'}"><b>${G.lire(v.profittoAnno)}</b></td>
           <td class="num ${v.profittoScorso < 0 ? 'rosso' : 'verde'}">${G.lire(v.profittoScorso)}</td><td class="num">${v.eta}</td></tr>`;
       }
-      h += '</table>';
+      h += '</table><div class="nota">Profitto = ricavi (le consegne) − costi (l\'esercizio del mezzo). Il prezzo d\'acquisto è un investimento e non entra nel profitto.</div>';
     }
     apriFinestra(`Mezzi (${s0.veicoli.length})`, h, true);
   }
@@ -480,8 +490,83 @@
   const finestraFinanze = () => G.apriGestione('conti');
   ui.apriFinestra = (titolo, corpo, larga) => apriFinestra(titolo, corpo, larga);
 
-  function finestraAiuto() {
-    apriFinestra('Come si gioca', `
+  // l'aiuto a schede: come si gioca, quanto costa costruire, come leggere i conti, comandi
+  const SCHEDE_AIUTO = { gioco: '🚂 Come si gioca', costi: '🏗️ Costi', soldi: '💰 Soldi e profitti', comandi: '⌨️ Comandi' };
+  function finestraAiuto(scheda) {
+    scheda = SCHEDE_AIUTO[scheda] ? scheda : 'gioco';
+    const testa = `<div class="schede">${Object.keys(SCHEDE_AIUTO).map(k => `<button class="${k === scheda ? 'attivo' : ''}" data-az="schedaAiuto" data-s="${k}">${SCHEDE_AIUTO[k]}</button>`).join('')}</div>`;
+    const corpo = { gioco: aiutoGioco, costi: aiutoCosti, soldi: aiutoSoldi, comandi: aiutoComandi }[scheda]();
+    apriFinestra('Come si gioca', testa + corpo, true);
+  }
+
+  function aiutoCosti() {
+    const s0 = st(), km = s0 ? G.kmCasella(s0) : 1;
+    const terreni = Object.keys(C.moltTerreno).filter(t => isFinite(C.moltTerreno[t]));
+    const reti = Object.keys(C.reti);
+    let h = `<p>Le reti si pagano <b>casella per casella</b>: costo della rete × moltiplicatore del terreno${km !== 1 ? ` × <b>${G.numero(km)} km</b>
+      (in questa partita una casella è lunga ${G.numero(km)} km)` : ''}. Se nella casella c'è un bosco si aggiunge il taglio.
+      Mentre trascini vedi il tracciato e il prezzo prima di costruire: è il percorso <b>più economico</b>, non il più corto, quindi gira
+      attorno alle montagne e passa i fiumi dove conviene.</p>`;
+    h += `<table class="elenco"><tr><th>Terreno</th><th class="num">×</th>${reti.map(r => `<th class="num">${C.reti[r].nome}</th>`).join('')}</tr>`;
+    for (const t of terreni) h += `<tr><td>${t[0].toUpperCase() + t.slice(1)}${t === 'fiume' ? ' (ponte)' : ''}</td><td class="num">×${C.moltTerreno[t]}</td>${reti.map(r => `<td class="num">${G.lire(C.reti[r].costo * C.moltTerreno[t] * km)}</td>`).join('')}</tr>`;
+    h += `<tr><td>Bosco (in più)</td><td></td><td class="num" colspan="${reti.length}">${G.lire(C.costoBosco * km)} a casella</td></tr>`;
+    h += '<tr><td>Mare e laghi</td><td></td><td colspan="9" class="sotto">non si costruisce</td></tr></table>';
+    h += `<ul><li>Dove la rete c'è già non si paga: si può partire da un binario esistente. Le <b>strade comunali</b> delle città sono gratis.</li>
+      <li>L'<b>autostrada</b> costruita sopra una strada costa il 40% in meno.</li>
+      <li>Case e industrie non si attraversano: prima vanno demolite (una casa costa ${G.lire(C.costoCasa)} per piano).</li>
+      <li>Demolire un pezzo di rete o una stazione costa ${G.lire(C.costoDemolizione)}.</li>
+      <li>Conta solo il tipo di terreno: la <b>pendenza</b> non costa di più e i treni vanno alla stessa velocità in salita.
+      Una casella in diagonale costa come una diritta.</li></ul>`;
+    h += '<h4>Manutenzione (ogni anno, pagata un dodicesimo al mese)</h4><table class="elenco">';
+    for (const r of reti) h += `<tr><td>${C.reti[r].nome}</td><td class="num">${G.lire(C.reti[r].manutenzione)} al km</td></tr>`;
+    h += '</table><p class="sotto">La manutenzione delle reti non dipende dal terreno: un km in montagna costa come uno in pianura.</p>';
+    h += '<h4>Stazioni</h4><table class="elenco"><tr><th>Tipo</th><th class="num">Costo</th><th class="num">Manutenzione all\'anno</th><th class="num">Bacino</th></tr>';
+    for (const k in C.taglieStazione) { const d = C.taglieStazione[k]; h += `<tr><td>🚉 ${d.nome}${d.anno ? ` (dal ${d.anno})` : ''}</td><td class="num">${G.lire(d.costo)}</td><td class="num">${G.lire(d.manutenzione)}</td><td class="num">${d.raggio} caselle</td></tr>`; }
+    for (const k of ['deposito', 'aeroporto']) { const d = C.stazioni[k]; h += `<tr><td>${d.icona} ${d.nome}${d.anno ? ` (dal ${d.anno})` : ''}</td><td class="num">${G.lire(d.costo)}</td><td class="num">${G.lire(d.manutenzione)}</td><td class="num">${d.raggio} caselle</td></tr>`; }
+    h += '</table>';
+    h += `<h4>Mezzi</h4><p>Ogni modello ha un prezzo e un <b>costo annuo di esercizio</b>; ogni vagone costa ${G.lire(C.vagone.costo)} più
+      ${G.lire(C.vagone.esercizio)} l'anno. L'esercizio cresce del 4% per ogni anno di età, e i mezzi fuori produzione si guastano più spesso.</p>`;
+    return h;
+  }
+
+  function aiutoSoldi() {
+    return `${G.SPIEGAZIONE_CONTI || ''}
+      <h4>🟢 Ricavi</h4>
+      <p>Si incassa a ogni consegna: <b>unità × prezzo della merce × distanza</b> in linea d'aria fra la stazione di partenza e quella
+      d'arrivo. Se il viaggio dura più di quanto la merce sopporta il prezzo cala: i passeggeri e la posta vogliono mezzi veloci,
+      carbone e ferro possono aspettare. Si paga solo dove la merce è accettata.</p>
+      <h4>🔴 Costi</h4>
+      <p>Sono le spese che si pagano <b>sempre</b>, anche con i mezzi fermi: l'<b>esercizio</b> dei mezzi, la <b>manutenzione</b> di
+      binari, strade e stazioni e gli <b>interessi</b> del prestito (${Math.round(C.inizio.interesse * 100)}% l'anno). Si pagano un dodicesimo al mese.</p>
+      <h4>📈 Profitto</h4>
+      <p><b>Profitto = ricavi − costi.</b> Dice se la compagnia guadagna: è il numero in alto a sinistra («Profitto» dell'anno).
+      Se è negativo stai perdendo soldi ogni mese.</p>
+      <h4>🟣 Investimenti</h4>
+      <p>Costruire reti e stazioni e comprare mezzi sono <b>investimenti</b>: si pagano una volta e non sono costi, perché quello che
+      hai costruito resta e fa crescere il <b>valore dell'azienda</b>. Per questo non abbassano il profitto, ma fanno scendere la cassa.
+      La vendita di un mezzo è un investimento al contrario.</p>
+      <h4>💰 Cassa e valore</h4>
+      <p>La <b>cassa</b> cresce del profitto e cala degli investimenti. Il <b>valore dell'azienda</b> = cassa + valore dei mezzi + metà del
+      costo della rete − debito. Il primo anno, con tante costruzioni, la cassa scende anche se il profitto è buono: è normale.</p>
+      <h4>🚂 I conti di ogni mezzo</h4>
+      <p>Per ogni mezzo vedi <b>ricavi</b> (le sue consegne), <b>costi</b> (il suo esercizio) e <b>profitto</b>. Il prezzo d'acquisto non
+      entra nel profitto: nel pannello del mezzo c'è «Prezzo già ripagato», cioè quanto del prezzo è tornato indietro col profitto.
+      La manutenzione della rete e gli interessi sono di tutta la compagnia, quindi la somma dei profitti dei mezzi è più alta del profitto
+      della compagnia. Il quadro di gestione (tasto E) mostra tutto mese per mese.</p>`;
+  }
+
+  function aiutoComandi() {
+    return `<table class="elenco"><tr><td>Sposta la mappa</td><td>trascina col tasto destro (o sinistro con 🔍), frecce</td></tr>
+      <tr><td>Zoom</td><td>rotellina, tasti + e −</td></tr>
+      <tr><td>Strumenti</td><td>I info · B ferrovia · R strada · U autostrada · T stazione (apre le dimensioni) · F autostazione · A aeroporto · X demolisci</td></tr>
+      <tr><td>Finestre</td><td>V mezzi · M mondo · E gestione (conti e grafici) · H aiuto · G griglia · L livelli della mappa (cosa mostrare) · C vie dei paesi</td></tr>
+      <tr><td>Tempo</td><td>spazio pausa · 1 normale (1 secondo = 5 minuti) · 2 veloce (1 ora al secondo) · 3 velocissimo (1 giorno al secondo) · 4 turbo (1 settimana al secondo)</td></tr>
+      <tr><td>Annulla / chiudi</td><td>Esc</td></tr></table>
+      <p class="sotto">Le partite si salvano dal pulsante 💾 Partita: nel browser oppure su file.</p>`;
+  }
+
+  function aiutoGioco() {
+    return `
       <p>Sei a capo di una compagnia di trasporti. Costruisci <b>ferrovie</b>, <b>strade</b>, <b>autostrade</b> (dal 1955) e
       <b>aeroporti</b> (dal 1925), compra i mezzi e porta passeggeri e merci dove servono. Ogni consegna viene pagata in base
       alla <b>distanza</b> e alla <b>velocità</b> del viaggio.</p>
@@ -505,13 +590,7 @@
       🌾 Grano → 🍝 Pastificio → Cibo → città · 🛢️ Petrolio → ⚗️ Raffineria → Carburante → città · ⚡ La centrale compra il carbone.</p>
       <p>Miniere e pozzi hanno una <b>riserva</b>: prima o poi si esauriscono e ne vengono scoperti di nuovi.
       Le <b>città crescono</b> se le servi bene; le case nuove nascono lungo le strade e attorno alle stazioni.</p>
-      <h4>Comandi</h4>
-      <table class="elenco"><tr><td>Sposta la mappa</td><td>trascina col tasto destro (o sinistro con 🔍), frecce</td></tr>
-      <tr><td>Zoom</td><td>rotellina, tasti + e −</td></tr>
-      <tr><td>Strumenti</td><td>I info · B ferrovia · R strada · U autostrada · T stazione (apre le dimensioni) · F autostazione · A aeroporto · X demolisci</td></tr>
-      <tr><td>Finestre</td><td>V mezzi · M mondo · E gestione (conti e grafici) · H aiuto · G griglia · L livelli della mappa (cosa mostrare) · C vie dei paesi</td></tr>
-      <tr><td>Tempo</td><td>spazio pausa · 1 normale (1 secondo = 5 minuti) · 2 veloce (1 ora al secondo) · 3 velocissimo (1 giorno al secondo) · 4 turbo (1 settimana al secondo)</td></tr>
-      <tr><td>Annulla / chiudi</td><td>Esc</td></tr></table>`, true);
+      <p class="sotto">Quanto costa costruire: scheda «Costi». Ricavi, costi e profitto: scheda «Soldi e profitti».</p>`;
   }
 
   // versione e build (da js/versione.js, generato da "npm run versione")
@@ -601,8 +680,9 @@
     chiudiPannello,
     chiudiFinestra,
     vaiA: d => G.vaiA(+d.x, +d.y),
-    finestra: d => ({ veicoli: finestraVeicoli, mondo: finestraMondo, finanze: () => G.apriGestione(), aiuto: finestraAiuto, info: finestraInfo, menu: () => finestraMenu(false) })[d.f](),
+    finestra: d => ({ veicoli: finestraVeicoli, mondo: finestraMondo, finanze: () => G.apriGestione(), aiuto: () => finestraAiuto(d.s), info: finestraInfo, menu: () => finestraMenu(false) })[d.f](),
     schedaMondo: d => finestraMondo(d.s),
+    schedaAiuto: d => finestraAiuto(d.s),
     schedaGestione: d => G.apriGestione(d.s),
     apriStazione: d => { const s = st().stazioni[+d.id]; if (!s) return; ui.apriPannello('stazione', +d.id); if (d.vai) { G.vaiA(s.x + 0.5, s.y + 0.5); chiudiFinestra(); } },
     apriCitta: d => { const c = st().citta[+d.id]; ui.apriPannello('citta', +d.id); if (d.vai) { G.vaiA(c.x + 0.5, c.y + 0.5); chiudiFinestra(); } },

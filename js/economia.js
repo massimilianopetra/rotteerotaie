@@ -28,6 +28,20 @@
     m[voce] = (m[voce] || 0) + lire;
   };
   G.somma = o => Object.values(o).reduce((a, b) => a + b, 0);
+
+  // Le voci del conto si dividono in due famiglie:
+  // - gestione: ricavi delle consegne e costi che si pagano sempre (esercizio dei mezzi, manutenzione, interessi);
+  //   profitto = ricavi − costi: dice se la compagnia guadagna;
+  // - investimenti: costruzioni e acquisto di mezzi meno le vendite dei mezzi: spese una tantum che restano
+  //   nel valore dell'azienda. Saldo di cassa = profitto − investimenti.
+  G.VOCI_INVESTIMENTO = ['costruzione', 'veicoli'];
+  G.bilancio = function (conto) {
+    const e = conto.entrate || {}, u = conto.uscite || {};
+    let ricavi = 0, costi = 0, investimenti = 0;
+    for (const k in e) if (k === 'vendite') investimenti -= e[k]; else ricavi += e[k];
+    for (const k in u) if (G.VOCI_INVESTIMENTO.includes(k)) investimenti += u[k]; else costi += u[k];
+    return { ricavi, costi, profitto: ricavi - costi, investimenti, cassa: ricavi - costi - investimenti };
+  };
   G.lire = n => (n < 0 ? '−' : '') + 'L. ' + Math.abs(Math.round(n)).toLocaleString('it-IT');
   G.numero = n => Math.round(n).toLocaleString('it-IT');
 
@@ -439,7 +453,7 @@
     let esercizio = 0;
     for (const v of st.veicoli) {
       const c = G.esercizioVeicolo(v) / 12;
-      esercizio += c; v.profittoAnno -= c;
+      esercizio += c; G.contoVeicolo(v, 0, c);
     }
     if (esercizio) G.spendi(st, esercizio, 'esercizio');
     const inf = G.costiInfrastruttura(st);
@@ -460,12 +474,14 @@
   // ---------------------------------------------------------------- un anno
   G.annuale = function (st, anno) {
     const c = st.conti, vecchio = c.corrente;
-    const utile = G.somma(vecchio.entrate) - G.somma(vecchio.uscite);
+    const b = G.bilancio(vecchio);
     c.storico.push({ anno: c.anno, entrate: vecchio.entrate, uscite: vecchio.uscite, soldi: st.soldi, valore: G.valoreAzienda(st) });
     if (c.storico.length > 40) c.storico.shift();
     c.anno = anno; c.corrente = G.nuovoConto();
-    for (const v of st.veicoli) { v.profittoScorso = v.profittoAnno; v.profittoAnno = 0; v.eta++; }
-    G.notizia(st, `Bilancio del ${anno - 1}: ${utile >= 0 ? 'utile' : 'perdita'} di ${G.lire(Math.abs(utile))}. Valore dell'azienda: ${G.lire(G.valoreAzienda(st))}.`);
+    for (const v of st.veicoli) { G.chiudiAnnoVeicolo(v); v.eta++; }
+    G.notizia(st, `Bilancio del ${anno - 1}: ricavi ${G.lire(b.ricavi)}, costi ${G.lire(b.costi)}, ` +
+      `${b.profitto >= 0 ? 'profitto' : 'perdita'} di ${G.lire(Math.abs(b.profitto))}` +
+      (b.investimenti > 0 ? `; investiti ${G.lire(b.investimenti)} in rete e mezzi` : '') + `. Valore dell'azienda: ${G.lire(G.valoreAzienda(st))}.`);
     for (const mod of C.veicoli) if (mod.anno === anno) G.notizia(st, `Novità del ${anno}: è in vendita ${mod.nome} (${mod.kmh} km/h).`);
     for (const k in C.reti) if (C.reti[k].anno === anno) G.notizia(st, `Da quest'anno si possono costruire le ${C.reti[k].nome.toLowerCase()}!`);
     for (const k in C.stazioni) if (C.stazioni[k].anno === anno) G.notizia(st, `Inizia l'era del volo: ora si possono costruire gli aeroporti!`);
