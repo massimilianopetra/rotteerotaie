@@ -4,7 +4,9 @@
 (function () {
   'use strict';
   const G = window.GIOCO, C = window.CATALOGO, T = G.T, OCC = G.OCC;
-  const PX = 8;
+  // pixel per casella del terreno pre-disegnato: 8 sulle mappe inventate, meno su quelle reali (grandi),
+  // perché l'immagine resti sotto i 12 milioni di pixel (circa 50 MB)
+  let PX = 8;
   const D = G.disegno = { cam: { x: 0, y: 0, ts: 16 }, terreno: null, mini: null, ox: 0, oy: 0 };
 
   // ---------------------------------------------------------------- terreno
@@ -35,7 +37,8 @@
     // alberi: tre chiome per casella in posizioni pseudo-casuali
     const alberi = [];
     if (m.bosco[i]) for (let k = 0; k < 3; k++) {
-      alberi.push([1.6 + G.hash(x * 3 + k, y) * 4.8, 1.6 + G.hash(x, y * 3 + k + 7) * 4.8, 1.5 + G.hash(x + k, y + 11) * 0.9]);
+      const u = PX / 8;
+      alberi.push([(1.6 + G.hash(x * 3 + k, y) * 4.8) * u, (1.6 + G.hash(x, y * 3 + k + 7) * 4.8) * u, (1.5 + G.hash(x + k, y + 11) * 0.9) * u]);
     }
     for (let py = 0; py < PX; py++) for (let px = 0; px < PX; px++) {
       const fx = x + (px + 0.5) / PX, fy = y + (py + 0.5) / PX;
@@ -71,6 +74,7 @@
 
   G.preparaTerreno = function (st) {
     const m = st.mondo, cv = document.createElement('canvas');
+    PX = Math.max(2, Math.min(8, Math.floor(Math.sqrt(12e6 / m.N))));
     cv.width = m.W * PX; cv.height = m.H * PX;
     const ctx = cv.getContext('2d');
     const img = ctx.createImageData(cv.width, cv.height);
@@ -91,7 +95,8 @@
   G.schermoAMondo = (sx, sy) => ({ x: (sx - D.ox) / D.cam.ts, y: (sy - D.oy) / D.cam.ts });
 
   // ---------------------------------------------------------------- reti
-  function percorsiRete(V, mask, divisore) {
+  // salta(i, j): tratti da non disegnare (da lontano le vie comunali stanno nell'immagine dell'abitato)
+  function percorsiRete(V, mask, divisore, salta) {
     const { m, ts, ox, oy } = V, p1 = new Path2D(), p2 = new Path2D();
     let n1 = 0, n2 = 0;
     for (let y = Math.max(0, V.y0 - 1); y <= Math.min(m.H - 1, V.y1 + 1); y++) {
@@ -101,6 +106,7 @@
         const cx = ox + (x + 0.5) * ts, cy = oy + (y + 0.5) * ts;
         for (let d = 1; d <= 4; d++) if ((mk >> d) & 1) {
           const j = i + G.DY[d] * m.W + G.DX[d];
+          if (salta && salta(i, j)) continue;
           const secondo = divisore && divisore(i, j);
           const p = secondo ? p2 : p1;
           p.moveTo(cx, cy); p.lineTo(cx + G.DX[d] * ts, cy + G.DY[d] * ts);
@@ -124,7 +130,7 @@
 
   function disegnaStrade(V) {
     const { m, ts, ctx } = V;
-    const r = percorsiRete(V, m.mStr, (i, j) => m.tipoStr[i] === 2 && m.tipoStr[j] === 2);
+    const r = percorsiRete(V, m.mStr, (i, j) => m.tipoStr[i] === 2 && m.tipoStr[j] === 2, V.lontano ? (i, j) => m.strCitta[i] && m.strCitta[j] : null);
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     if (r.n1) {
       ctx.strokeStyle = '#5f5b52'; ctx.lineWidth = Math.max(1.6, ts * 0.36); ctx.stroke(r.p1);
@@ -162,8 +168,48 @@
     ['#cdbb9c', '#bfae90', '#d6c6a8'], ['#8d99a8', '#7f8b9b', '#9aa6b4']];
   const DIM = [0, 0.46, 0.6, 0.74, 0.88];
 
+  // da lontano case e vie comunali sono troppe per disegnarle una per una (sulle mappe reali decine di
+  // migliaia): si usa un'immagine già pronta con PA pixel per casella, rifatta solo quando le città cambiano.
+  // "Lontano" = meno di 6 pixel per casella, sulle mappe reali (fittissime) meno di 12.
+  const PA = 4;
+  G.lontano = (m, ts) => ts < (m.reale ? 12 : 6);
+  function preparaAbitato(st) {
+    const m = st.mondo, L = m.W * PA;
+    if (!D.abitato || D.abitato.width !== L || D.abitato.height !== m.H * PA) {
+      D.abitato = document.createElement('canvas'); D.abitato.width = L; D.abitato.height = m.H * PA;
+    }
+    const c = D.abitato.getContext('2d'), img = c.createImageData(L, m.H * PA), d = img.data;
+    const col = COL_CASE.map(l => l && l.map(coloreHex)), via = [125, 120, 108];
+    const px = (X, Y, k) => { const o = (Y * L + X) * 4; d[o] = k[0]; d[o + 1] = k[1]; d[o + 2] = k[2]; d[o + 3] = 255; };
+    for (let y = 0; y < m.H; y++) for (let x = 0; x < m.W; x++) {
+      const i = y * m.W + x, X = x * PA, Y = y * PA;
+      if (m.occ[i] === OCC.CASA) { // un quadrato più grande per i palazzi
+        const l = m.liv[i], k = col[l][Math.floor(G.hash(x, y) * 3)], s = l >= 3 ? 3 : 2, o = l >= 3 ? 0 : 1;
+        for (let a = 0; a < s; a++) for (let b = 0; b < s; b++) px(X + o + b, Y + o + a, k);
+      } else if (m.strCitta[i] && m.mStr[i]) { // il centro e i tratti verso le vie vicine
+        const mk = m.mStr[i];
+        px(X + 1, Y + 1, via); px(X + 2, Y + 1, via); px(X + 1, Y + 2, via); px(X + 2, Y + 2, via);
+        for (let dd = 0; dd < 8; dd++) if ((mk >> dd) & 1) {
+          const dx = G.DX[dd], dy = G.DY[dd];
+          if (dx && dy) px(X + (dx > 0 ? 3 : 0), Y + (dy > 0 ? 3 : 0), via);
+          else if (dx) { px(X + (dx > 0 ? 3 : 0), Y + 1, via); px(X + (dx > 0 ? 3 : 0), Y + 2, via); }
+          else { px(X + 1, Y + (dy > 0 ? 3 : 0), via); px(X + 2, Y + (dy > 0 ? 3 : 0), via); }
+        }
+      }
+    }
+    c.putImageData(img, 0, 0);
+    D.abitatoSporco = false;
+  }
+
   function disegnaCase(V) {
     const { m, ts, ox, oy, ctx } = V;
+    if (V.lontano) {
+      if (!D.abitato || D.abitatoSporco) preparaAbitato(V.st);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(D.abitato, V.x0 * PA, V.y0 * PA, (V.x1 - V.x0 + 1) * PA, (V.y1 - V.y0 + 1) * PA,
+        ox + V.x0 * ts, oy + V.y0 * ts, (V.x1 - V.x0 + 1) * ts, (V.y1 - V.y0 + 1) * ts);
+      return;
+    }
     for (let y = V.y0; y <= V.y1; y++) for (let x = V.x0; x <= V.x1; x++) {
       const i = y * m.W + x;
       if (m.occ[i] !== OCC.CASA) continue;
@@ -444,9 +490,35 @@
   function disegnaEtichette(st, V) {
     const { ts, ox, oy, ctx } = V;
     const dim = Math.max(11, Math.min(20, ts * 0.8));
-    for (const c of st.citta) {
+    // le città più grandi per prime; si salta la scritta che coprirebbe una già messa
+    // (sulle mappe reali le città sono migliaia: da lontano si leggono solo le maggiori)
+    if (!st._cittaOrd || st._cittaOrd.n !== st.citta.length || st._cittaOrd.giorno !== st.giornoInt) {
+      st._cittaOrd = { n: st.citta.length, giorno: st.giornoInt, elenco: [...st.citta].sort((a, b) => b.pop - a.pop) };
+    }
+    const LATO = 120, settori = new Map(), messe = [];
+    const libero = (x0, y0, x1, y1) => {
+      for (let sy = Math.floor(y0 / LATO); sy <= Math.floor(y1 / LATO); sy++) for (let sx = Math.floor(x0 / LATO); sx <= Math.floor(x1 / LATO); sx++) {
+        for (const r of settori.get(sx * 10007 + sy) || []) if (x0 < r[2] && x1 > r[0] && y0 < r[3] && y1 > r[1]) return false;
+      }
+      return true;
+    };
+    const occupa = r => {
+      for (let sy = Math.floor(r[1] / LATO); sy <= Math.floor(r[3] / LATO); sy++) for (let sx = Math.floor(r[0] / LATO); sx <= Math.floor(r[2] / LATO); sx++) {
+        const k = sx * 10007 + sy;
+        if (!settori.has(k)) settori.set(k, []);
+        settori.get(k).push(r);
+      }
+    };
+    for (const c of st._cittaOrd.elenco) {
       if (!visibile(V, c.x - 4, c.y - 2, 8)) continue;
       const x = ox + (c.x + 0.5) * ts, y = oy + (c.y + 0.5) * ts - Math.max(ts * 1.2, 16);
+      const mezza = Math.max(c.nome.length * dim * 0.3, 2.2 * dim) + 3;
+      const r = [x - mezza, y - dim * 0.6, x + mezza, y + dim * 1.4];
+      if (!libero(r[0], r[1], r[2], r[3])) continue;
+      occupa(r);
+      messe.push([c, x, y]);
+    }
+    for (const [c, x, y] of messe) {
       etichetta(ctx, c.nome, x, y, dim, '#fff');
       etichetta(ctx, G.numero(c.pop) + ' ab.', x, y + dim * 0.95, dim * 0.68, '#ffe9a8');
     }
@@ -541,6 +613,7 @@
   G.disegna = function (st, ctx, w, h, ui) {
     const m = st.mondo, cam = D.cam, ts = cam.ts;
     while (st.sporchi.length) { ridisegnaCasella(m, st.sporchi.pop()); st.minimappaSporca = true; }
+    if (st.minimappaSporca) D.abitatoSporco = true;
     const ox = Math.round(w / 2 - cam.x * ts), oy = Math.round(h / 2 - cam.y * ts);
     D.ox = ox; D.oy = oy;
     const x0 = Math.max(0, Math.floor(-ox / ts)), y0 = Math.max(0, Math.floor(-oy / ts));
@@ -549,7 +622,7 @@
     ctx.imageSmoothingEnabled = ts < PX;
     ctx.drawImage(D.terreno.cv, x0 * PX, y0 * PX, (x1 - x0 + 1) * PX, (y1 - y0 + 1) * PX,
       ox + x0 * ts, oy + y0 * ts, (x1 - x0 + 1) * ts, (y1 - y0 + 1) * ts);
-    const V = { m, ts, ox, oy, x0, y0, x1, y1, ctx };
+    const V = { m, st, ts, ox, oy, x0, y0, x1, y1, ctx, lontano: G.lontano(m, ts) };
     if (ui.griglia && ts >= 8) {
       ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 1; ctx.beginPath();
       for (let x = x0; x <= x1 + 1; x++) { ctx.moveTo(ox + x * ts + 0.5, oy + y0 * ts); ctx.lineTo(ox + x * ts + 0.5, oy + (y1 + 1) * ts); }
@@ -584,6 +657,12 @@
     for (const k in C.industrie) colInd[k] = coloreHex(C.industrie[k].colore);
     for (let i = 0; i < m.N; i++) {
       let col = null;
+      // sulle mappe reali i paesi sono ovunque: case appena accennate e niente vie comunali,
+      // altrimenti la minimappa diventa una macchia rossa
+      if (m.reale && (m.occ[i] === OCC.CASA || (m.strCitta[i] && !m.mBin[i]))) {
+        if (m.occ[i] === OCC.CASA) { d[i * 4] = (d[i * 4] + 214) / 2; d[i * 4 + 1] = (d[i * 4 + 1] + 92) / 2; d[i * 4 + 2] = (d[i * 4 + 2] + 64) / 2; }
+        continue;
+      }
       if (m.occ[i] === OCC.CASA) col = [214, 92, 64];
       else if (m.occ[i] === OCC.INDUSTRIA) col = colInd[st.industrie[m.rif[i]].tipo];
       else if (m.occ[i] === OCC.STAZIONE) col = [255, 255, 255];
