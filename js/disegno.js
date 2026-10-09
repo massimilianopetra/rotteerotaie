@@ -130,7 +130,8 @@
 
   function disegnaStrade(V) {
     const { m, ts, ctx } = V;
-    const r = percorsiRete(V, m.mStr, (i, j) => m.tipoStr[i] === 2 && m.tipoStr[j] === 2, V.lontano ? (i, j) => m.strCitta[i] && m.strCitta[j] : null);
+    // le vie comunali non si disegnano da lontano (stanno nell'immagine dell'abitato) né quando il giocatore le nasconde
+    const r = percorsiRete(V, m.mStr, (i, j) => m.tipoStr[i] === 2 && m.tipoStr[j] === 2, V.lontano || V.senzaVie ? (i, j) => m.strCitta[i] && m.strCitta[j] : null);
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     if (r.n1) {
       ctx.strokeStyle = '#5f5b52'; ctx.lineWidth = Math.max(1.6, ts * 0.36); ctx.stroke(r.p1);
@@ -186,7 +187,7 @@
       if (m.occ[i] === OCC.CASA) { // un quadrato più grande per i palazzi
         const l = m.liv[i], k = col[l][Math.floor(G.hash(x, y) * 3)], s = l >= 3 ? 3 : 2, o = l >= 3 ? 0 : 1;
         for (let a = 0; a < s; a++) for (let b = 0; b < s; b++) px(X + o + b, Y + o + a, k);
-      } else if (m.strCitta[i] && m.mStr[i]) { // il centro e i tratti verso le vie vicine
+      } else if (m.strCitta[i] && m.mStr[i] && !(G.ui && G.ui.nascondiVie)) { // il centro e i tratti verso le vie vicine
         const mk = m.mStr[i];
         px(X + 1, Y + 1, via); px(X + 2, Y + 1, via); px(X + 1, Y + 2, via); px(X + 2, Y + 2, via);
         for (let dd = 0; dd < 8; dd++) if ((mk >> dd) & 1) {
@@ -622,7 +623,7 @@
     ctx.imageSmoothingEnabled = ts < PX;
     ctx.drawImage(D.terreno.cv, x0 * PX, y0 * PX, (x1 - x0 + 1) * PX, (y1 - y0 + 1) * PX,
       ox + x0 * ts, oy + y0 * ts, (x1 - x0 + 1) * ts, (y1 - y0 + 1) * ts);
-    const V = { m, st, ts, ox, oy, x0, y0, x1, y1, ctx, lontano: G.lontano(m, ts) };
+    const V = { m, st, ts, ox, oy, x0, y0, x1, y1, ctx, lontano: G.lontano(m, ts), senzaVie: !!ui.nascondiVie };
     if (ui.griglia && ts >= 8) {
       ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 1; ctx.beginPath();
       for (let x = x0; x <= x1 + 1; x++) { ctx.moveTo(ox + x * ts + 0.5, oy + y0 * ts); ctx.lineTo(ox + x * ts + 0.5, oy + (y1 + 1) * ts); }
