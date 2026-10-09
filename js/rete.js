@@ -168,6 +168,10 @@
 
   // ---------------------------------------------------------------- pendenze, gallerie e viadotti
   const NESSUNA = -32768; // quota della rete mai calcolata (reti di prima): vale quella del terreno
+  // reti che non fanno gallerie da sole (le scava il giocatore con G.cercaGalleria); le strade sì
+  const GALLERIE_A_MANO = { binario: 'la ferrovia', autostrada: "l'autostrada" };
+  const MENU_RETE = { binario: 'nel menu della ferrovia (B)', autostrada: "nel menu dell'autostrada (U)" };
+  G.GALLERIE_A_MANO = GALLERIE_A_MANO;
   const OPERA = G.OPERA = { SUPERFICIE: 0, GALLERIA: 1, VIADOTTO: 2 };
   const grQuota = rete => (rete === 'binario' ? 'quotaBin' : 'quotaStr');
   const grOpera = rete => (rete === 'binario' ? 'operaBin' : 'operaStr');
@@ -220,7 +224,7 @@
         const pk = Math.abs(h[k] - h[k - 1]) / L[k] * 1000;
         r.pendenza = Math.max(r.pendenza, pk);
         // ferrovia: un tratto nuovo oltre la pendenza massima (fra due punti fissi, per esempio) non si costruisce
-        if (rete === 'binario' && pk > O.pendenzaMax[rete] + 0.5 && (c0[k] > 0 || c0[k - 1] > 0)) r.ripidi.push(i);
+        if (GALLERIE_A_MANO[rete] && pk > O.pendenzaMax[rete] + 0.5 && (c0[k] > 0 || c0[k - 1] > 0)) r.ripidi.push(i);
       }
       if (c0[k] === 0) { opere[k] = oR[i]; continue; } // c'è già (o è una stazione): niente da pagare
       const d = h[k] - terra[k];
@@ -228,7 +232,7 @@
       if (d < -O.sogliaMetri && m.occ[i] !== OCC.STAZIONE) {
         opere[k] = OPERA.GALLERIA; c = prezzo * O.galleria;
         // la ferrovia non fora i monti da sola: le gallerie le scava il giocatore (G.cercaGalleria)
-        if (rete === 'binario') r.ripidi.push(i);
+        if (GALLERIE_A_MANO[rete]) r.ripidi.push(i);
       }
       else if (d > O.sogliaMetri) { opere[k] = OPERA.VIADOTTO; c = prezzo * O.viadotto; }
       else { const s = Math.abs(d) * O.scavoAlMetro * km; c = c0[k] + s; r.scavo += s; }
@@ -240,8 +244,8 @@
     }
     r.costo = Math.round(r.costo);
     if (r.ripidi.length) {
-      r.impossibile = 'Troppo ripido: la ferrovia sale e scende al massimo del ' + O.pendenzaMax[rete] + '‰ (caselle in rosso). ' +
-        'Gira attorno al monte, oppure scegli 🚇 Galleria nel menu della ferrovia (B) e scavala tu.';
+      r.impossibile = 'Troppo ripido: ' + GALLERIE_A_MANO[rete] + ' sale e scende al massimo del ' + O.pendenzaMax[rete] + '‰ (caselle in rosso). ' +
+        'Gira attorno al monte, oppure scegli 🚇 Galleria ' + MENU_RETE[rete] + ' e scavala tu.';
     }
     return r;
   };
@@ -255,7 +259,7 @@
     if (!isFinite(G.costoCasella(st, a, rete)) || !isFinite(G.costoCasella(st, b, rete))) return null;
     if (a === b) { const p = G.profiloTracciato(st, [a], rete); return { caselle: [a], costo: p.costo, profilo: p }; }
     let tr = null;
-    for (const molt of rete === 'binario' ? [4, 40] : [1]) {
+    for (const molt of GALLERIE_A_MANO[rete] ? [4, 40] : [1]) {
       const caselle = ricercaTracciato(st, a, b, rete, molt);
       if (!caselle) return tr;
       const profilo = G.profiloTracciato(st, caselle, rete);
@@ -313,8 +317,10 @@
   // Le caselle in mezzo devono stare sotto il terreno (almeno sogliaMetri di roccia sopra) e l'uscita b più o meno
   // alla stessa quota (entro sogliaMetri). Restituisce un tracciato come cercaTracciato; se non si può,
   // tr.impossibile dice perché e tr.blocchi sono le caselle da segnare in rosso.
-  G.cercaGalleria = function (st, a, b) {
-    const m = st.mondo, W = m.W, O = C.opere, Hm = G.metriTerreno(m), km = G.kmCasella(st), rete = 'binario';
+  // rete: 'binario' (predefinita) o 'autostrada'
+  G.cercaGalleria = function (st, a, b, rete) {
+    rete = rete || 'binario';
+    const m = st.mondo, W = m.W, O = C.opere, Hm = G.metriTerreno(m), km = G.kmCasella(st), mask = rete === 'binario' ? m.mBin : m.mStr;
     const no = (testo, blocchi, caselle) => ({ caselle: caselle || null, costo: 0, impossibile: testo, blocchi: blocchi || [] });
     const ma = G.motivoCasella(st, a, rete), mb = G.motivoCasella(st, b, rete);
     if (ma) return no('Non si entra da qui: ' + ma, [a]);
@@ -332,20 +338,20 @@
     }
     if (caselle.length < 3) return no('Trascina dall\'imbocco fino all\'uscita dall\'altra parte del monte: la galleria è lunga almeno 3 caselle', [], caselle);
     if (mb) return no('Non si esce qui: ' + mb, [b], caselle);
-    const quota = m.mBin[a] ? G.quotaRete(st, a, rete) : Hm[a], n = caselle.length, qTesto = G.numero(Math.round(quota)) + ' m';
-    // in mezzo: tutto sotto il terreno, senza incrociare altri binari o stazioni
+    const quota = mask[a] ? G.quotaRete(st, a, rete) : Hm[a], n = caselle.length, qTesto = G.numero(Math.round(quota)) + ' m';
+    // in mezzo: tutto sotto il terreno, senza incrociare la stessa rete o stazioni
     const scoperte = [], occupate = [];
     for (let k = 1; k < n - 1; k++) {
       const i = caselle[k];
-      if (m.mBin[i] || m.occ[i] === OCC.STAZIONE) occupate.push(i);
+      if (mask[i] || m.occ[i] === OCC.STAZIONE) occupate.push(i);
       else if (Hm[i] < quota + O.sogliaMetri) scoperte.push(i);
     }
-    if (occupate.length) return no('La galleria incrocerebbe un binario o una stazione: falla partire o arrivare lì, oppure passa altrove', occupate, caselle);
+    if (occupate.length) return no('La galleria incrocerebbe ' + (rete === 'binario' ? 'un binario' : 'una strada') + ' o una stazione: falla partire o arrivare lì, oppure passa altrove', occupate, caselle);
     if (scoperte.length) {
       return no('La galleria uscirebbe allo scoperto: nelle caselle in rosso il terreno non sta almeno ' + O.sogliaMetri +
         ' m sopra la galleria (' + qTesto + '). Cambia direzione o fermati prima.', scoperte, caselle);
     }
-    const qb = m.mBin[b] ? G.quotaRete(st, b, rete) : Hm[b], salto = Math.round(qb - quota);
+    const qb = mask[b] ? G.quotaRete(st, b, rete) : Hm[b], salto = Math.round(qb - quota);
     if (Math.abs(salto) > O.sogliaMetri) {
       return no('L\'uscita è ' + G.numero(Math.abs(salto)) + ' m più ' + (salto > 0 ? 'in alto' : 'in basso') + ' della galleria (' + qTesto +
         '): la galleria è in piano, quindi l\'uscita deve stare alla stessa quota (entro ' + O.sogliaMetri + ' m). ' +

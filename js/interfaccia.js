@@ -11,7 +11,7 @@
   const ui = G.ui = {
     strumento: 'info', pannello: null, trascina: null, anteprima: null, bacino: null, cursore: -1,
     selVeicolo: null, segui: false, velocita: 1, percorso: false, tasti: new Set(),
-    mouseSuPannello: false, ultimaVel: 1, tagliaStazione: 'media', modoBinario: 'normale'
+    mouseSuPannello: false, ultimaVel: 1, tagliaStazione: 'media', modoRete: { binario: 'normale', autostrada: 'normale' }
   };
 
   // icone delle stazioni ferroviarie (SVG 40×40): binario e banchina in basso, fabbricato sopra
@@ -154,17 +154,24 @@
     menu.classList.remove('nascosto'); // prima si mostra, poi si misura l'altezza
     menu.style.top = Math.max(50, Math.min(r.top, window.innerHeight - menu.offsetHeight - 10)) + 'px';
   }
-  // il pulsante della ferrovia apre lo stesso tipo di menu: ferrovia normale oppure galleria
+  // i pulsanti della ferrovia e dell'autostrada aprono lo stesso tipo di menu: rete normale oppure galleria
+  const MENU_GALLERIA = {
+    binario: { titolo: 'Ferrovia', icona: '🛤️', normale: 'Ferrovia normale' },
+    autostrada: { titolo: 'Autostrada', icona: '🚧', normale: 'Autostrada normale' }
+  };
+  const inGalleria = rete => !!MENU_GALLERIA[rete] && ui.modoRete[rete] === 'galleria';
   function aggiornaPulsanteBinario() {
-    const b = document.querySelector('#attrezzi button[data-id="binario"]');
-    if (b) b.innerHTML = (ui.modoBinario === 'galleria' ? '🚇' : '🛤️') + '<span class="freccina">▸</span>';
+    for (const id in MENU_GALLERIA) {
+      const b = document.querySelector(`#attrezzi button[data-id="${id}"]`);
+      if (b) b.innerHTML = (inGalleria(id) ? '🚇' : MENU_GALLERIA[id].icona) + '<span class="freccina">▸</span>';
+    }
   }
-  function apriMenuBinario() {
-    const menu = $('#menuStazioni'), b = document.querySelector('#attrezzi button[data-id="binario"]'), O = C.opere;
-    const voce = (k, ic, nome, testo) => `<button data-az="modoBinario" data-m="${k}" class="${ui.modoBinario === k ? 'attivo' : ''}">
+  function apriMenuBinario(rete) {
+    const menu = $('#menuStazioni'), b = document.querySelector(`#attrezzi button[data-id="${rete}"]`), O = C.opere, M = MENU_GALLERIA[rete];
+    const voce = (k, ic, nome, testo) => `<button data-az="modoBinario" data-r="${rete}" data-m="${k}" class="${ui.modoRete[rete] === k ? 'attivo' : ''}">
       <span class="icona">${ic}</span><span><b>${nome}</b><span class="sotto">${testo}</span></span></button>`;
-    menu.innerHTML = '<div class="titolo">Ferrovia</div>' +
-      voce('normale', '🛤️', 'Ferrovia normale', `Segue il terreno, sale al massimo del ${O.pendenzaMax.binario}‰.<br>Sulle valli fa da sola i viadotti (×${O.viadotto}); dove servirebbe una galleria non si costruisce.`) +
+    menu.innerHTML = `<div class="titolo">${M.titolo}</div>` +
+      voce('normale', M.icona, M.normale, `Segue il terreno, sale al massimo del ${O.pendenzaMax[rete]}‰.<br>Sulle valli fa da sola i viadotti (×${O.viadotto}); dove servirebbe una galleria non si costruisce.`) +
       voce('galleria', '🚇', 'Galleria', `Dritta e in piano, alla quota dell'imbocco.<br>Trascina dall'imbocco all'uscita, dall'altra parte del monte: l'uscita deve stare alla stessa quota (±${O.sogliaMetri} m). ×${O.galleria} il costo.`);
     const r = b.getBoundingClientRect();
     menu.classList.remove('nascosto');
@@ -174,7 +181,7 @@
   const menuStazioniAperto = () => !$('#menuStazioni').classList.contains('nascosto');
 
   function scegliStrumento(id) {
-    if (id !== 'stazione' && id !== 'binario') chiudiMenuStazioni();
+    if (id !== 'stazione' && !MENU_GALLERIA[id]) chiudiMenuStazioni();
     ui.strumento = id; ui.trascina = null; ui.anteprima = null; ui.bacino = null;
     if (id !== 'info') ui.percorso = false;
     document.querySelectorAll('#attrezzi button').forEach(b => b.classList.toggle('attivo', b.dataset.id === id));
@@ -594,8 +601,8 @@
       <p>Ogni casella ha una quota in metri (la vedi passandoci sopra). Una linea non può salire o scendere più di
       <b>${O.pendenzaMax.binario}‰</b> per la ferrovia (${O.pendenzaMax.binario} m ogni km), <b>${O.pendenzaMax.strada}‰</b> per la strada e
       <b>${O.pendenzaMax.autostrada}‰</b> per l'autostrada. Il gioco disegna da solo il profilo della linea: sopra le valli fa i viadotti.
-      Dove servirebbe una galleria la <b>ferrovia non si costruisce</b>: la galleria la scavi tu con 🚇 Galleria (menu della ferrovia, tasto B),
-      dritta e in piano alla quota dell'imbocco. Le strade invece fanno ancora le gallerie da sole.</p>
+      Dove servirebbe una galleria la <b>ferrovia</b> e l'<b>autostrada non si costruiscono</b>: la galleria la scavi tu con 🚇 Galleria
+      (menu della ferrovia, tasto B, o dell'autostrada, tasto U), dritta e in piano alla quota dell'imbocco. Le strade normali invece fanno ancora le gallerie da sole.</p>
       <table class="elenco"><tr><td>🚇 <b>Galleria</b></td><td>la linea passa più di ${O.sogliaMetri} m sotto il terreno</td><td class="num">×${O.galleria} il costo al km della rete</td></tr>
       <tr><td>🌉 <b>Viadotto</b></td><td>la linea passa più di ${O.sogliaMetri} m sopra il terreno</td><td class="num">×${O.viadotto} il costo al km</td></tr>
       <tr><td>⛏️ Trincea o rilevato</td><td>scarti più piccoli</td><td class="num">${G.lire(O.scavoAlMetro * km)} per metro a casella</td></tr></table>
@@ -654,7 +661,7 @@
     return `<table class="elenco"><tr><td>Sposta la mappa</td><td>trascina col tasto destro (o sinistro con 🔍), frecce</td></tr>
       <tr><td>Zoom</td><td>rotellina, tasti + e −</td></tr>
       <tr><td>Vista 3D</td><td>D passa dalla vista dall'alto (2D) a quella in 3D assonometrica e ritorno · O gira la vista 3D di 90° (Maiusc+O al contrario)</td></tr>
-      <tr><td>Strumenti</td><td>I info · B ferrovia (normale o galleria) · R strada · U autostrada · T stazione (apre le dimensioni) · F autostazione · A aeroporto · P porto · X demolisci</td></tr>
+      <tr><td>Strumenti</td><td>I info · B ferrovia (normale o galleria) · R strada · U autostrada (normale o galleria) · T stazione (apre le dimensioni) · F autostazione · A aeroporto · P porto · X demolisci</td></tr>
       <tr><td>Finestre</td><td>V mezzi · M mondo · E gestione (conti e grafici) · K banca · H aiuto · G griglia · L livelli della mappa (cosa mostrare) · C vie dei paesi</td></tr>
       <tr><td>Tempo</td><td>spazio pausa · 1 normale (1 secondo = 5 minuti) · 2 veloce (1 ora al secondo) · 3 velocissimo (1 giorno al secondo) · 4 turbo (1 settimana al secondo)</td></tr>
       <tr><td>Annulla / chiudi</td><td>Esc</td></tr></table>
@@ -685,7 +692,7 @@
       Torino → Milano, passando da Vercelli senza fermarsi) oppure <b>↔ andata e ritorno</b> (Milano → Vercelli → Torino → Vercelli →
       Milano). Sulla mappa il percorso del mezzo selezionato segue i binari; il tratto pieno è il viaggio in corso.</p>
       <h4>⛰️ Montagne: gallerie e viadotti</h4>
-      <p>Il pulsante della ferrovia (tasto B) apre un menu con due voci:</p>
+      <p>Il pulsante della ferrovia (tasto B) apre un menu con due voci; quello dell'autostrada (tasto U) uguale, con il limite del ${C.opere.pendenzaMax.autostrada}‰:</p>
       <ul><li><b>🛤️ Ferrovia normale</b>: segue il terreno e non sale né scende più del ${C.opere.pendenzaMax.binario}‰
       (${C.opere.pendenzaMax.binario} m ogni km). Sopra le valli fa da sola i <b>viadotti</b> 🌉. Se per passare dovrebbe forare un monte,
       <b>non si costruisce</b>: le caselle troppo ripide diventano rosse. Gira attorno al monte oppure scava una galleria.</li>
@@ -788,17 +795,17 @@
   // ---------------------------------------------------------------- azioni dei pulsanti
   const AZIONI = {
     strumento: d => {
-      if (d.id !== 'stazione' && d.id !== 'binario') { scegliStrumento(d.id); return; }
+      if (d.id !== 'stazione' && !MENU_GALLERIA[d.id]) { scegliStrumento(d.id); return; }
       // i pulsanti della stazione e della ferrovia aprono (o chiudono) il loro menu
       const aperto = menuStazioniAperto() && ui.strumento === d.id;
       scegliStrumento(d.id);
-      if (aperto) chiudiMenuStazioni(); else if (d.id === 'stazione') apriMenuStazioni(); else apriMenuBinario();
+      if (aperto) chiudiMenuStazioni(); else if (d.id === 'stazione') apriMenuStazioni(); else apriMenuBinario(d.id);
     },
     modoBinario: d => {
-      ui.modoBinario = d.m;
+      ui.modoRete[d.r] = d.m;
       aggiornaPulsanteBinario();
       chiudiMenuStazioni();
-      scegliStrumento('binario');
+      scegliStrumento(d.r);
     },
     taglia: d => {
       ui.tagliaStazione = d.t;
@@ -989,8 +996,8 @@
   function aggiornaAnteprima(c, e) {
     const s0 = st(), rete = ui.strumento;
     if (c.i < 0) return;
-    const galleria = rete === 'binario' && ui.modoBinario === 'galleria';
-    const tr = galleria ? G.cercaGalleria(s0, ui.trascina.da, c.i) : G.cercaTracciato(s0, ui.trascina.da, c.i, rete);
+    const galleria = inGalleria(rete);
+    const tr = galleria ? G.cercaGalleria(s0, ui.trascina.da, c.i, rete) : G.cercaTracciato(s0, ui.trascina.da, c.i, rete);
     if (tr && tr.impossibile) {
       // la linea si vede in rosso con le caselle che non vanno; al rilascio non si costruisce
       ui.anteprima = { caselle: tr.caselle, ok: false, blocchi: tr.blocchi, motivo: tr.impossibile };
@@ -1128,8 +1135,9 @@
         return;
       }
       if (STAZIONI.includes(ui.strumento)) anteprimaStazione(c, e);
-      else if (ui.strumento === 'binario' && ui.modoBinario === 'galleria' && c.i >= 0) {
-        const mc = G.motivoCasella(st(), c.i, 'binario'), q = st().mondo.mBin[c.i] ? G.quotaRete(st(), c.i, 'binario') : G.metriTerreno(st().mondo)[c.i];
+      else if (inGalleria(ui.strumento) && c.i >= 0) {
+        const r0 = ui.strumento, m0 = st().mondo, mc = G.motivoCasella(st(), c.i, r0);
+        const q = (r0 === 'binario' ? m0.mBin : m0.mStr)[c.i] ? G.quotaRete(st(), c.i, r0) : G.metriTerreno(m0)[c.i];
         suggerisci(`🚇 Galleria · imbocco a ${G.numero(Math.round(q))} m${mc ? `: <span class="rosso">${esc(mc)}</span>` : ''}<br><span class="sotto">Tieni premuto e trascina fino all'uscita, dall'altra parte del monte</span>`, e);
       } else if (RETI.includes(ui.strumento) && c.i >= 0) {
         const t = G.NOMI_TERRENO[st().mondo.tipo[c.i]], mc = G.motivoCasella(st(), c.i, ui.strumento);
@@ -1309,7 +1317,7 @@
     // (un clic sulla mappa col menu aperto lo chiude soltanto, senza costruire)
     document.addEventListener('pointerdown', e => {
       if (menuMappaAperto() && !e.target.closest('#menuMappa, #pulsanteMappa')) chiudiMenuMappa();
-      if (!menuStazioniAperto() || e.target.closest('#menuStazioni, #attrezzi button[data-id="stazione"], #attrezzi button[data-id="binario"]')) return;
+      if (!menuStazioniAperto() || e.target.closest('#menuStazioni, #attrezzi button[data-id="stazione"], #attrezzi button[data-id="binario"], #attrezzi button[data-id="autostrada"]')) return;
       chiudiMenuStazioni();
       if (e.target.id === 'mappa' && e.button === 0) e.stopPropagation();
     }, true);
