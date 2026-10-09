@@ -10,7 +10,7 @@
 
   const ui = G.ui = {
     strumento: 'info', pannello: null, trascina: null, anteprima: null, bacino: null, cursore: -1,
-    selVeicolo: null, segui: false, griglia: false, velocita: 1, percorso: false, tasti: new Set(),
+    selVeicolo: null, segui: false, velocita: 1, percorso: false, tasti: new Set(),
     mouseSuPannello: false, ultimaVel: 1, tagliaStazione: 'media'
   };
 
@@ -514,7 +514,7 @@
       <table class="elenco"><tr><td>Sposta la mappa</td><td>trascina col tasto destro (o sinistro con 🔍), frecce</td></tr>
       <tr><td>Zoom</td><td>rotellina, tasti + e −</td></tr>
       <tr><td>Strumenti</td><td>I info · B ferrovia · R strada · U autostrada · T stazione (apre le dimensioni) · F autostazione · A aeroporto · X demolisci</td></tr>
-      <tr><td>Finestre</td><td>V mezzi · M mondo · E finanze · H aiuto · G griglia · C mostra/nascondi le vie dei paesi</td></tr>
+      <tr><td>Finestre</td><td>V mezzi · M mondo · E finanze · H aiuto · G griglia · L livelli della mappa (cosa mostrare) · C vie dei paesi</td></tr>
       <tr><td>Tempo</td><td>spazio pausa · 1 normale (1 secondo = 5 minuti) · 2 veloce (1 ora al secondo) · 3 velocissimo (1 giorno al secondo) · 4 turbo (1 settimana al secondo)</td></tr>
       <tr><td>Annulla / chiudi</td><td>Esc</td></tr></table>`, true);
   }
@@ -674,8 +674,14 @@
       }), 30);
     },
     menuIniziale: () => finestraMenu(true),
-    griglia: () => { ui.griglia = !ui.griglia; },
-    vieComunali: () => mostraVieComunali(ui.nascondiVie)
+    griglia: () => impostaLivello('griglia', !ui.livelli.griglia),
+    menuMappa: () => { if (menuMappaAperto()) chiudiMenuMappa(); else apriMenuMappa(); },
+    livello: (d, el) => impostaLivello(d.k, el.checked),
+    vista: d => {
+      const v = VISTE.find(x => x.id === d.v);
+      for (const l of LIVELLI) if (l.k !== 'griglia') ui.livelli[l.k] = !!v.l[l.k];
+      salvaLivelli();
+    }
   };
   const veicoloSel = () => ui.selVeicolo && st() && st().veicoli.find(k => k.id === ui.selVeicolo);
 
@@ -856,6 +862,7 @@
       if (k.startsWith('Arrow')) { ui.tasti.add(k); e.preventDefault(); return; }
       if (k === 'Escape') {
         if (menuStazioniAperto()) chiudiMenuStazioni();
+        else if (menuMappaAperto()) chiudiMenuMappa();
         else if (ui.trascina) { ui.trascina = null; ui.anteprima = null; }
         else if (ui.finestra) chiudiFinestra();
         else if (ui.percorso) { ui.percorso = false; disegnaPannello(); }
@@ -872,34 +879,104 @@
       if (t) { AZIONI.strumento({ id: t.id }); return; }
       const f = { v: 'veicoli', m: 'mondo', e: 'finanze', h: 'aiuto' }[k.toLowerCase()];
       if (f) { AZIONI.finestra({ f }); return; }
-      if (k.toLowerCase() === 'g') ui.griglia = !ui.griglia;
-      if (k.toLowerCase() === 'c') mostraVieComunali(ui.nascondiVie);
+      if (k.toLowerCase() === 'g') impostaLivello('griglia', !ui.livelli.griglia);
+      if (k.toLowerCase() === 'c') impostaLivello('vie', !ui.livelli.vie);
+      if (k.toLowerCase() === 'l') AZIONI.menuMappa();
     });
     window.addEventListener('keyup', e => ui.tasti.delete(e.key));
     window.addEventListener('blur', () => ui.tasti.clear());
   }
 
   // ---------------------------------------------------------------- avvio
-  // vie comunali visibili o nascoste (tasto C): sulle mappe reali rendono la mappa molto fitta.
+  // ---------------------------------------------------------------- livelli della mappa
+  // Cosa si disegna: ogni livello si accende e si spegne dal menu «🗺️ Mappa» (tasto L) e ci sono viste già pronte.
+  // Sulle mappe reali case e vie dei paesi rendono la mappa fittissima: spegnerle fa risaltare la rete.
   // La scelta si ricorda nel browser.
-  const CHIAVE_VIE = 'rotaie-e-rotte-nascondi-vie';
-  function mostraVieComunali(si) {
-    ui.nascondiVie = !si;
-    G.disegno.abitatoSporco = true; // l'immagine dell'abitato si rifà con o senza vie
-    const b = $('#vieComunali');
-    if (b) { b.classList.toggle('attivo', ui.nascondiVie); b.title = (ui.nascondiVie ? 'Mostra' : 'Nascondi') + ' le vie dei paesi (C)'; }
-    try { localStorage.setItem(CHIAVE_VIE, ui.nascondiVie ? '1' : '0'); } catch (e) { /* niente: vale solo per ora */ }
+  const LIVELLI = [
+    { k: 'case', icona: '🏠', nome: 'Case' },
+    { k: 'vie', icona: '🏘️', nome: 'Vie dei paesi', tasto: 'C' },
+    { k: 'strade', icona: '🛣️', nome: 'Strade e autostrade' },
+    { k: 'ferrovie', icona: '🛤️', nome: 'Ferrovie' },
+    { k: 'stazioni', icona: '🚉', nome: 'Stazioni e aeroporti' },
+    { k: 'industrie', icona: '🏭', nome: 'Industrie' },
+    { k: 'mezzi', icona: '🚂', nome: 'Treni, autobus, camion e aerei' },
+    { k: 'nomi', icona: '🔤', nome: 'Nomi delle città' },
+    { k: 'griglia', icona: '#️⃣', nome: 'Griglia delle caselle', tasto: 'G', si: true },
+    { k: 'attenua', icona: '🌫️', nome: 'Terreno attenuato (la rete risalta)', si: true }
+  ];
+  const TUTTO = { case: true, vie: true, strade: true, ferrovie: true, stazioni: true, industrie: true, mezzi: true, nomi: true, griglia: false, attenua: false };
+  const VISTE = [
+    { id: 'tutto', nome: 'Tutto', icona: '🌍', l: TUTTO },
+    { id: 'ferrovia', nome: 'Solo ferrovia', icona: '🛤️', l: { ferrovie: true, stazioni: true, mezzi: true, nomi: true, attenua: true } },
+    { id: 'reti', nome: 'Reti e stazioni', icona: '🚉', l: { strade: true, ferrovie: true, stazioni: true, mezzi: true, nomi: true } },
+    { id: 'merci', nome: 'Industrie e merci', icona: '🏭', l: { strade: true, ferrovie: true, stazioni: true, industrie: true, mezzi: true, nomi: true, attenua: true } }
+  ];
+  const CHIAVE_LIVELLI = 'rotaie-e-rotte-livelli';
+  ui.livelli = Object.assign({}, TUTTO);
+
+  // la vista pronta che corrisponde ai livelli accesi (la griglia non conta), null se è una scelta personale
+  function vistaAttuale() {
+    const v = VISTE.find(v => LIVELLI.every(l => l.k === 'griglia' || !!v.l[l.k] === !!ui.livelli[l.k]));
+    return v ? v.id : null;
   }
+  function salvaLivelli() {
+    try { localStorage.setItem(CHIAVE_LIVELLI, JSON.stringify(ui.livelli)); } catch (e) { /* vale solo per ora */ }
+    G.disegno.abitatoSporco = true; // l'immagine dell'abitato si rifà con o senza case e vie
+    const b = $('#pulsanteMappa');
+    if (b) b.classList.toggle('filtro', vistaAttuale() !== 'tutto'); // si vede che qualcosa è nascosto
+    if (menuMappaAperto()) disegnaMenuMappa();
+  }
+  function impostaLivello(k, acceso) {
+    ui.livelli[k] = acceso;
+    salvaLivelli();
+    const l = LIVELLI.find(x => x.k === k);
+    if (!menuMappaAperto()) G.avviso(l.icona + ' ' + l.nome + ': ' + (l.si ? (acceso ? 'sì' : 'no') : (acceso ? 'visibili' : 'nascoste')));
+  }
+  const menuMappaAperto = () => !$('#menuMappa').classList.contains('nascosto');
+  function disegnaMenuMappa() {
+    const att = vistaAttuale();
+    let h = '<div class="titolo">Viste pronte</div><div class="viste">';
+    for (const v of VISTE) h += `<button data-az="vista" data-v="${v.id}" class="${att === v.id ? 'attivo' : ''}"><span class="ic">${v.icona}</span>${v.nome}</button>`;
+    h += '</div><div class="titolo">Cosa mostrare</div>';
+    for (const l of LIVELLI) {
+      h += `<label class="livello"><input type="checkbox" data-az="livello" data-k="${l.k}" ${ui.livelli[l.k] ? 'checked' : ''}>` +
+        `<span class="ic">${l.icona}</span><span class="nome">${l.nome}</span>${l.tasto ? '<kbd>' + l.tasto + '</kbd>' : ''}</label>`;
+    }
+    h += '<div class="nota">Con un attrezzo in mano si vede sempre quello che serve (i binari con la ferrovia, le strade con la strada…). Il tasto <kbd>L</kbd> apre e chiude questo menu.</div>';
+    $('#menuMappa').innerHTML = h;
+  }
+  function apriMenuMappa() {
+    if (menuStazioniAperto()) chiudiMenuStazioni();
+    disegnaMenuMappa();
+    const m = $('#menuMappa'), r = $('#pulsanteMappa').getBoundingClientRect();
+    m.classList.remove('nascosto');
+    m.style.top = (r.bottom + 6) + 'px';
+    m.style.left = Math.max(8, Math.min(window.innerWidth - m.offsetWidth - 8, r.left + r.width / 2 - m.offsetWidth / 2)) + 'px';
+  }
+  const chiudiMenuMappa = () => $('#menuMappa').classList.add('nascosto');
+  // livelli accesi, più quelli che servono all'attrezzo in mano o al mezzo selezionato
+  ui.livelliVisibili = function () {
+    const L = ui.livelli, t = ui.strumento;
+    return Object.assign({}, L, {
+      strade: L.strade || t === 'strada' || t === 'autostrada' || t === 'deposito',
+      ferrovie: L.ferrovie || t === 'binario' || t === 'stazione',
+      stazioni: L.stazioni || t === 'stazione' || t === 'deposito' || t === 'aeroporto' || ui.percorso,
+      mezzi: L.mezzi || !!ui.selVeicolo
+    });
+  };
 
   ui.prepara = function () {
-    let nascoste = false;
-    try { nascoste = localStorage.getItem(CHIAVE_VIE) === '1'; } catch (e) { /* si parte con le vie visibili */ }
-    mostraVieComunali(!nascoste);
+    try {
+      const salvati = JSON.parse(localStorage.getItem(CHIAVE_LIVELLI) || 'null');
+      if (salvati) for (const l of LIVELLI) if (typeof salvati[l.k] === 'boolean') ui.livelli[l.k] = salvati[l.k];
+    } catch (e) { /* si parte con tutto visibile */ }
+    salvaLivelli();
     $('#attrezzi').innerHTML = STRUMENTI.map(s => `<button data-az="strumento" data-id="${s.id}" title="${s.nome} (${s.tasto})">${s.icona}</button>`).join('');
     aggiornaPulsanteStazione();
     // il menu delle dimensioni si chiude cliccando altrove
     // (un clic sulla mappa col menu aperto lo chiude soltanto, senza costruire)
     document.addEventListener('pointerdown', e => {
+      if (menuMappaAperto() && !e.target.closest('#menuMappa, #pulsanteMappa')) chiudiMenuMappa();
       if (!menuStazioniAperto() || e.target.closest('#menuStazioni, #attrezzi button[data-id="stazione"]')) return;
       chiudiMenuStazioni();
       if (e.target.id === 'mappa' && e.button === 0) e.stopPropagation();
