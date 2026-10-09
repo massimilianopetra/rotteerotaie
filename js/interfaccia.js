@@ -540,14 +540,14 @@
         <tr><td>Sito</td><td><a href="https://massimilianopetra.github.io/rotteerotaie/" target="_blank" rel="noopener">massimilianopetra.github.io/rotteerotaie</a></td></tr>
       </table>
       <p>Costruisci ferrovie, strade, autostrade e aeroporti, compra i mezzi e porta passeggeri e merci fra città
-      inventate o vere (l'Italia) che crescono grazie a te, dall'Ottocento ai giorni nostri.</p>` +
+      inventate o vere (Italia ed Europa) che crescono grazie a te, dall'Ottocento ai giorni nostri.</p>` +
       (st() ? '' : '<div class="pulsanti"><button data-az="menuIniziale">← Torna al menu</button></div>'));
   }
 
   function finestraMenu(avvio) {
     const salv = G.esisteSalvataggio && G.esisteSalvataggio();
     const seme = Math.floor(Math.random() * 1e6);
-    let h = avvio ? '<p class="intro">Costruisci un impero dei trasporti: ferrovie, strade, autostrade e aeroporti fra città inventate, oppure sulla mappa vera dell\'Italia.</p>' : '';
+    let h = avvio ? '<p class="intro">Costruisci un impero dei trasporti: ferrovie, strade, autostrade e aeroporti fra città inventate, oppure sulla mappa vera dell\'Italia o dell\'Europa.</p>' : '';
     const mappe = (C.mappeReali || []).map(k => `<option value="${k.id}">${k.nome} (mappa reale)</option>`).join('');
     h += `<label>Nome della compagnia<input id="npNome" value="Ferrovie Riunite" maxlength="40"></label>
       <label>Mondo<select id="npMappa" data-az="sceltaMappa"><option value="">Inventato (dal seme)</option>${mappe}</select></label>

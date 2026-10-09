@@ -3,7 +3,7 @@
 Un gioco di **strategia dei trasporti** nel browser, ispirato ai classici come *Railroad Tycoon*:
 si guida una compagnia che costruisce **ferrovie**, **strade**, **autostrade** e **aeroporti**,
 compra treni, autobus, camion e aerei e trasporta passeggeri e merci fra città inventate
-(oppure sulla mappa vera dell'**Italia**) che **crescono** grazie ai collegamenti.
+(oppure sulla mappa vera dell'**Italia** o dell'**Europa**) che **crescono** grazie ai collegamenti.
 
 **Gioca online: https://massimilianopetra.github.io/rotteerotaie/**
 
@@ -16,7 +16,7 @@ Apri `index.html` con un doppio clic (Chrome, Edge o Firefox). Non serve Interne
 All'avvio si sceglie il nome della compagnia, l'anno di inizio (dal 1850 al 1980), la grandezza della mappa,
 il numero di città e il **seme** del mondo (stesso seme = stesso mondo).
 
-## Mappe reali: l'Italia (e presto l'Europa)
+## Mappe reali: Italia ed Europa
 
 Nel menu «Mondo» si può scegliere, invece di un mondo inventato, una mappa vera costruita da
 **OpenStreetMap** (città, paesi, abitanti, laghi) e dai rilievi aperti *Terrarium* (quote e linea di costa):
@@ -24,9 +24,9 @@ Nel menu «Mondo» si può scegliere, invece di un mondo inventato, una mappa ve
 | Mappa | Caselle | Una casella | Località |
 |---|---|---|---|
 | Italia | 551 × 662 | 2 km | città e paesi con più di 500 abitanti |
-| Europa (in preparazione) | 787 × 710 | 6 km | tutte le città |
+| Europa | 787 × 710 | 6 km | tutte le città (1.220, con Anatolia e Nordafrica) |
 
-Ogni mappa è un file a sé (`dati/mappe/italia.js`, circa 1 MB) che il gioco carica **solo quando la
+Ogni mappa è un file a sé (`dati/mappe/italia.js` e `dati/mappe/europa.js`, 1–1,5 MB) che il gioco carica **solo quando la
 si sceglie**, così in memoria c'è soltanto la mappa in uso. Funziona anche aprendo `index.html` con un doppio clic.
 Gli abitanti del gioco crescono con la radice quadrata di quelli veri (un paese ha poche case, Roma qualche migliaio
 di abitanti del gioco); costi delle linee, manutenzione, velocità e pagamenti tengono conto dei chilometri per casella.
@@ -44,7 +44,7 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
 
 ## Il gioco
 
-- **Mappa vista dall'alto** generata a caso (o vera: l'Italia): mare, laghi, fiumi, pianure, colline, montagne e boschi.
+- **Mappa vista dall'alto** generata a caso (o vera: Italia ed Europa): mare, laghi, fiumi, pianure, colline, montagne e boschi.
   Costruire in collina, in montagna o sopra un fiume (ponte) costa di più.
 - **Città inventate** (Castelvento, Roccalupo, Sant'Ilario, Porto Ceruleo…) che crescono se sono ben servite:
   le case nuove nascono lungo le vie e attorno alle stazioni, e diventano palazzine e palazzi.
