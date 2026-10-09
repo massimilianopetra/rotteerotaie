@@ -260,7 +260,7 @@
       let incasso = 0;
       for (const p of v.carico) {
         const o = st.stazioni[p.o], co = o ? G.centroStazione(o) : c;
-        const dist = Math.hypot(co.x - c.x, co.y - c.y);
+        const dist = Math.hypot(co.x - c.x, co.y - c.y) * G.kmCasella(st); // in km
         const giorni = st.giorno - p.g;
         const ft = Math.max(0.25, Math.min(1, 1 - (giorni - def.giorni) / (def.giorni * 2)));
         incasso += p.q * def.prezzo * dist * ft;
@@ -309,7 +309,7 @@
 
   function velocita(st, v) {
     // caselle al giorno: km/h × 24 ore ÷ km per casella
-    const mod = G.modello(v.modello), m = st.mondo, K = C.kmPerCasella / 24;
+    const mod = G.modello(v.modello), m = st.mondo, K = G.kmCasella(st) / 24;
     let vel = mod.kmh / K;
     if (v.tipo === 'treno') {
       vel *= 1 - 0.3 * v.vagoni / mod.vagoni;

@@ -35,14 +35,62 @@
     return (t === T.PIANURA || t === T.COLLINA || t === T.MONTAGNA) && m.occ[i] === OCC.LIBERO;
   };
   // casella buona per una casa o per una strada comunale
+  // (sulle mappe reali anche in montagna: L'Aquila, Cortina, i paesi delle Alpi)
   G.edificabile = function (m, i) {
     const t = m.tipo[i];
-    return (t === T.PIANURA || t === T.COLLINA) && m.occ[i] === OCC.LIBERO && !m.mBin[i] && !m.mStr[i];
+    return (t === T.PIANURA || t === T.COLLINA || (t === T.MONTAGNA && m.reale)) && m.occ[i] === OCC.LIBERO && !m.mBin[i] && !m.mStr[i];
   };
 
+  // lato di una casella in km: 1 sulle mappe inventate, di più su quelle reali (Italia 2, Europa 6)
+  G.kmCasella = st => (st && st.opz && st.opz.km) || C.kmPerCasella;
+
+  // ---------------------------------------------------------------- mappe reali
+  // Ogni mappa reale è un file dati/mappe/<id>.js (generato da scripts/mappe.js) che si carica solo quando serve,
+  // aggiungendo un <script> alla pagina: funziona anche aprendo index.html con un doppio clic (niente fetch).
+  // Si tiene in memoria solo la mappa in uso.
+  G.caricaMappaReale = function (id, fatto) {
+    const M = window.MAPPE_REALI = window.MAPPE_REALI || {};
+    for (const k of Object.keys(M)) if (k !== id) delete M[k];
+    if (M[id]) { fatto(null); return; }
+    const def = (C.mappeReali || []).find(k => k.id === id);
+    if (!def) { fatto('Mappa sconosciuta: ' + id); return; }
+    const s = document.createElement('script');
+    s.src = def.file;
+    s.onload = () => { s.remove(); fatto(M[id] ? null : 'Il file della mappa non è valido: ' + def.file); };
+    s.onerror = () => { s.remove(); fatto('Impossibile caricare la mappa ' + def.file); };
+    document.head.appendChild(s);
+  };
+
+  function daBase64(s) {
+    const bin = atob(s), u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return u8;
+  }
+
+  // terreno di una mappa reale: tipi e quote vengono dal file, i boschi dal seme
+  function terrenoReale(opz) {
+    const R = window.MAPPE_REALI && window.MAPPE_REALI[opz.mappa];
+    if (!R) throw new Error('Mappa non caricata: ' + opz.mappa);
+    const m = G.creaGriglie(R.W, R.H), alt = daBase64(R.alt);
+    m.tipo.set(daBase64(R.tipo));
+    for (let i = 0; i < m.N; i++) m.alt[i] = alt[i] / 255;
+    // soglie fisse (vedi quotaGioco in scripts/mappe.js): mare, 250 m, 700 m, 2300 m
+    m.livMare = 0.2; m.livPian = 0.45; m.livColl = 0.65; m.livNeve = 0.95;
+    m.reale = true;
+    const rnd = G.creaCasuale(opz.seme), r3 = G.creaRumore(rnd);
+    const soglia = [0, 0.62, 0.53, 0.5, 0]; // meno boschi in pianura (campi coltivati)
+    for (let y = 0; y < m.H; y++) for (let x = 0; x < m.W; x++) {
+      const i = y * m.W + x, t = m.tipo[i];
+      if (!soglia[t] || m.alt[i] > m.livNeve - 0.06) continue;
+      if (r3(x / 12, y / 12, 3) > soglia[t]) m.bosco[i] = 1;
+    }
+    return m;
+  }
+
   // ---------------------------------------------------------------- terreno
-  // dipende solo dal seme: al caricamento di una partita si rigenera identico
+  // dipende solo dal seme (o dal file della mappa reale): al caricamento di una partita si rigenera identico
   G.generaTerreno = function (opz) {
+    if (opz.mappa) return terrenoReale(opz);
     const rnd = G.creaCasuale(opz.seme);
     const W = opz.W, H = opz.H, m = G.creaGriglie(W, H), N = m.N;
     const r1 = G.creaRumore(rnd), r2 = G.creaRumore(rnd), r3 = G.creaRumore(rnd);
@@ -153,11 +201,14 @@
     const m = G.generaTerreno(opz);
     const st = G.statoVuoto(opz, m);
     const rnd = G.creaCasuale((opz.seme * 7 + 13) >>> 0);
-    piazzaCitta(st, rnd);
+    if (opz.mappa) piazzaCittaReali(st, rnd); else piazzaCitta(st, rnd);
+    // sulle mappe reali conta solo la terraferma (le inventate ne hanno circa l'84%)
+    let caselle = m.N;
+    if (m.reale) { caselle = 0; for (let i = 0; i < m.N; i++) if (m.tipo[i] !== T.ACQUA) caselle++; caselle /= 0.84; }
     for (const tipo of Object.keys(C.industrie)) {
       const def = C.industrie[tipo];
       if (def.dalAnno && opz.anno < def.dalAnno) continue;
-      const n = Math.max(1, Math.round(def.densita * m.N / 10000));
+      const n = Math.max(1, Math.round(def.densita * caselle / 10000));
       for (let k = 0; k < n; k++) G.fondaIndustria(st, tipo, rnd);
     }
     return st;
@@ -227,10 +278,49 @@
     });
   }
 
-  function fondaCitta(st, c, rnd, obiettivo) {
+  // città vere dal file della mappa: "nome|x|y|abitanti" per riga, già in ordine di grandezza.
+  // Gli abitanti del gioco crescono con la radice di quelli veri (R.abitanti × √abitanti):
+  // così un paese ha qualche casa e Roma qualche migliaio di abitanti del gioco, come una capitale inventata.
+  function piazzaCittaReali(st, rnd) {
+    const m = st.mondo, R = window.MAPPE_REALI[st.opz.mappa], obiettivi = [];
+    for (const riga of R.citta.split('\n')) {
+      const p = riga.split('|');
+      let x = +p[1], y = +p[2];
+      const veri = +p[3];
+      // il centro può stare su una casella libera o su una via di un paese vicino (le vie si condividono);
+      // se c'è già una casa si cerca il posto buono più vicino entro due caselle
+      const adatto = i => (G.edificabile(m, i) || (m.mStr[i] && m.occ[i] === OCC.LIBERO && m.tipo[i] !== T.ACQUA && m.tipo[i] !== T.FIUME));
+      if (!adatto(y * m.W + x)) {
+        let best = null;
+        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+          const nx = x + dx, ny = y + dy, d = dx * dx + dy * dy;
+          if (nx > 0 && ny > 0 && nx < m.W - 1 && ny < m.H - 1 && adatto(ny * m.W + nx) && (!best || d < best[2])) best = [nx, ny, d];
+        }
+        if (!best) continue;
+        x = best[0]; y = best[1];
+      }
+      const c = {
+        id: st.citta.length, nome: p[0], x, y, veri,
+        pop: 0, case: 0, mese: G.nuovoMese(), meseScorso: G.nuovoMese(), storico: [], nServite: 0, crescita: 0
+      };
+      st.citta.push(c);
+      // prima solo il nucleo (croce di vie e qualche casa): così ogni paese si prende il suo posto
+      // prima che le città grandi, cresciute, occupino tutto quello che hanno attorno
+      const obiettivo = Math.min(9000, (R.abitanti || 3) * Math.sqrt(veri));
+      fondaCitta(st, c, rnd, obiettivo, 60);
+      if (c.pop === 0) { st.citta.pop(); continue; } // nessuno spazio: il paese resta fuori
+      obiettivi.push(obiettivo);
+    }
+    // poi ognuna cresce fino alla sua grandezza, dalle più grandi
+    st.citta.forEach((c, k) => { cresciFino(st, c, rnd, obiettivi[k]); c.storico.push(c.pop); });
+  }
+
+  // primo = abitanti a cui fermarsi per ora (le vie iniziali però sono già quelle della città intera)
+  function fondaCitta(st, c, rnd, obiettivo, primo) {
     const m = st.mondo, centro = c.y * m.W + c.x;
     if (m.bosco[centro]) m.bosco[centro] = 0;
-    const L = 2 + Math.round(Math.sqrt(obiettivo) / 9);
+    // sulle mappe reali le città sono fitte: vie iniziali più corte
+    const L = m.reale ? 1 + Math.round(Math.sqrt(obiettivo) / 14) : 2 + Math.round(Math.sqrt(obiettivo) / 9);
     for (let d = 0; d < 8; d += 2) { // la croce delle vie principali
       let prec = centro;
       const len = Math.max(1, L + rnd.intero(-1, 1));
@@ -241,11 +331,21 @@
         prec = nx;
       }
     }
+    cresciFino(st, c, rnd, Math.min(obiettivo, primo || Infinity));
+  }
+
+  // sulle mappe reali le case nascono già della grandezza adatta alla città finale (c.obiettivo) e,
+  // se attorno è tutto occupato dai paesi vicini, si alzano quelle che ci sono
+  function cresciFino(st, c, rnd, obiettivo) {
     let tent = 0, falliti = 0;
+    if (st.mondo.reale) c.obiettivo = obiettivo;
     while (c.pop < obiettivo && tent++ < 3000 && falliti < 30) {
       if (G.aggiungiCasa(st, c, rnd, 0)) falliti = 0;
-      else if (!G.estendiStrada(st, c, rnd)) falliti++;
+      else if (G.estendiStrada(st, c, rnd)) continue;
+      else if (st.mondo.reale && G.miglioraCasa(st, c, rnd)) falliti = 0;
+      else falliti++;
     }
+    delete c.obiettivo;
   }
 
   // raggio dell'abitato: dipende dal numero di edifici, non dagli abitanti (i palazzi sono più fitti)
@@ -259,7 +359,7 @@
   G.classeCitta = pop => (pop < 300 ? 'villaggio' : pop < 1000 ? 'paese' : pop < 3000 ? 'cittadina' : pop < 10000 ? 'città' : 'metropoli');
 
   function livelloNuovaCasa(c, d, R, rnd) {
-    const max = G.livelloMax(c.pop);
+    const max = G.livelloMax(Math.max(c.pop, c.obiettivo || 0)); // obiettivo: grandezza finale durante la fondazione
     const vic = Math.max(0, 1 - d / (R + 0.01));
     return Math.max(1, Math.min(max, 1 + Math.floor(vic * max * 0.9 + rnd() * 0.8)));
   }
@@ -306,7 +406,7 @@
 
   // una casa esistente diventa più grande
   G.miglioraCasa = function (st, c, rnd) {
-    const m = st.mondo, R = G.raggioCitta(c), max = G.livelloMax(c.pop);
+    const m = st.mondo, R = G.raggioCitta(c), max = G.livelloMax(Math.max(c.pop, c.obiettivo || 0));
     for (let k = 0; k < 40; k++) {
       const x = Math.round(c.x + (rnd() * 2 - 1) * R), y = Math.round(c.y + (rnd() * 2 - 1) * R);
       if (x < 0 || y < 0 || x >= m.W || y >= m.H) continue;
@@ -350,11 +450,35 @@
     return false;
   };
 
+  // città divise in settori di 16 × 16 caselle: sulle mappe reali sono migliaia e scorrerle tutte
+  // a ogni ricerca sarebbe lento. Le città non cambiano posto: l'indice si rifà solo se cambia il numero.
+  function indiceCitta(st) {
+    const X = st._indiceCitta;
+    if (X && X.n === st.citta.length && X.mondo === st.mondo) return X;
+    const L = 16, col = Math.ceil(st.mondo.W / L), righe = Math.ceil(st.mondo.H / L);
+    const sett = Array.from({ length: col * righe }, () => []);
+    for (const c of st.citta) sett[((c.y / L) | 0) * col + ((c.x / L) | 0)].push(c);
+    return (st._indiceCitta = { n: st.citta.length, mondo: st.mondo, L, col, righe, sett });
+  }
+
   G.cittaVicina = function (st, x, y, maxD) {
+    const X = indiceCitta(st), L = X.L, sx = Math.floor(x / L), sy = Math.floor(y / L);
     let best = null, bd = maxD === undefined ? Infinity : maxD;
-    for (const c of st.citta) {
-      const d = Math.hypot(c.x - x, c.y - y);
-      if (d < bd) { bd = d; best = c; }
+    // anelli di settori sempre più larghi: ci si ferma quando sono più lontani della città migliore
+    for (let r = 0; r <= X.col + X.righe && (r - 1) * L <= bd; r++) {
+      for (let qy = sy - r; qy <= sy + r; qy++) {
+        if (qy < 0 || qy >= X.righe) continue;
+        const bordo = qy === sy - r || qy === sy + r;
+        for (let qx = sx - r; qx <= sx + r; qx += bordo ? 1 : 2 * r) {
+          if (qx >= 0 && qx < X.col) {
+            for (const c of X.sett[qy * X.col + qx]) {
+              const d = Math.hypot(c.x - x, c.y - y);
+              if (d < bd) { bd = d; best = c; }
+            }
+          }
+          if (r === 0) break;
+        }
+      }
     }
     return best;
   };
@@ -375,11 +499,13 @@
       if (!ok || adatte < (def.bosco ? 3 : 2)) continue;
       const c = G.cittaVicina(st, x + 1, y + 1);
       const dc = c ? Math.hypot(c.x - x - 1, c.y - y - 1) : 99;
-      if (def.vicinoCitta ? (dc < 4 || dc > 14) : dc < 6) continue;
+      // sulle mappe reali i paesi sono fitti: le industrie stanno più vicine alle case
+      if (m.reale ? (def.vicinoCitta ? (dc < 2 || dc > 10) : dc < 3) : (def.vicinoCitta ? (dc < 4 || dc > 14) : dc < 6)) continue;
       if (st.industrie.some(s => !s.chiusa && Math.abs(s.x - x) < 5 && Math.abs(s.y - y) < 5)) continue;
       const base = def.nome + ' di ' + (c ? c.nome : 'Campagna');
       let nome = base, k = 1;
-      while (st.industrie.some(s => s.nome === nome)) nome = base + ROMANI[Math.min(++k, 6)];
+      // II, III… VI, poi 7, 8…: sulle mappe reali le industrie omonime possono essere molte
+      while (st.industrie.some(s => s.nome === nome)) { k++; nome = base + (k <= 6 ? ROMANI[k] : ' ' + k); }
       const riserva = def.riserva ? rnd.intero(def.riserva[0], def.riserva[1]) : 0;
       const ind = {
         id: st.industrie.length, tipo, x, y, nome,

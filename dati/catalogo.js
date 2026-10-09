@@ -10,6 +10,14 @@ window.CATALOGO = {
   nomiVelocita: ['Pausa', 'Normale: 1 s = 5 minuti', 'Veloce: 1 s = 1 ora', 'Velocissimo: 1 s = 1 giorno', 'Turbo: 1 s = 1 settimana'],
   // lato di una casella in km: i mezzi viaggiano alla loro velocità vera (un treno a 60 km/h fa 60 caselle in un'ora)
   kmPerCasella: 1,
+  // mappe con scenari reali: ogni file si carica solo quando si sceglie la mappa (lo crea scripts/mappe.js).
+  // Lì una casella misura "km" chilometri: costi delle reti, manutenzione, velocità e pagamenti ne tengono conto.
+  mappeReali: [
+    { id: 'italia', nome: 'Italia', file: 'dati/mappe/italia.js', km: 2,
+      descrizione: 'L\'Italia vera da OpenStreetMap: tutte le città e i paesi con più di 500 abitanti, rilievi, fiumi e laghi. Una casella = 2 km.' },
+    { id: 'europa', nome: 'Europa', file: 'dati/mappe/europa.js', km: 6,
+      descrizione: 'L\'Europa vera da OpenStreetMap, dall\'Atlantico a Mosca e dalla Scandinavia al Mediterraneo (con Anatolia e Nordafrica): tutte le città. Una casella = 6 km.' }
+  ],
   // gli aerei possono essere rallentati (1 = velocità vera)
   fattoreAerei: 1,
   tempi: {

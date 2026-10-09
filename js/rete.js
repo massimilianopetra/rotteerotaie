@@ -75,6 +75,15 @@
     return top;
   };
 
+  // array delle ricerche A* grandi quanto la mappa: si riusano (sulle mappe reali ogni ricerca ne creerebbe
+  // di nuovi per qualche MB). Una casella vale solo se porta il "giro" della ricerca in corso.
+  let bufA = null;
+  function bufferRicerca(N) {
+    if (!bufA || bufA.N !== N) bufA = { N, g: new Float64Array(N), da: new Int32Array(N), visto: new Uint32Array(N), chiuso: new Uint32Array(N), giro: 0 };
+    if (++bufA.giro > 4e9) { bufA.visto.fill(0); bufA.chiuso.fill(0); bufA.giro = 1; }
+    return bufA;
+  }
+
   // ---------------------------------------------------------------- costruzione
   // costo in lire per far passare la rete nella casella (0 se c'è già, Infinity se impossibile)
   G.costoCasella = function (st, i, rete) {
@@ -90,9 +99,10 @@
     if (rete === 'binario' && m.mBin[i]) return 0;
     if (rete === 'strada' && m.mStr[i]) return 0;
     if (rete === 'autostrada' && m.tipoStr[i] === 2) return 0;
-    let c = C.reti[rete].costo * C.moltTerreno[G.NOMI_TERRENO[t]];
+    const km = G.kmCasella(st); // sulle mappe reali una casella è lunga più di un chilometro
+    let c = C.reti[rete].costo * km * C.moltTerreno[G.NOMI_TERRENO[t]];
     if (rete === 'autostrada' && m.mStr[i]) c *= 0.6; // allargare una strada costa meno
-    if (m.bosco[i]) c += C.costoBosco;
+    if (m.bosco[i]) c += C.costoBosco * km;
     return c;
   };
 
@@ -109,32 +119,32 @@
     const m = st.mondo, W = m.W, N = m.N;
     if (!isFinite(G.costoCasella(st, a, rete)) || !isFinite(G.costoCasella(st, b, rete))) return null;
     if (a === b) return { caselle: [a], costo: G.costoCasella(st, a, rete) };
-    const base = C.reti[rete].costo * 0.35;
-    const g = new Float64Array(N).fill(Infinity), da = new Int32Array(N).fill(-1), chiuso = new Uint8Array(N);
+    const base = C.reti[rete].costo * G.kmCasella(st) * 0.35;
+    const B = bufferRicerca(N), g = B.g, da = B.da, visto = B.visto, chiuso = B.chiuso, giro = B.giro;
     const bx = b % W, by = (b / W) | 0;
     const h = i => {
       const dx = Math.abs(i % W - bx), dy = Math.abs(((i / W) | 0) - by);
       return base * (Math.max(dx, dy) + 0.414 * Math.min(dx, dy));
     };
     const coda = new Coda();
-    g[a] = 0; coda.metti(a, h(a));
+    g[a] = 0; da[a] = -1; visto[a] = giro; coda.metti(a, h(a));
     let iter = 0;
     while (!coda.vuota()) {
       const i = coda.togli();
-      if (chiuso[i]) continue;
-      chiuso[i] = 1;
+      if (chiuso[i] === giro) continue;
+      chiuso[i] = giro;
       if (i === b || ++iter > 150000) break;
       for (let d = 0; d < 8; d++) {
         const j = G.vicino(m, i, d);
-        if (j < 0 || chiuso[j]) continue;
+        if (j < 0 || chiuso[j] === giro) continue;
         const cj = G.costoCasella(st, j, rete);
         if (!isFinite(cj)) continue;
         const passo = giaCollegati(m, i, d, rete) ? base * 0.5 * LUN[d] : (cj + base) * LUN[d];
         const ng = g[i] + passo;
-        if (ng < g[j]) { g[j] = ng; da[j] = i; coda.metti(j, ng + h(j)); }
+        if (visto[j] !== giro || ng < g[j]) { visto[j] = giro; g[j] = ng; da[j] = i; coda.metti(j, ng + h(j)); }
       }
     }
-    if (!chiuso[b]) return null;
+    if (chiuso[b] !== giro) return null;
     const caselle = [];
     for (let i = b; i !== -1; i = da[i]) caselle.push(i);
     caselle.reverse();
@@ -166,34 +176,34 @@
     let ris = null;
     if (a === b) ris = [a];
     else if (mask[a] && mask[b]) {
-      const g = new Float64Array(N).fill(Infinity), da = new Int32Array(N).fill(-1), chiuso = new Uint8Array(N);
+      const B = bufferRicerca(N), g = B.g, da = B.da, visto = B.visto, chiuso = B.chiuso, giro = B.giro;
       const bx = b % W, by = (b / W) | 0, fh = rete === 'binario' ? 1 : 0.6;
       const h = i => {
         const dx = Math.abs(i % W - bx), dy = Math.abs(((i / W) | 0) - by);
         return fh * (Math.max(dx, dy) + 0.414 * Math.min(dx, dy));
       };
       const coda = new Coda();
-      g[a] = 0; coda.metti(a, h(a));
+      g[a] = 0; da[a] = -1; visto[a] = giro; coda.metti(a, h(a));
       while (!coda.vuota()) {
         const i = coda.togli();
-        if (chiuso[i]) continue;
-        chiuso[i] = 1;
+        if (chiuso[i] === giro) continue;
+        chiuso[i] = giro;
         if (i === b) break;
         const mk = mask[i];
         for (let d = 0; d < 8; d++) {
           if (!((mk >> d) & 1)) continue;
           const j = G.vicino(m, i, d);
-          if (j < 0 || chiuso[j]) continue;
+          if (j < 0 || chiuso[j] === giro) continue;
           let f = 1;
           if (rete === 'binario') {
             const t = m.tipo[j];
             if (t === T.COLLINA) f = 1.15; else if (t === T.MONTAGNA) f = 1.35;
           } else if (m.tipoStr[i] === 2 && m.tipoStr[j] === 2) f = 0.6;
           const ng = g[i] + LUN[d] * f;
-          if (ng < g[j]) { g[j] = ng; da[j] = i; coda.metti(j, ng + h(j)); }
+          if (visto[j] !== giro || ng < g[j]) { visto[j] = giro; g[j] = ng; da[j] = i; coda.metti(j, ng + h(j)); }
         }
       }
-      if (chiuso[b]) {
+      if (chiuso[b] === giro) {
         ris = [];
         for (let i = b; i !== -1; i = da[i]) ris.push(i);
         ris.reverse();

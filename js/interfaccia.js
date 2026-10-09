@@ -96,7 +96,9 @@
   function zoom(f, sx, sy) {
     const cv = $('#mappa');
     if (sx === undefined) { sx = cv.clientWidth / 2; sy = cv.clientHeight / 2; }
-    const p = G.schermoAMondo(sx, sy);
+    // il punto sotto il mouse si calcola dalla camera, non dall'ultimo fotogramma disegnato:
+    // con più scatti di rotellina fra due fotogrammi la vista altrimenti scivolerebbe via
+    const p = { x: D.cam.x + (sx - cv.clientWidth / 2) / D.cam.ts, y: D.cam.y + (sy - cv.clientHeight / 2) / D.cam.ts };
     D.cam.ts = Math.max(3, Math.min(48, D.cam.ts * f));
     D.cam.x = p.x - (sx - cv.clientWidth / 2) / D.cam.ts;
     D.cam.y = p.y - (sy - cv.clientHeight / 2) / D.cam.ts;
@@ -424,10 +426,8 @@
     scheda = scheda || 'citta';
     let h = `<div class="schede">${['citta', 'industrie', 'stazioni'].map(k => `<button class="${k === scheda ? 'attivo' : ''}" data-az="schedaMondo" data-s="${k}">${{ citta: '🏙️ Città', industrie: '🏭 Industrie', stazioni: '🚉 Stazioni' }[k]}</button>`).join('')}</div>`;
     if (scheda === 'citta') {
-      h += '<table class="elenco"><tr><th>Città</th><th>Abitanti</th><th>Crescita</th><th>Stazioni servite</th></tr>';
-      for (const c of [...s0.citta].sort((a, b) => b.pop - a.pop)) {
-        h += `<tr class="link" data-az="apriCitta" data-id="${c.id}" data-vai="1"><td>${esc(c.nome)}<div class="sotto">${G.classeCitta(c.pop)}</div></td><td class="num">${G.numero(c.pop)}</td><td class="num">${c.crescita >= 0 ? '+' : ''}${c.crescita}</td><td class="num">${c.nServite}</td></tr>`;
-      }
+      if (s0.citta.length > 200) h += '<input id="cercaCitta" class="cerca" placeholder="🔍 Cerca una città per nome…" autocomplete="off">';
+      h += `<table class="elenco"><thead><tr><th>Città</th><th>Abitanti</th><th>Crescita</th><th>Stazioni servite</th></tr></thead><tbody id="elencoCitta">${righeCitta('')}</tbody>`;
     } else if (scheda === 'industrie') {
       h += '<table class="elenco"><tr><th>Industria</th><th>Produzione / mese</th><th>Trasportato</th><th>Riserva</th></tr>';
       for (const ind of s0.industrie.filter(k => !k.chiusa).sort((a, b) => a.tipo.localeCompare(b.tipo))) {
@@ -444,6 +444,23 @@
     }
     h += '</table>';
     apriFinestra('Il mondo', h, true);
+  }
+
+  // righe della tabella delle città: sulle mappe reali sono migliaia, quindi solo le 200 più grandi e quelle
+  // servite, oppure quelle che contengono il testo cercato
+  function righeCitta(cerca) {
+    const s0 = st(), t = cerca.trim().toLowerCase();
+    let el = [...s0.citta].sort((a, b) => b.pop - a.pop);
+    if (t) el = el.filter(c => c.nome.toLowerCase().includes(t)).slice(0, 200);
+    else if (el.length > 200) el = el.filter((c, k) => k < 200 || c.nServite > 0);
+    let h = '';
+    for (const c of el) {
+      h += `<tr class="link" data-az="apriCitta" data-id="${c.id}" data-vai="1"><td>${esc(c.nome)}<div class="sotto">${G.classeCitta(c.pop)}</div></td><td class="num">${G.numero(c.pop)}</td><td class="num">${c.crescita >= 0 ? '+' : ''}${c.crescita}</td><td class="num">${c.nServite}</td></tr>`;
+    }
+    const altre = s0.citta.length - el.length;
+    if (altre > 0 && !t) h += `<tr><td colspan="4" class="sotto">… e altre ${G.numero(altre)} città e paesi: cercali per nome.</td></tr>`;
+    if (!el.length) h += '<tr><td colspan="4" class="sotto">Nessuna città con questo nome.</td></tr>';
+    return h;
   }
 
   function finestraFinanze() {
@@ -523,15 +540,18 @@
         <tr><td>Sito</td><td><a href="https://massimilianopetra.github.io/rotteerotaie/" target="_blank" rel="noopener">massimilianopetra.github.io/rotteerotaie</a></td></tr>
       </table>
       <p>Costruisci ferrovie, strade, autostrade e aeroporti, compra i mezzi e porta passeggeri e merci fra città
-      inventate che crescono grazie a te, dall'Ottocento ai giorni nostri.</p>` +
+      inventate o vere (Italia ed Europa) che crescono grazie a te, dall'Ottocento ai giorni nostri.</p>` +
       (st() ? '' : '<div class="pulsanti"><button data-az="menuIniziale">← Torna al menu</button></div>'));
   }
 
   function finestraMenu(avvio) {
     const salv = G.esisteSalvataggio && G.esisteSalvataggio();
     const seme = Math.floor(Math.random() * 1e6);
-    let h = avvio ? '<p class="intro">Costruisci un impero dei trasporti: ferrovie, strade, autostrade e aeroporti fra città inventate che crescono grazie a te.</p>' : '';
+    let h = avvio ? '<p class="intro">Costruisci un impero dei trasporti: ferrovie, strade, autostrade e aeroporti fra città inventate, oppure sulla mappa vera dell\'Italia o dell\'Europa.</p>' : '';
+    const mappe = (C.mappeReali || []).map(k => `<option value="${k.id}">${k.nome} (mappa reale)</option>`).join('');
     h += `<label>Nome della compagnia<input id="npNome" value="Ferrovie Riunite" maxlength="40"></label>
+      <label>Mondo<select id="npMappa" data-az="sceltaMappa"><option value="">Inventato (dal seme)</option>${mappe}</select></label>
+      <div class="nota" id="npDescr"></div>
       <div class="riga"><label>Anno di inizio<select id="npAnno"><option>1850</option><option>1880</option><option>1920</option><option>1950</option><option>1980</option></select></label>
       <label>Mappa<select id="npDim"><option value="128x96">piccola</option><option value="192x144" selected>media</option><option value="256x192">grande</option></select></label></div>
       <div class="riga"><label>Città<select id="npCitta"><option>8</option><option selected>14</option><option>20</option><option>28</option></select></label>
@@ -627,12 +647,31 @@
     },
     prestito: d => { const e = +d.d > 0 ? G.prendiPrestito(st()) : G.rendiPrestito(st()); if (e) G.avviso(e, true); finestraFinanze(); },
     salva: () => { const e = G.salvaPartita(st()); G.avviso(e || 'Partita salvata', !!e); },
-    carica: () => { const e = G.caricaPartita(); if (e) G.avviso(e, true); else { $('#finestra').classList.add('nascosto'); ui.finestra = null; G.avviso('Partita caricata'); } },
-    iniziaPartita: () => {
+    carica: () => {
+      G.avviso('Caricamento della partita…');
+      // un attimo di respiro perché l'avviso si veda: le mappe reali richiedono qualche secondo
+      setTimeout(() => G.caricaPartita(e => {
+        if (e) { G.avviso(e, true); return; }
+        $('#finestra').classList.add('nascosto'); ui.finestra = null; G.avviso('Partita caricata');
+      }), 30);
+    },
+    // con una mappa reale dimensioni e numero di città vengono dalla mappa
+    sceltaMappa: () => {
+      const def = (C.mappeReali || []).find(k => k.id === $('#npMappa').value);
+      $('#npDim').disabled = $('#npCitta').disabled = !!def;
+      $('#npDescr').textContent = def ? def.descrizione : '';
+    },
+    iniziaPartita: (d, el) => {
       const [W, H] = $('#npDim').value.split('x').map(Number);
-      const seme = Math.abs(parseInt($('#npSeme').value, 10) || 1);
-      G.nuovaPartita({ nome: $('#npNome').value.trim() || 'Ferrovie Riunite', anno: +$('#npAnno').value, W, H, numCitta: +$('#npCitta').value, seme });
-      $('#finestra').classList.add('nascosto'); ui.finestra = null;
+      const seme = Math.abs(parseInt($('#npSeme').value, 10) || 1), mappa = $('#npMappa').value || undefined;
+      const opz = { nome: $('#npNome').value.trim() || 'Ferrovie Riunite', anno: +$('#npAnno').value, W, H, numCitta: +$('#npCitta').value, seme, mappa };
+      if (mappa) { G.avviso('Preparo la mappa: qualche secondo…'); el.disabled = true; }
+      setTimeout(() => G.nuovaPartita(opz, e => {
+        el.disabled = false;
+        if (e) { G.avviso(e, true); return; }
+        $('#finestra').classList.add('nascosto'); ui.finestra = null;
+        if (mappa) G.avviso('Buon viaggio!');
+      }), 30);
     },
     menuIniziale: () => finestraMenu(true),
     griglia: () => { ui.griglia = !ui.griglia; }
@@ -661,7 +700,8 @@
     if (!tr) { ui.anteprima = { caselle: [ui.trascina.da, c.i], ok: false }; suggerisci('<span class="rosso">Impossibile passare di qui</span>', e); return; }
     const ok = tr.costo <= s0.soldi;
     ui.anteprima = { caselle: tr.caselle, costo: tr.costo, ok, tr };
-    suggerisci(`${C.reti[rete].nome}: <b class="${ok ? '' : 'rosso'}">${G.lire(tr.costo)}</b> · ${tr.caselle.length} caselle`, e);
+    const km = G.kmCasella(s0), lun = km === 1 ? '' : ` (${G.numero(Math.round((tr.caselle.length - 1) * km))} km)`;
+    suggerisci(`${C.reti[rete].nome}: <b class="${ok ? '' : 'rosso'}">${G.lire(tr.costo)}</b> · ${tr.caselle.length} caselle${lun}`, e);
   }
 
   function anteprimaStazione(c, e) {
@@ -858,7 +898,10 @@
       if (el.dataset.az && (el.tagName === 'INPUT' || el.tagName === 'SELECT')) AZIONI[el.dataset.az](el.dataset, el);
       if (el.dataset.cambia === 'acquisto') aggiornaAcquisto(false);
     });
-    document.addEventListener('input', e => { if (e.target.dataset.cambia === 'acquisto') aggiornaAcquisto(false); });
+    document.addEventListener('input', e => {
+      if (e.target.dataset.cambia === 'acquisto') aggiornaAcquisto(false);
+      if (e.target.id === 'cercaCitta') $('#elencoCitta').innerHTML = righeCitta(e.target.value);
+    });
     $('#finestra').addEventListener('pointerdown', e => { if (e.target.id === 'finestra') chiudiFinestra(); });
     const p = $('#pannello');
     p.addEventListener('pointerenter', () => { ui.mouseSuPannello = true; });

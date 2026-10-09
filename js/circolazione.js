@@ -163,12 +163,27 @@
   // strada (per esempio una diramazione presa "contromano"). Alla partenza (dir = -1) può andare in qualsiasi
   // direzione, come quando cambia senso in stazione. extra(i, d) = costo in più per entrare nella casella i in direzione d.
   // I buffer si riusano: si chiama spesso.
-  let buf = null;
+  // Gli stati si numerano solo sulle caselle con binari (indice ricostruito quando la rete cambia):
+  // sulle mappe reali, grandi, un array per ogni casella e direzione occuperebbe decine di MB.
+  let buf = null, indice = null;
+  function indiceBinari(st) {
+    const m = st.mondo;
+    if (indice && indice.mondo === m && indice.ver === st.versioneRete) return indice;
+    const pos = indice && indice.mondo === m ? indice.pos : new Int32Array(m.N);
+    const celle = [];
+    for (let i = 0; i < m.N; i++) if (m.mBin[i]) { pos[i] = celle.length; celle.push(i); } else pos[i] = -1;
+    indice = { mondo: m, ver: st.versioneRete, pos, celle };
+    return indice;
+  }
   // b = casella d'arrivo, oppure un elenco di caselle (va bene la prima che si raggiunge: i binari di una stazione)
   function cercaBinario(st, a, b, dir, extra) {
     const mete = Array.isArray(b) ? b : [b];
-    const m = st.mondo, W = m.W, S = m.N * 9;
-    if (!buf || buf.S !== S) buf = { S, g: new Float64Array(S), da: new Int32Array(S), visto: new Uint32Array(S), chiuso: new Uint32Array(S), giro: 0 };
+    const m = st.mondo, W = m.W, X = indiceBinari(st), pos = X.pos, celle = X.celle, S = celle.length * 9;
+    if (pos[a] < 0) return null;
+    if (!buf || buf.S < S) {
+      const n = Math.ceil(S * 1.5) + 900;
+      buf = { S: n, g: new Float64Array(n), da: new Int32Array(n), visto: new Uint32Array(n), chiuso: new Uint32Array(n), giro: 0 };
+    }
     const B = buf;
     if (++B.giro > 4e9) { B.visto.fill(0); B.chiuso.fill(0); B.giro = 1; }
     const giro = B.giro;
@@ -182,14 +197,14 @@
       return min;
     };
     const coda = new G.Coda();
-    const s0 = a * 9 + (dir >= 0 ? dir : 8);
+    const s0 = pos[a] * 9 + (dir >= 0 ? dir : 8);
     B.g[s0] = 0; B.da[s0] = -1; B.visto[s0] = giro; coda.metti(s0, h(a));
     let fine = -1;
     while (!coda.vuota()) {
       const s = coda.togli();
       if (B.chiuso[s] === giro) continue;
       B.chiuso[s] = giro;
-      const i = (s / 9) | 0, din = s % 9;
+      const i = celle[(s / 9) | 0], din = s % 9;
       if (mete.includes(i)) { fine = s; break; }
       const mk = m.mBin[i];
       for (let d = 0; d < 8; d++) {
@@ -197,8 +212,8 @@
         let inversione = 0;
         if (din < 8) { const giro8 = Math.abs(d - din); if (Math.min(giro8, 8 - giro8) > 2) inversione = INVERSIONE; }
         const j = G.vicino(m, i, d);
-        if (j < 0) continue;
-        const sj = j * 9 + d;
+        if (j < 0 || pos[j] < 0) continue;
+        const sj = pos[j] * 9 + d;
         if (B.chiuso[sj] === giro) continue;
         let f = 1;
         const t = m.tipo[j];
@@ -210,7 +225,7 @@
     }
     if (fine < 0) return null;
     const cas = [];
-    for (let s = fine; s !== -1; s = B.da[s]) cas.push((s / 9) | 0);
+    for (let s = fine; s !== -1; s = B.da[s]) cas.push(celle[(s / 9) | 0]);
     cas.reverse();
     return { caselle: cas, costo: B.g[fine] };
   }

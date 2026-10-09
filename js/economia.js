@@ -386,6 +386,8 @@
       if (m.mStr[i] && !m.strCitta[i]) { if (m.tipoStr[i] === 2) aut++; else str++; }
     }
     for (const s of st.stazioni) if (s) staz += G.defStazione(s).manutenzione;
+    const km = G.kmCasella(st); // la manutenzione è a chilometro
+    bin *= km; str *= km; aut *= km;
     return {
       binari: bin * C.reti.binario.manutenzione,
       strade: str * C.reti.strada.manutenzione + aut * C.reti.autostrada.manutenzione,
@@ -394,12 +396,14 @@
   };
 
   G.mensile = function (st) {
+    // con migliaia di città (mappe reali) si tengono 20 anni di storia, altrimenti 50: il salvataggio resta piccolo
+    const maxStorico = st.citta.length > 300 ? 240 : 600;
     const rnd = G.casualeLibero;
     for (const c of st.citta) {
       G.cresciCitta(st, c, rnd);
       c.meseScorso = c.mese; c.mese = G.nuovoMese();
       c.storico.push(c.pop);
-      if (c.storico.length > 600) c.storico.shift();
+      if (c.storico.length > maxStorico) c.storico.shift();
     }
     for (const s of st.stazioni) if (s) G.aggiornaBacino(st, s);
     G.aggiornaIndustrieStazioni(st);
