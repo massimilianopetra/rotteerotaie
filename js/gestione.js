@@ -7,10 +7,16 @@
   const TITOLO = 'Quadro di gestione';
   const NOMI_MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
   const COL = { entrate: '#5ccf7a', uscite: '#ff6b5b', invest: '#8e7cc3', utile: '#f2b134', cassa: '#f2b134', valore: '#5b8def', griglia: 'rgba(255,255,255,0.07)', zero: 'rgba(255,255,255,0.28)' };
+  // voci di spesa: icona, nome, colore (prima i costi di gestione, poi gli investimenti)
   const USCITE = {
-    costruzione: ['🏗️', 'Costruzioni', '#c98b4a'], veicoli: ['🚂', 'Acquisto mezzi', '#8e7cc3'], esercizio: ['⛽', 'Esercizio mezzi', '#e07b5f'],
-    manutenzione: ['🔧', 'Manutenzione', '#d4a24c'], interessi: ['🏦', 'Interessi', '#b0606a']
+    esercizio: ['⛽', 'Esercizio mezzi', '#e07b5f'], manBinari: ['🛤️', 'Manutenzione binari', '#d4a24c'],
+    manStrade: ['🛣️', 'Manutenzione strade', '#b8a05a'], manStazioni: ['🚉', 'Manutenzione stazioni', '#5fa8a0'],
+    manutenzione: ['🔧', 'Manutenzione (prima della divisione)', '#c9b27a'], interessi: ['🏦', 'Interessi', '#b0606a'],
+    penali: ['⚖️', 'Penali della banca', '#8a4a6a'],
+    costruzione: ['🏗️', 'Costruzioni e demolizioni', '#c98b4a'], veicoli: ['🚂', 'Acquisto mezzi', '#8e7cc3']
   };
+  const nomeUscita = k => (USCITE[k] ? USCITE[k][0] + ' ' + USCITE[k][1] : esc(k));
+  const coloreUscita = k => (USCITE[k] ? USCITE[k][2] : '#9fb2c4');
   const TIPI = { treno: '🚂 Treni', strada: '🚌 Mezzi su strada', aereo: '✈️ Aerei' };
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const tot = o => G.somma(o || {});
@@ -267,6 +273,108 @@
     return h;
   }
 
+  // colonne impilate: per ogni mese una pila con una fetta per voce di costo
+  function graficoPile(lista, voci) {
+    const W = 640, H = 220, sx = 62, dx = 12, sy = 12, gy = 24, n = lista.length;
+    const tot = lista.map(m => voci.reduce((a, k) => a + (m.uscite[k] || 0), 0));
+    const sc = scala(tot, H, sy, gy), l = (W - sx - dx) / n, b = Math.min(22, l * 0.7);
+    const X = k => sx + l * (k + 0.5), etich = lista.map(etichetta);
+    let s = `<svg class="graficoG" viewBox="0 0 ${W} ${H}">` + assi(sc, W, sx, dx) + etichetteX(etich, X, H);
+    lista.forEach((m, k) => {
+      let base = 0;
+      for (const v of voci) {
+        const q = m.uscite[v] || 0;
+        if (q <= 0) continue;
+        const y0 = sc.Y(base), y1 = sc.Y(base + q);
+        s += `<rect x="${(X(k) - b / 2).toFixed(1)}" y="${y1.toFixed(1)}" width="${b.toFixed(1)}" height="${Math.max(0.5, y0 - y1).toFixed(1)}" fill="${coloreUscita(v)}" opacity="${m.inCorso ? 0.5 : 0.9}"/>`;
+        base += q;
+      }
+      const t = `${etich[k].lungo}\nTotale costi: ${G.lire(tot[k])}` + voci.filter(v => m.uscite[v] > 0).map(v => `\n${USCITE[v] ? USCITE[v][1] : v}: ${G.lire(m.uscite[v])}`).join('');
+      s += `<rect x="${(X(k) - l / 2).toFixed(1)}" y="${sy}" width="${l.toFixed(1)}" height="${H - sy - gy}" fill="transparent"><title>${esc(t)}</title></rect>`;
+    });
+    return s + '</svg>';
+  }
+
+  // il quadro dei costi: quanto si spende, per cosa, e quanto si spenderà ogni mese
+  function costi(st) {
+    const inv = k => G.VOCI_INVESTIMENTO.includes(k);
+    const tutti = mesi(st), ultimi = tutti.slice(-12), chiusi = st.conti.mesi.slice(-12);
+    const scorso = st.conti.mesi.length ? st.conti.mesi[st.conti.mesi.length - 1] : null;
+    const u12 = somme(ultimi, 'uscite');
+    // costi che si pagheranno ogni mese con la compagnia com'è adesso
+    const inf = G.costiInfrastruttura(st), eserAnno = st.veicoli.reduce((a, v) => a + G.esercizioVeicolo(v), 0);
+    const prev = { esercizio: eserAnno / 12, manBinari: inf.binari / 12, manStrade: inf.strade / 12, manStazioni: inf.stazioni / 12, interessi: G.interessiMese ? G.interessiMese(st) : 0 };
+    const totPrev = G.somma(prev);
+    const ricMese = chiusi.length ? chiusi.reduce((a, m) => a + G.bilancio(m).ricavi, 0) / chiusi.length : 0;
+    const costi12 = Object.keys(u12).filter(k => !inv(k)).reduce((a, k) => a + u12[k], 0);
+    const inv12 = Object.keys(u12).filter(inv).reduce((a, k) => a + u12[k], 0);
+    const copre = totPrev > 0 ? ricMese / totPrev : 0;
+
+    let h = '<div class="kpis">';
+    h += kpi('📅 Costi fissi al mese', G.lire(totPrev), 'con mezzi, rete e prestiti di adesso');
+    h += kpi('🟢 Ricavi medi al mese', G.lire(ricMese), chiusi.length ? `ultimi ${chiusi.length} mesi chiusi` : 'nessun mese chiuso');
+    h += kpi('⚖️ Copertura', totPrev > 0 ? Math.round(copre * 100) + '%' : '—', totPrev <= 0 ? 'nessun costo fisso' : copre >= 1 ? 'i ricavi pagano i costi fissi' : '<span class="rosso">i ricavi non bastano</span>', copre >= 1 ? 'verde' : totPrev > 0 ? 'rosso' : '');
+    h += kpi('🔴 Costi (12 mesi)', G.lire(costi12), 'esercizio, manutenzione, interessi');
+    h += kpi('🟣 Investimenti (12 mesi)', G.lire(inv12), 'costruzioni e acquisto di mezzi');
+    h += '</div>';
+
+    // tabella delle voci
+    // colonne: mese scorso, quest'anno (dal 1° gennaio), ultimi 12 mesi, quota sui costi, previsto al mese
+    const anno = st.conti.corrente.uscite;
+    const voci = Object.keys(USCITE).filter(k => prev[k] > 0 || u12[k] > 0 || anno[k] > 0 || (scorso && scorso.uscite[k] > 0));
+    const vc = voci.filter(k => !inv(k)), vi = voci.filter(inv);
+    const cella = v => `<td class="num">${v ? G.lire(v) : ''}</td>`;
+    const riga = k => `<tr><td><i class="pallinoG" style="background:${coloreUscita(k)}"></i>${nomeUscita(k)}</td>${cella(scorso && scorso.uscite[k])}${cella(anno[k])}${cella(u12[k])}` +
+      `<td class="num sotto">${!inv(k) && costi12 > 0 && u12[k] ? Math.round(u12[k] / costi12 * 100) + '%' : ''}</td>${inv(k) ? '<td></td>' : cella(prev[k])}</tr>`;
+    const somma = (el, f) => el.reduce((a, k) => a + (f(k) || 0), 0);
+    const totale = (nome, el) => `<tr class="totale"><td>${nome}</td>${cella(somma(el, k => scorso && scorso.uscite[k]))}${cella(somma(el, k => anno[k]))}${cella(somma(el, k => u12[k]))}<td></td>${el === vi ? '<td></td>' : cella(totPrev)}</tr>`;
+    h += `<h4>Per voce</h4><table class="elenco conti"><tr><th></th><th class="num">Mese scorso</th><th class="num">${st.conti.anno}<div class="sotto">dal 1° gennaio</div></th><th class="num">Ultimi 12 mesi</th><th class="num">Quota</th><th class="num">Previsto al mese</th></tr>`;
+    if (!vc.length) h += '<tr><td colspan="6" class="sotto">Ancora nessun costo.</td></tr>';
+    if (vc.length) h += '<tr class="titoletto"><td colspan="6">🔴 Costi di gestione</td></tr>' + vc.map(riga).join('') + totale('Totale costi', vc);
+    if (vi.length) h += '<tr class="titoletto"><td colspan="6">🟣 Investimenti</td></tr>' + vi.map(riga).join('') + totale('Totale investimenti', vi);
+    h += '</table><p class="sotto">Esercizio, manutenzione e interessi si pagano alla fine di ogni mese; «previsto al mese» è quanto pagherai ' +
+      'con la compagnia così com\'è adesso. Passa col mouse sul grafico qui sotto per leggere ogni mese.</p>';
+
+    const ult24 = tutti.slice(-24), vg = Object.keys(USCITE).filter(k => !inv(k) && ult24.some(m => m.uscite[k] > 0));
+    if (vg.length) h += '<h4>Costi di gestione, mese per mese</h4>' + graficoPile(ult24, vg) + legenda(vg.map(k => [USCITE[k][1], USCITE[k][2]]));
+
+    // dettaglio: mezzi, rete, banca
+    h += '<div class="dueG"><div><h4>⛽ Esercizio dei mezzi</h4>';
+    if (!st.veicoli.length) h += '<p class="sotto">Nessun mezzo.</p>';
+    else {
+      h += '<table class="elenco"><tr><th>Tipo</th><th class="num">Quanti</th><th class="num">All\'anno</th><th class="num">A testa</th></tr>';
+      for (const t of Object.keys(TIPI)) {
+        const el = st.veicoli.filter(v => v.tipo === t); if (!el.length) continue;
+        const a = el.reduce((x, v) => x + G.esercizioVeicolo(v), 0);
+        h += `<tr><td>${TIPI[t]}</td><td class="num">${el.length}</td><td class="num">${G.lire(a)}</td><td class="num">${G.lire(a / el.length)}</td></tr>`;
+      }
+      h += '</table><div class="sotto">I più cari (cresce del 4% per anno di età):</div><table class="elenco">';
+      for (const v of [...st.veicoli].sort((a, b) => G.esercizioVeicolo(b) - G.esercizioVeicolo(a)).slice(0, 5)) {
+        h += `<tr class="link" data-az="apriVeicolo" data-id="${v.id}"><td>${esc(v.nome)} <span class="sotto">${v.eta} anni${v.vagoni ? ` · ${v.vagoni} vagoni` : ''}</span></td><td class="num">${G.lire(G.esercizioVeicolo(v))}/anno</td>` +
+          `<td class="num ${classe(v.profittoAnno)}" title="Profitto quest'anno">${segno(v.profittoAnno)}${G.lireBreve(v.profittoAnno)}</td></tr>`;
+      }
+      h += '</table>';
+    }
+    const m = st.mondo, km = G.kmCasella(st);
+    let bin = 0, str = 0, aut = 0;
+    for (let i = 0; i < m.N; i++) { if (m.mBin[i]) bin++; if (m.mStr[i] && !m.strCitta[i]) { if (m.tipoStr[i] === 2) aut++; else str++; } }
+    const staz = {};
+    for (const s of st.stazioni) if (s) { const d = G.defStazione(s), k = s.tipo === 'stazione' ? d.nome : C.stazioni[s.tipo].nome; staz[k] = staz[k] || { n: 0, c: 0 }; staz[k].n++; staz[k].c += d.manutenzione; }
+    h += '</div><div><h4>🔧 Manutenzione della rete (all\'anno)</h4><table class="elenco">';
+    if (bin) h += `<tr><td>🛤️ Binari: ${G.numero(bin * km)} km × ${G.lire(C.reti.binario.manutenzione)}</td><td class="num">${G.lire(inf.binari)}</td></tr>`;
+    if (str) h += `<tr><td>🛣️ Strade: ${G.numero(str * km)} km × ${G.lire(C.reti.strada.manutenzione)}</td><td class="num">${G.lire(str * km * C.reti.strada.manutenzione)}</td></tr>`;
+    if (aut) h += `<tr><td>🚧 Autostrade: ${G.numero(aut * km)} km × ${G.lire(C.reti.autostrada.manutenzione)}</td><td class="num">${G.lire(aut * km * C.reti.autostrada.manutenzione)}</td></tr>`;
+    for (const k in staz) h += `<tr><td>🚉 ${staz[k].n} × ${esc(k)}</td><td class="num">${G.lire(staz[k].c)}</td></tr>`;
+    if (!bin && !str && !aut && !Object.keys(staz).length) h += '<tr><td class="sotto">Ancora niente da mantenere.</td></tr>';
+    h += '</table><p class="sotto">Le strade comunali delle città sono gratis. Una stazione inutile costa ogni anno: demoliscila.</p>';
+    h += '<h4>🏦 Interessi</h4>';
+    if (st.prestito > 0 && st.banca) {
+      h += '<table class="elenco">' + st.banca.prestiti.map(p => { const t = p.tipo === 'fisso' ? p.tasso : G.tassoVariabile(st); return `<tr><td>${p.tipo === 'fisso' ? '🔒 Fisso' : '🔄 Variabile'} ${G.lire(p.importo)} al ${G.percento(t)}</td><td class="num">${G.lire(p.importo * t / 100 / 12)}/mese</td></tr>`; }).join('') + '</table>';
+    } else h += '<p class="sotto">Nessun prestito: nessun interesse.</p>';
+    h += '<div class="pulsanti"><button data-az="finestra" data-f="banca">🏦 Vai in banca</button></div></div></div>';
+    return h;
+  }
+
   function merci(st) {
     const ultimi = mesi(st, 12), ent = somme(ultimi, 'entrate'), un = somme(ultimi, 'unita');
     const chiavi = Object.keys(C.merci).filter(k => ent[k] > 0 || un[k] >= 1).sort((a, b) => (ent[b] || 0) - (ent[a] || 0));
@@ -292,7 +400,7 @@
   Object.assign(G, { graficoLinee, legendaG: legenda, kpiG: kpi, etichettaMese: etichetta, mesiConti: mesi });
 
   // ---------------------------------------------------------------- finestra
-  const SCHEDE = { riepilogo: ['📊 Riepilogo', riepilogo], conti: ['📒 Conto economico', conti], mezzi: ['🚂 Mezzi', mezzi], merci: ['📦 Merci', merci] };
+  const SCHEDE = { riepilogo: ['📊 Riepilogo', riepilogo], conti: ['📒 Conto economico', conti], costi: ['💸 Costi', costi], mezzi: ['🚂 Mezzi', mezzi], merci: ['📦 Merci', merci] };
   let scheda = 'riepilogo', mesiVisti = -1;
   G.apriGestione = function (s) {
     const st = G.st;

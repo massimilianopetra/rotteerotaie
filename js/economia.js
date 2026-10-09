@@ -444,9 +444,11 @@
       esercizio += c; G.contoVeicolo(v, 0, c);
     }
     if (esercizio) G.spendi(st, esercizio, 'esercizio');
+    // manutenzione in tre voci, per vedere nel quadro dei costi quanto pesa ciascuna (le partite vecchie avevano "manutenzione")
     const inf = G.costiInfrastruttura(st);
-    const man = G.somma(inf) / 12;
-    if (man) G.spendi(st, man, 'manutenzione');
+    if (inf.binari) G.spendi(st, inf.binari / 12, 'manBinari');
+    if (inf.strade) G.spendi(st, inf.strade / 12, 'manStrade');
+    if (inf.stazioni) G.spendi(st, inf.stazioni / 12, 'manStazioni');
     G.bancaMensile(st); // interessi del mese e nuovo tasso
     st.mesiInRosso = st.soldi < 0 ? st.mesiInRosso + 1 : 0;
     if (st.mesiInRosso === 3) G.notizia(st, 'Attenzione: i conti sono in rosso da tre mesi! Chiedi un prestito in banca (tasto K) o vendi qualche veicolo.');

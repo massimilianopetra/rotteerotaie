@@ -83,7 +83,9 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
 - **Quadro di gestione** (📊 Gestione, tasto `E`, oppure clic sul profitto in alto): indicatori (cassa, profitto, ricavi, costi
   e investimenti degli ultimi 12 mesi, margine, valore dell'azienda, rete, passeggeri), grafici mese per mese di ricavi, costi
   e investimenti, cassa e valore, da dove arrivano e dove vanno i soldi; schede con il conto economico (ricavi − costi = profitto,
-  poi gli investimenti e il saldo di cassa) e i prestiti, ricavi/costi/profitto dei mezzi, le merci. In alto è sempre visibile
+  poi gli investimenti e il saldo di cassa), il **quadro dei costi** (ogni voce: esercizio dei mezzi, manutenzione di binari,
+  strade e stazioni, interessi, penali, con mese scorso, anno, 12 mesi, quota e costo previsto al mese, copertura dei costi
+  fissi coi ricavi, grafico a colonne impilate e dettaglio per mezzo, rete e prestito), ricavi/costi/profitto dei mezzi, le merci. In alto è sempre visibile
   il profitto dell'anno con l'andamento della cassa negli ultimi 12 mesi.
 - **Aiuto a schede** (tasto `H`): come si gioca, costi di costruzione e manutenzione, soldi e profitti, comandi.
 - **Salvataggio** di più partite nel browser (anche automatico ogni 1° gennaio) e su file `.rotaie`
