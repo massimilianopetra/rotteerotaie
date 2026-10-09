@@ -107,7 +107,7 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
 |---|---|
 | Spostare la mappa | trascinare col tasto destro (o sinistro con 🔍), frecce |
 | Zoom | rotellina, tasti `+` e `−` |
-| Strumenti | `I` info · `B` ferrovia (menu: normale o galleria) · `R` strada · `U` autostrada · `T` stazione (apre il menu delle dimensioni) · `F` autostazione · `A` aeroporto · `P` porto · `X` demolisci |
+| Strumenti | `I` info · `B` ferrovia (menu: normale o galleria) · `R` strada · `U` autostrada (menu: normale o galleria) · `T` stazione (apre il menu delle dimensioni) · `F` autostazione · `A` aeroporto · `P` porto · `X` demolisci |
 | Finestre | `V` mezzi · `M` mondo · `E` quadro di gestione · `K` banca · `H` aiuto |
 | Mappa | `L` livelli della mappa (pulsante 🗺️ Mappa) · `C` vie dei paesi · `G` griglia |
 | Vista 3D | `D` vista 3D assonometrica / vista dall'alto · `O` gira la vista 3D di 90° (`Maiusc+O` al contrario) |
@@ -151,10 +151,10 @@ Ogni casella ha una quota in metri (sulle mappe reali è quella vera). Una linea
 ferrovia, **70‰** la strada e **45‰** l'autostrada: il gioco calcola da solo il profilo della linea, che segue il terreno
 finché può. Dove passa più di 25 m **sopra** il terreno costruisce un **viadotto** (×6 il costo al km della rete); gli
 scarti minori sono trincee e rilevati pagati a metro. Dove dovrebbe passare più di 25 m **sotto** il terreno la **ferrovia
-non si costruisce** (le caselle troppo ripide diventano rosse): la galleria la scava il giocatore con **🚇 Galleria**, la
-seconda voce del menu della ferrovia (tasto `B`). La galleria è **dritta e in piano** alla quota dell'imbocco: si trascina
+(e l'autostrada) non si costruisce** (le caselle troppo ripide diventano rosse): la galleria la scava il giocatore con **🚇 Galleria**, la
+seconda voce del menu della ferrovia (tasto `B`) o dell'autostrada (tasto `U`). La galleria è **dritta e in piano** alla quota dell'imbocco: si trascina
 dall'imbocco all'uscita dall'altra parte del monte, sopra deve esserci sempre almeno 25 m di monte e l'uscita deve stare
-alla stessa quota (±25 m); costa ×10. Le strade invece fanno ancora le gallerie da sole. L'anteprima mostra viadotti e
+alla stessa quota (±25 m); costa ×10. Le strade normali invece fanno ancora le gallerie da sole. L'anteprima mostra viadotti e
 pendenza massima, e la ricerca del tracciato gira attorno ai monti quando può. I treni **rallentano in salita**: il vapore pieno al 35‰ va a circa metà velocità, elettriche
 e diesel reggono il doppio, i treni corti salgono meglio. Sulla mappa le gallerie sono tratteggiate con gli imbocchi,
 i viadotti hanno impalcato e piloni. Esempi sull'Italia: Milano–Torino tutta in pianura; Genova–Alessandria con una
