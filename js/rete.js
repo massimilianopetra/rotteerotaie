@@ -344,6 +344,48 @@
     return ris;
   };
 
+  // ---------------------------------------------------------------- rotte delle navi
+  // A* sull'acqua (mare e laghi, non i fiumi) da una casella fino a una delle caselle del porto s.
+  // Le caselle dei porti di partenza e di arrivo si possono attraversare; il risultato resta in memoria
+  // (l'acqua non cambia, i porti sì: la chiave contiene le loro caselle).
+  const rotte = new Map();
+  G.cercaRotta = function (st, a, s) {
+    const m = st.mondo, W = m.W, N = m.N, arrivo = new Set(G.caselleStazione(st, s));
+    const chiave = st.opz.seme + ':' + a + ':' + [...arrivo].join(',');
+    if (rotte.has(chiave)) return rotte.get(chiave);
+    if (rotte.size > 500) rotte.clear();
+    const bx = s.x + (s.lato - 1) / 2, by = s.y + (s.lato - 1) / 2;
+    const h = i => { const dx = Math.abs(i % W - bx), dy = Math.abs(((i / W) | 0) - by); return Math.max(dx, dy) + 0.414 * Math.min(dx, dy); };
+    const B = bufferRicerca(N), g = B.g, da = B.da, visto = B.visto, chiuso = B.chiuso, giro = B.giro;
+    const coda = new Coda();
+    g[a] = 0; da[a] = -1; visto[a] = giro; coda.metti(a, h(a));
+    let fine = -1;
+    while (!coda.vuota()) {
+      const i = coda.togli();
+      if (chiuso[i] === giro) continue;
+      chiuso[i] = giro;
+      if (arrivo.has(i)) { fine = i; break; }
+      // dal porto di partenza si esce solo verso l'acqua; nel porto d'arrivo si entra dall'acqua
+      for (let d = 0; d < 8; d++) {
+        const j = G.vicino(m, i, d);
+        if (j < 0 || chiuso[j] === giro) continue;
+        if (m.tipo[j] !== T.ACQUA && !arrivo.has(j)) continue;
+        if (arrivo.has(j) && m.tipo[i] !== T.ACQUA) continue;
+        const ng = g[i] + LUN[d];
+        if (visto[j] !== giro || ng < g[j]) { visto[j] = giro; g[j] = ng; da[j] = i; coda.metti(j, ng + h(j)); }
+      }
+    }
+    let ris = null;
+    if (fine >= 0) { ris = []; for (let i = fine; i !== -1; i = da[i]) ris.push(i); ris.reverse(); }
+    rotte.set(chiave, ris);
+    return ris;
+  };
+  // la casella tocca l'acqua (mare o lago)? Serve per costruire un porto
+  G.toccaAcqua = function (m, i) {
+    for (let d = 0; d < 8; d++) { const j = G.vicino(m, i, d); if (j >= 0 && m.tipo[j] === T.ACQUA) return true; }
+    return false;
+  };
+
   // ---------------------------------------------------------------- demolizione
   function stacca(m, i, maschera) {
     const rete = maschera === m.mBin ? 'binario' : 'strada';

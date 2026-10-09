@@ -100,7 +100,7 @@
   };
   // la stazione è collegata se almeno una sua casella ha un binario (o una strada)
   G.stazioneCollegata = function (st, s) {
-    if (s.tipo === 'aeroporto') return true;
+    if (s.tipo === 'aeroporto' || s.tipo === 'porto') return true;
     const m = st.mondo, mask = s.tipo === 'stazione' ? m.mBin : m.mStr;
     return G.caselleStazione(st, s).some(i => mask[i]);
   };
@@ -123,7 +123,8 @@
       const i = yy * m.W + xx, t = m.tipo[i];
       if (t === T.ACQUA || t === T.FIUME) return "Non si costruisce sull'acqua";
       if (m.occ[i]) return 'Casella occupata';
-      if (tipo === 'aeroporto' && (m.mBin[i] || m.mStr[i])) return 'Togli prima strade e binari';
+      if ((tipo === 'aeroporto' || tipo === 'porto') && (m.mBin[i] || m.mStr[i])) return 'Togli prima strade e binari';
+      if (tipo === 'porto' && !G.toccaAcqua(m, i)) return 'Il porto va sulla costa: una casella che tocca il mare o un lago';
       if (t === T.MONTAGNA) costo += def.costo * 0.5 / (def.lato * def.lato);
       if (m.bosco[i]) costo += C.costoBosco;
     }
@@ -145,7 +146,8 @@
       const ind = st.industrie.find(k => !k.chiusa && Math.abs(k.x + 1 - c0.x) < 6 && Math.abs(k.y + 1 - c0.y) < 6);
       base = (v ? v.nome : 'Campagna') + ' ' + (ind ? C.industrie[ind.tipo].breve : 'Bivio');
     }
-    const pre = s.tipo === 'aeroporto' ? 'Aeroporto di ' : s.tipo === 'deposito' ? 'Autostazione ' : s.taglia === 'fermata' ? 'Fermata ' : '';
+    // «Porto di Porto Salino» suonerebbe male: lì diventa «Scalo di Porto Salino»
+    const pre = s.tipo === 'aeroporto' ? 'Aeroporto di ' : s.tipo === 'porto' ? (/^Porto /.test(base) ? 'Scalo di ' : 'Porto di ') : s.tipo === 'deposito' ? 'Autostazione ' : s.taglia === 'fermata' ? 'Fermata ' : '';
     if (s.taglia === 'centrale') base += ' Centrale';
     let nome = pre + base, k = 1;
     while (st.stazioni.some(o => o && o !== s && o.nome === nome)) nome = pre + base + ' ' + (++k);

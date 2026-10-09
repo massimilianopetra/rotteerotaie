@@ -56,10 +56,11 @@
     { id: 'stazione', icona: '🚉', nome: 'Stazione ferroviaria: clic per scegliere le dimensioni', tasto: 'T' },
     { id: 'deposito', icona: '🚏', nome: 'Autostazione (bus e camion)', tasto: 'F' },
     { id: 'aeroporto', icona: '✈️', nome: 'Aeroporto', tasto: 'A' },
+    { id: 'porto', icona: '⚓', nome: 'Porto (navi): sulla costa del mare o di un lago', tasto: 'P' },
     { id: 'demolisci', icona: '💥', nome: 'Demolisci', tasto: 'X' }
   ];
   const RETI = ['binario', 'strada', 'autostrada'];
-  const STAZIONI = ['stazione', 'deposito', 'aeroporto'];
+  const STAZIONI = ['stazione', 'deposito', 'aeroporto', 'porto'];
 
   // ---------------------------------------------------------------- avvisi
   let timerAvviso = 0;
@@ -235,7 +236,7 @@
     const veic = s0.veicoli.filter(v => v.fermate.some(f => f.s === s.id));
     h += `<h4>Mezzi che si fermano qui (${veic.length})</h4>`;
     for (const v of veic) h += `<div class="link" data-az="apriVeicolo" data-id="${v.id}">${esc(v.nome)} · ${pallino(v.merce)}${nomeMerce(v.merce)}</div>`;
-    const cosa = { stazione: 'un treno', deposito: 'un autobus o un camion', aeroporto: 'un aereo' }[s.tipo];
+    const cosa = { stazione: 'un treno', deposito: 'un autobus o un camion', aeroporto: 'un aereo', porto: 'una nave' }[s.tipo];
     h += `<div class="pulsanti"><button class="primario" data-az="acquista" data-id="${s.id}">🛒 Compra ${cosa}</button>`;
     h += `<button data-az="demolisciStazione" data-id="${s.id}">💥 Demolisci</button></div>`;
     return h;
@@ -294,7 +295,7 @@
 
   function htmlVeicolo(s0, v) {
     const mod = G.modello(v.modello);
-    let h = `<h3>${{ treno: '🚂', bus: '🚌', camion: '🚚', aereo: '✈️' }[v.classe]} ${esc(v.nome)}</h3>`;
+    let h = `<h3>${{ treno: '🚂', bus: '🚌', camion: '🚚', aereo: '✈️', traghetto: '⛴️', cargo: '🚢' }[v.classe]} ${esc(v.nome)}</h3>`;
     h += `<div class="sotto">${esc(mod.nome)}${v.vagoni ? ` · ${v.vagoni} vagoni` : ''} · ${mod.kmh} km/h · ${v.eta} anni</div>`;
     h += `<p class="${v.stato === 'bloccato' || v.stato === 'guasto' ? 'rosso' : ''}"><b>Stato:</b> ${esc(G.statoVeicolo(s0, v))}</p>`;
     if (v.tipo === 'treno' && v.stato === 'viaggio') {
@@ -420,7 +421,7 @@
 
   function finestraAcquisto(sid) {
     const s0 = st(), s = s0.stazioni[sid];
-    const tipo = { stazione: 'treno', deposito: 'strada', aeroporto: 'aereo' }[s.tipo];
+    const tipo = { stazione: 'treno', deposito: 'strada', aeroporto: 'aereo', porto: 'nave' }[s.tipo];
     const mod = G.modelliDisponibili(s0, tipo);
     if (!mod.length) { G.avviso('Nessun mezzo disponibile in questo anno', true); return; }
     let h = `<p>Il mezzo parte da <b>${esc(s.nome)}</b>. Dopo l'acquisto aggiungi le altre fermate cliccando sulle stazioni.</p>`;
@@ -590,7 +591,7 @@
     h += '</table><p class="sotto">La manutenzione delle reti non dipende dal terreno: un km in montagna costa come uno in pianura.</p>';
     h += '<h4>Stazioni</h4><table class="elenco"><tr><th>Tipo</th><th class="num">Costo</th><th class="num">Manutenzione all\'anno</th><th class="num">Bacino</th></tr>';
     for (const k in C.taglieStazione) { const d = C.taglieStazione[k]; h += `<tr><td>🚉 ${d.nome}${d.anno ? ` (dal ${d.anno})` : ''}</td><td class="num">${G.lire(d.costo)}</td><td class="num">${G.lire(d.manutenzione)}</td><td class="num">${d.raggio} caselle</td></tr>`; }
-    for (const k of ['deposito', 'aeroporto']) { const d = C.stazioni[k]; h += `<tr><td>${d.icona} ${d.nome}${d.anno ? ` (dal ${d.anno})` : ''}</td><td class="num">${G.lire(d.costo)}</td><td class="num">${G.lire(d.manutenzione)}</td><td class="num">${d.raggio} caselle</td></tr>`; }
+    for (const k of ['deposito', 'aeroporto', 'porto']) { const d = C.stazioni[k]; h += `<tr><td>${d.icona} ${d.nome}${d.anno ? ` (dal ${d.anno})` : ''}</td><td class="num">${G.lire(d.costo)}</td><td class="num">${G.lire(d.manutenzione)}</td><td class="num">${d.raggio} caselle</td></tr>`; }
     h += '</table>';
     h += `<h4>Mezzi</h4><p>Ogni modello ha un prezzo e un <b>costo annuo di esercizio</b>; ogni vagone costa ${G.lire(C.vagone.costo)} più
       ${G.lire(C.vagone.esercizio)} l'anno. L'esercizio cresce del 4% per ogni anno di età, e i mezzi fuori produzione si guastano più spesso.</p>`;
@@ -634,7 +635,7 @@
   function aiutoComandi() {
     return `<table class="elenco"><tr><td>Sposta la mappa</td><td>trascina col tasto destro (o sinistro con 🔍), frecce</td></tr>
       <tr><td>Zoom</td><td>rotellina, tasti + e −</td></tr>
-      <tr><td>Strumenti</td><td>I info · B ferrovia · R strada · U autostrada · T stazione (apre le dimensioni) · F autostazione · A aeroporto · X demolisci</td></tr>
+      <tr><td>Strumenti</td><td>I info · B ferrovia · R strada · U autostrada · T stazione (apre le dimensioni) · F autostazione · A aeroporto · P porto · X demolisci</td></tr>
       <tr><td>Finestre</td><td>V mezzi · M mondo · E gestione (conti e grafici) · K banca · H aiuto · G griglia · L livelli della mappa (cosa mostrare) · C vie dei paesi</td></tr>
       <tr><td>Tempo</td><td>spazio pausa · 1 normale (1 secondo = 5 minuti) · 2 veloce (1 ora al secondo) · 3 velocissimo (1 giorno al secondo) · 4 turbo (1 settimana al secondo)</td></tr>
       <tr><td>Annulla / chiudi</td><td>Esc</td></tr></table>
@@ -664,6 +665,11 @@
       <p>Con tre o più fermate scegli cosa fa il mezzo dopo l'ultima: <b>🔁 giro</b> (torna dritto alla prima: Milano → Vercelli →
       Torino → Milano, passando da Vercelli senza fermarsi) oppure <b>↔ andata e ritorno</b> (Milano → Vercelli → Torino → Vercelli →
       Milano). Sulla mappa il percorso del mezzo selezionato segue i binari; il tratto pieno è il viaggio in corso.</p>
+      <h4>⚓ Porti e navi</h4>
+      <p>Il <b>porto</b> (tasto P) va su una casella di terra che tocca il mare o un lago. Le navi non hanno bisogno di reti:
+      navigano sull'acqua e girano da sole attorno a coste e isole, quindi due porti bastano per una linea. I <b>traghetti</b>
+      portano passeggeri e posta, le <b>navi da carico</b> tutte le altre merci. Sono lente ma molto capienti, e si pagano come
+      gli altri mezzi: in base alla distanza in linea d'aria fra i due porti. Due porti su acque diverse (un lago e il mare) non si collegano.</p>
       <h4>Le catene delle merci</h4>
       <p>⛏️ Carbone + ⛰️ Ferro → 🏭 Acciaieria → Acciaio · Acciaio + 🌲 Legname → 🏗️ Fabbrica → Merci → città<br>
       🌾 Grano → 🍝 Pastificio → Cibo → città · 🛢️ Petrolio → ⚗️ Raffineria → Carburante → città · ⚡ La centrale compra il carbone.</p>
@@ -1190,7 +1196,7 @@
     return Object.assign({}, L, {
       strade: L.strade || t === 'strada' || t === 'autostrada' || t === 'deposito',
       ferrovie: L.ferrovie || t === 'binario' || t === 'stazione',
-      stazioni: L.stazioni || t === 'stazione' || t === 'deposito' || t === 'aeroporto' || ui.percorso,
+      stazioni: L.stazioni || t === 'stazione' || t === 'deposito' || t === 'aeroporto' || t === 'porto' || ui.percorso,
       mezzi: L.mezzi || !!ui.selVeicolo
     });
   };
