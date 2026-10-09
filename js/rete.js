@@ -213,14 +213,23 @@
     for (let k = 1; k < n; k++) if (!fisso[k]) h[k] = Math.min(h[k - 1] + pmax * L[k], Math.max(h[k - 1] - pmax * L[k], h[k]));
     for (let k = n - 2; k >= 0; k--) if (!fisso[k]) h[k] = Math.min(h[k + 1] + pmax * L[k + 1], Math.max(h[k + 1] - pmax * L[k + 1], h[k]));
     const prezzo = C.reti[rete].costo * km, opere = new Uint8Array(n), costi = new Float64Array(n);
-    const r = { quote: h, opere, costi, costo: 0, pendenza: 0, gallerie: 0, kmGallerie: 0, viadotti: 0, kmViadotti: 0, scavo: 0 };
+    const r = { quote: h, opere, costi, costo: 0, pendenza: 0, gallerie: 0, kmGallerie: 0, viadotti: 0, kmViadotti: 0, scavo: 0, ripidi: [] };
     for (let k = 0; k < n; k++) {
       const i = caselle[k];
-      if (k) r.pendenza = Math.max(r.pendenza, Math.abs(h[k] - h[k - 1]) / L[k] * 1000);
+      if (k) {
+        const pk = Math.abs(h[k] - h[k - 1]) / L[k] * 1000;
+        r.pendenza = Math.max(r.pendenza, pk);
+        // ferrovia: un tratto nuovo oltre la pendenza massima (fra due punti fissi, per esempio) non si costruisce
+        if (rete === 'binario' && pk > O.pendenzaMax[rete] + 0.5 && (c0[k] > 0 || c0[k - 1] > 0)) r.ripidi.push(i);
+      }
       if (c0[k] === 0) { opere[k] = oR[i]; continue; } // c'è già (o è una stazione): niente da pagare
       const d = h[k] - terra[k];
       let c;
-      if (d < -O.sogliaMetri && m.occ[i] !== OCC.STAZIONE) { opere[k] = OPERA.GALLERIA; c = prezzo * O.galleria; }
+      if (d < -O.sogliaMetri && m.occ[i] !== OCC.STAZIONE) {
+        opere[k] = OPERA.GALLERIA; c = prezzo * O.galleria;
+        // la ferrovia non fora i monti da sola: le gallerie le scava il giocatore (G.cercaGalleria)
+        if (rete === 'binario') r.ripidi.push(i);
+      }
       else if (d > O.sogliaMetri) { opere[k] = OPERA.VIADOTTO; c = prezzo * O.viadotto; }
       else { const s = Math.abs(d) * O.scavoAlMetro * km; c = c0[k] + s; r.scavo += s; }
       costi[k] = c; r.costo += c;
@@ -230,16 +239,37 @@
       }
     }
     r.costo = Math.round(r.costo);
+    if (r.ripidi.length) {
+      r.impossibile = 'Troppo ripido: la ferrovia sale e scende al massimo del ' + O.pendenzaMax[rete] + '‰ (caselle in rosso). ' +
+        'Gira attorno al monte, oppure scegli 🚇 Galleria nel menu della ferrovia (B) e scavala tu.';
+    }
     return r;
   };
 
   // il tracciato più economico fra due caselle (A*); restituisce { caselle, costo, profilo } o null.
   // La ricerca tiene conto delle pendenze: un passo troppo ripido costa quanto una galleria o un viadotto,
   // così la linea gira attorno ai monti quando conviene.
+  // Per la ferrovia, se il tracciato trovato è troppo ripido, si riprova con i passi ripidi molto più cari:
+  // spesso c'è un giro più lungo (un fondovalle) che resta sotto la pendenza massima.
   G.cercaTracciato = function (st, a, b, rete) {
-    const m = st.mondo, W = m.W, N = m.N;
     if (!isFinite(G.costoCasella(st, a, rete)) || !isFinite(G.costoCasella(st, b, rete))) return null;
     if (a === b) { const p = G.profiloTracciato(st, [a], rete); return { caselle: [a], costo: p.costo, profilo: p }; }
+    let tr = null;
+    for (const molt of rete === 'binario' ? [4, 40] : [1]) {
+      const caselle = ricercaTracciato(st, a, b, rete, molt);
+      if (!caselle) return tr;
+      const profilo = G.profiloTracciato(st, caselle, rete);
+      const t = { caselle, costo: profilo.costo, profilo };
+      if (profilo.impossibile) { t.impossibile = profilo.impossibile; t.blocchi = profilo.ripidi; }
+      if (!tr || !t.impossibile) tr = t;
+      if (!t.impossibile) break;
+    }
+    return tr;
+  };
+
+  // A*: le caselle del tracciato più economico; molt = quanto pesa un passo troppo ripido
+  function ricercaTracciato(st, a, b, rete, molt) {
+    const m = st.mondo, W = m.W, N = m.N;
     const km = G.kmCasella(st), base = C.reti[rete].costo * km * 0.35;
     const Hm = G.metriTerreno(m), O = C.opere, pmax = O.pendenzaMax[rete] / 1000, prezzo = C.reti[rete].costo * km;
     const B = bufferRicerca(N), g = B.g, da = B.da, visto = B.visto, chiuso = B.chiuso, giro = B.giro;
@@ -263,7 +293,8 @@
         if (!isFinite(cj)) continue;
         if (cj > 0) { // casella da costruire: quanto è ripido il passo?
           const dh = Math.abs(Hm[j] - Hm[i]), p = dh / (km * 1000 * LUN[d]);
-          if (p > pmax) cj = Math.max(cj, prezzo * (Hm[j] > Hm[i] ? O.galleria : O.viadotto) * Math.min(1, 0.5 + (p - pmax) / pmax));
+          // (la ferrovia non fa gallerie da sola: un passo troppo ripido costa molto di più, meglio girare attorno)
+          if (p > pmax) cj = Math.max(cj, prezzo * (Hm[j] > Hm[i] ? O.galleria : O.viadotto) * Math.min(1, 0.5 + (p - pmax) / pmax) * molt);
           else cj += Math.min(dh, O.sogliaMetri) * 0.5 * O.scavoAlMetro * km;
         }
         const passo = giaCollegati(m, i, d, rete) ? base * 0.5 * LUN[d] : (cj + base) * LUN[d];
@@ -275,12 +306,66 @@
     const caselle = [];
     for (let i = b; i !== -1; i = da[i]) caselle.push(i);
     caselle.reverse();
-    const profilo = G.profiloTracciato(st, caselle, rete);
-    return { caselle, costo: profilo.costo, profilo };
+    return caselle;
+  }
+
+  // Galleria scavata dal giocatore: dritta (una linea di caselle da a a b) e in piano, alla quota dell'imbocco a.
+  // Le caselle in mezzo devono stare sotto il terreno (almeno sogliaMetri di roccia sopra) e l'uscita b più o meno
+  // alla stessa quota (entro sogliaMetri). Restituisce un tracciato come cercaTracciato; se non si può,
+  // tr.impossibile dice perché e tr.blocchi sono le caselle da segnare in rosso.
+  G.cercaGalleria = function (st, a, b) {
+    const m = st.mondo, W = m.W, O = C.opere, Hm = G.metriTerreno(m), km = G.kmCasella(st), rete = 'binario';
+    const no = (testo, blocchi, caselle) => ({ caselle: caselle || null, costo: 0, impossibile: testo, blocchi: blocchi || [] });
+    const ma = G.motivoCasella(st, a, rete), mb = G.motivoCasella(st, b, rete);
+    if (ma) return no('Non si entra da qui: ' + ma, [a]);
+    // linea dritta a 8 direzioni (Bresenham)
+    const caselle = [];
+    let x = a % W, y = (a / W) | 0;
+    const x1 = b % W, y1 = (b / W) | 0, dx = Math.abs(x1 - x), dy = -Math.abs(y1 - y), sx = x < x1 ? 1 : -1, sy = y < y1 ? 1 : -1;
+    let err = dx + dy;
+    for (;;) {
+      caselle.push(y * W + x);
+      if (x === x1 && y === y1) break;
+      const e2 = 2 * err;
+      if (e2 >= dy) { err += dy; x += sx; }
+      if (e2 <= dx) { err += dx; y += sy; }
+    }
+    if (caselle.length < 3) return no('Trascina dall\'imbocco fino all\'uscita dall\'altra parte del monte: la galleria è lunga almeno 3 caselle', [], caselle);
+    if (mb) return no('Non si esce qui: ' + mb, [b], caselle);
+    const quota = m.mBin[a] ? G.quotaRete(st, a, rete) : Hm[a], n = caselle.length, qTesto = G.numero(Math.round(quota)) + ' m';
+    // in mezzo: tutto sotto il terreno, senza incrociare altri binari o stazioni
+    const scoperte = [], occupate = [];
+    for (let k = 1; k < n - 1; k++) {
+      const i = caselle[k];
+      if (m.mBin[i] || m.occ[i] === OCC.STAZIONE) occupate.push(i);
+      else if (Hm[i] < quota + O.sogliaMetri) scoperte.push(i);
+    }
+    if (occupate.length) return no('La galleria incrocerebbe un binario o una stazione: falla partire o arrivare lì, oppure passa altrove', occupate, caselle);
+    if (scoperte.length) {
+      return no('La galleria uscirebbe allo scoperto: nelle caselle in rosso il terreno non sta almeno ' + O.sogliaMetri +
+        ' m sopra la galleria (' + qTesto + '). Cambia direzione o fermati prima.', scoperte, caselle);
+    }
+    const qb = m.mBin[b] ? G.quotaRete(st, b, rete) : Hm[b], salto = Math.round(qb - quota);
+    if (Math.abs(salto) > O.sogliaMetri) {
+      return no('L\'uscita è ' + G.numero(Math.abs(salto)) + ' m più ' + (salto > 0 ? 'in alto' : 'in basso') + ' della galleria (' + qTesto +
+        '): la galleria è in piano, quindi l\'uscita deve stare alla stessa quota (entro ' + O.sogliaMetri + ' m). ' +
+        (salto > 0 ? 'Allungala fino a dove il monte riscende.' : 'Accorciala, oppure fai partire l\'imbocco più in basso.'), [b], caselle);
+    }
+    const prezzo = C.reti[rete].costo * km, quote = new Float64Array(n).fill(quota), opere = new Uint8Array(n), costi = new Float64Array(n);
+    const r = { quote, opere, costi, costo: 0, pendenza: 0, gallerie: 1, kmGallerie: 0, viadotti: 0, kmViadotti: 0, scavo: 0, ripidi: [] };
+    for (let k = 0; k < n; k++) {
+      const i = caselle[k];
+      if (k === 0 || k === n - 1) costi[k] = G.costoCasella(st, i, rete); // gli imbocchi sono in superficie
+      else { opere[k] = OPERA.GALLERIA; costi[k] = prezzo * O.galleria; r.kmGallerie += km; }
+      r.costo += costi[k];
+    }
+    r.costo = Math.round(r.costo);
+    return { caselle, costo: r.costo, profilo: r, galleria: true, quota };
   };
 
   G.costruisciTracciato = function (st, tr, rete) {
     if (G.anno(st) < C.reti[rete].anno) return `${C.reti[rete].nome}: disponibile dal ${C.reti[rete].anno}`;
+    if (tr.impossibile) return tr.impossibile;
     if (st.soldi < tr.costo) return 'Fondi insufficienti';
     const m = st.mondo, p = tr.profilo || G.profiloTracciato(st, tr.caselle, rete), qR = m[grQuota(rete)], oR = m[grOpera(rete)];
     for (let k = 0; k + 1 < tr.caselle.length; k++) G.collega(st, tr.caselle[k], tr.caselle[k + 1], rete, false);

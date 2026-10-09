@@ -83,6 +83,7 @@ tr.link:hover { background: rgba(255, 255, 255, 0.06); text-decoration: none; }
 #menuStazioni .titolo { color: var(--accento); font-weight: 700; font-size: 13px; padding: 0 4px; }
 #menuStazioni button { display: flex; align-items: center; gap: 10px; text-align: left; padding: 6px 8px; }
 #menuStazioni button svg { width: 52px; height: 52px; flex: none; background: #6f8a52; border-radius: 6px; }
+#menuStazioni button .icona { width: 52px; flex: none; font-size: 30px; text-align: center; }
 #menuStazioni button .sotto { display: block; }
 #menuStazioni button.attivo .sotto { color: #4a3510; }
 #menuStazioni button:disabled { opacity: 0.45; cursor: default; }
