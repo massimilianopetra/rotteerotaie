@@ -147,7 +147,7 @@ Il tracciato proposto è il **più economico**, non il più corto: gira attorno 
 
 ### Pendenze, gallerie e viadotti
 
-Ogni casella ha una quota in metri (sulle mappe reali è quella vera). Una linea non sale né scende più di **35‰** la
+Ogni casella ha una quota in metri (sulle mappe reali è quella vera). Una linea non sale né scende più di **50‰** la
 ferrovia, **70‰** la strada e **45‰** l'autostrada: il gioco calcola da solo il profilo della linea, che segue il terreno
 finché può. Dove passa più di 25 m **sopra** il terreno costruisce un **viadotto** (×6 il costo al km della rete, +100% ogni
 100 m d'altezza). Ferrovia e autostrada, per scavalcare un dosso o salire a una città in alto, **si sopraelevano già prima** su
@@ -155,10 +155,10 @@ rilevati e viadotti, a rampa entro la pendenza massima; se nemmeno così ce la f
 scarti minori sono trincee e rilevati pagati a metro. Dove dovrebbe passare più di 25 m **sotto** il terreno la **ferrovia
 (e l'autostrada) non si costruisce** (le caselle troppo ripide diventano rosse): la galleria la scava il giocatore con **🚇 Galleria**, la
 seconda voce del menu della ferrovia (tasto `B`) o dell'autostrada (tasto `U`). La galleria è **dritta** e va dalla quota dell'imbocco a quella dell'uscita,
-salendo o scendendo al massimo con la pendenza della rete (35‰ ferrovia, 45‰ autostrada): si trascina dall'imbocco
+salendo o scendendo al massimo con la pendenza della rete (50‰ ferrovia, 45‰ autostrada): si trascina dall'imbocco
 all'uscita dall'altra parte del monte e sopra deve esserci almeno 25 m di monte (vicino agli imbocchi basta stare sotto
 il terreno); costa ×10. Le strade normali invece fanno ancora le gallerie da sole. L'anteprima mostra viadotti e
-pendenza massima, e la ricerca del tracciato gira attorno ai monti quando può. I treni **rallentano in salita**: il vapore pieno al 35‰ va a circa metà velocità, elettriche
+pendenza massima, e la ricerca del tracciato gira attorno ai monti quando può. I treni **rallentano in salita**: il vapore pieno al 50‰ va a circa un quarto della velocità, elettriche
 e diesel reggono il doppio, i treni corti salgono meglio. Sulla mappa le gallerie sono tratteggiate con gli imbocchi,
 i viadotti hanno impalcato e piloni. Esempi sull'Italia: Milano–Torino tutta in pianura; Genova–Alessandria con una
 galleria di 10 km sotto l'Appennino.

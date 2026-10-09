@@ -97,7 +97,7 @@ window.CATALOGO = {
   // moltiplicano il costo al km della rete (al posto del terreno). In salita i treni rallentano: a "salitaVapore" ‰
   // una locomotiva a vapore a pieno carico si fermerebbe (le elettriche e le diesel reggono "salitaElettrica" ‰).
   opere: {
-    pendenzaMax: { binario: 35, strada: 70, autostrada: 45 },
+    pendenzaMax: { binario: 50, strada: 70, autostrada: 45 },
     galleria: 10, viadotto: 6, sogliaMetri: 25, scavoAlMetro: 60,
     salitaVapore: 70, salitaElettrica: 150
   },
