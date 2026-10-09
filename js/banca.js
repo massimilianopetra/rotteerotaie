@@ -104,7 +104,7 @@
     const penale = G.penale(p, importo);
     if (st.soldi < importo + penale) return 'Fondi insufficienti';
     st.soldi -= importo;
-    if (penale) G.spendi(st, penale, 'interessi');
+    if (penale) G.spendi(st, penale, 'penali');
     p.importo -= importo;
     if (p.importo <= 0.5) b.prestiti.splice(b.prestiti.indexOf(p), 1);
     ricalcolaDebito(st);

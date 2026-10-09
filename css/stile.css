@@ -31,6 +31,7 @@ button.mini { padding: 0 6px; font-size: 11px; }
 .spiegaConti b { font-weight: 700; }
 table.conti tr.totale td .sotto { font-weight: 400; }
 table.contiMezzo { width: 100%; }
+.pallinoG { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
 /* banca */
 .consiglioBanca { margin: 10px 0; padding: 8px 10px; font-size: 13px; background: rgba(242, 177, 52, 0.08);
   border-left: 3px solid var(--accento); border-radius: 4px; }
