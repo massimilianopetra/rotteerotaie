@@ -31,6 +31,12 @@ button.mini { padding: 0 6px; font-size: 11px; }
 .spiegaConti b { font-weight: 700; }
 table.conti tr.totale td .sotto { font-weight: 400; }
 table.contiMezzo { width: 100%; }
+/* intestazioni ordinabili */
+table.elenco th.ordina { cursor: pointer; user-select: none; white-space: nowrap; }
+table.elenco th.ordina:hover { color: var(--testo); }
+table.elenco th.ordina.attiva { color: var(--accento); }
+th.ordina .freccia { margin-left: 4px; font-size: 10px; opacity: 0.45; }
+th.ordina.attiva .freccia { opacity: 1; }
 .pallinoG { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
 /* banca */
 .consiglioBanca { margin: 10px 0; padding: 8px 10px; font-size: 13px; background: rgba(242, 177, 52, 0.08);

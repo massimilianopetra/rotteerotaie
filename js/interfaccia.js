@@ -452,36 +452,70 @@
     apriFinestra(`Mezzi (${s0.veicoli.length})`, h, true);
   }
 
+  // Colonne delle tabelle del mondo: ogni colonna si ordina con un clic sull'intestazione (un altro clic inverte).
+  // v = valore per ordinare (numero o testo); num = colonna numerica (all'inizio dal più grande)
+  const prodIndustria = ind => { const def = C.industrie[ind.tipo]; return def.produce ? ind.produzione : def.uscita ? ind.prodScorso : -1; };
+  const attesaTot = s => Object.values(s.attesa).reduce((a, q) => a + (q >= 1 ? q : 0), 0);
+  const mezziStazione = s => st().veicoli.filter(v => v.fermate.some(f => f.s === s.id)).length;
+  const COLONNE_MONDO = {
+    citta: [
+      { k: 'nome', t: 'Città', v: c => c.nome }, { k: 'pop', t: 'Abitanti', v: c => c.pop, num: true },
+      { k: 'crescita', t: 'Crescita', v: c => c.crescita, num: true }, { k: 'servite', t: 'Stazioni servite', v: c => c.nServite, num: true }],
+    industrie: [
+      { k: 'nome', t: 'Industria', v: k => k.nome }, { k: 'tipo', t: 'Tipo', v: k => C.industrie[k.tipo].nome },
+      { k: 'prod', t: 'Produzione / mese', v: prodIndustria, num: true }, { k: 'perc', t: 'Trasportato', v: k => k.perc, num: true },
+      { k: 'riserva', t: 'Riserva', v: k => (C.industrie[k.tipo].riserva ? k.riserva / k.riservaIniziale : -1), num: true }],
+    stazioni: [
+      { k: 'nome', t: 'Stazione', v: s => s.nome }, { k: 'tipo', t: 'Tipo', v: s => G.nomeTipoStazione(s) },
+      { k: 'pop', t: 'Abitanti nel bacino', v: s => s.popBacino || 0, num: true }, { k: 'mezzi', t: 'Mezzi', v: mezziStazione, num: true },
+      { k: 'attesa', t: 'In attesa', v: attesaTot, num: true }]
+  };
+  ui.ordineMondo = { citta: { k: 'pop', dir: -1 }, industrie: { k: 'tipo', dir: 1 }, stazioni: { k: 'nome', dir: 1 } };
+  function ordinaMondo(scheda, el) {
+    const o = ui.ordineMondo[scheda], cols = COLONNE_MONDO[scheda], col = cols.find(c => c.k === o.k) || cols[0], nome = cols[0].v;
+    return el.map(x => [x, col.v(x)]).sort((a, b) => {
+      const d = typeof a[1] === 'string' ? a[1].localeCompare(b[1], 'it') : a[1] - b[1];
+      return d * o.dir || nome(a[0]).localeCompare(nome(b[0]), 'it');
+    }).map(x => x[0]);
+  }
+  function intestazioneMondo(scheda) {
+    const o = ui.ordineMondo[scheda];
+    return '<tr>' + COLONNE_MONDO[scheda].map(c => `<th class="ordina${c.num ? ' num' : ''}${c.k === o.k ? ' attiva' : ''}" data-az="ordinaMondo" data-s="${scheda}" data-k="${c.k}" title="Ordina per ${c.t.toLowerCase()}">` +
+      `${c.t}<span class="freccia">${c.k === o.k ? (o.dir > 0 ? '▲' : '▼') : '↕'}</span></th>`).join('') + '</tr>';
+  }
+
   function finestraMondo(scheda) {
     const s0 = st();
-    scheda = scheda || 'citta';
+    scheda = scheda || ui.schedaMondo || 'citta';
+    ui.schedaMondo = scheda;
     let h = `<div class="schede">${['citta', 'industrie', 'stazioni'].map(k => `<button class="${k === scheda ? 'attivo' : ''}" data-az="schedaMondo" data-s="${k}">${{ citta: '🏙️ Città', industrie: '🏭 Industrie', stazioni: '🚉 Stazioni' }[k]}</button>`).join('')}</div>`;
     if (scheda === 'citta') {
       if (s0.citta.length > 200) h += '<input id="cercaCitta" class="cerca" placeholder="🔍 Cerca una città per nome…" autocomplete="off">';
-      h += `<table class="elenco"><thead><tr><th>Città</th><th>Abitanti</th><th>Crescita</th><th>Stazioni servite</th></tr></thead><tbody id="elencoCitta">${righeCitta('')}</tbody>`;
+      h += `<table class="elenco"><thead>${intestazioneMondo('citta')}</thead><tbody id="elencoCitta">${righeCitta('')}</tbody>`;
     } else if (scheda === 'industrie') {
-      h += '<table class="elenco"><tr><th>Industria</th><th>Produzione / mese</th><th>Trasportato</th><th>Riserva</th></tr>';
-      for (const ind of s0.industrie.filter(k => !k.chiusa).sort((a, b) => a.tipo.localeCompare(b.tipo))) {
+      h += '<table class="elenco">' + intestazioneMondo('industrie');
+      for (const ind of ordinaMondo('industrie', s0.industrie.filter(k => !k.chiusa))) {
         const def = C.industrie[ind.tipo];
         const prod = def.produce ? `${G.numero(ind.produzione)} ${C.merci[def.produce].unita}` : def.uscita ? `${G.numero(ind.prodScorso)} ${C.merci[def.uscita].unita}` : '—';
-        h += `<tr class="link" data-az="apriIndustria" data-id="${ind.id}" data-vai="1"><td>${def.icona} ${esc(ind.nome)}</td><td class="num">${prod}</td><td class="num">${Math.round(ind.perc * 100)}%</td><td>${def.riserva ? barra(ind.riserva / ind.riservaIniziale, '#c9a227') : ''}</td></tr>`;
+        h += `<tr class="link" data-az="apriIndustria" data-id="${ind.id}" data-vai="1"><td>${def.icona} ${esc(ind.nome)}</td><td class="sotto">${def.nome}</td><td class="num">${prod}</td><td class="num">${Math.round(ind.perc * 100)}%</td><td>${def.riserva ? barra(ind.riserva / ind.riservaIniziale, '#c9a227') : ''}</td></tr>`;
       }
     } else {
-      h += '<table class="elenco"><tr><th>Stazione</th><th>Tipo</th><th>In attesa</th></tr>';
-      for (const s of s0.stazioni.filter(Boolean)) {
+      h += '<table class="elenco">' + intestazioneMondo('stazioni');
+      for (const s of ordinaMondo('stazioni', s0.stazioni.filter(Boolean))) {
         const att = Object.keys(s.attesa).filter(k => s.attesa[k] >= 1).map(k => `${pallino(k)}${G.numero(s.attesa[k])}`).join(' ') || '—';
-        h += `<tr class="link" data-az="apriStazione" data-id="${s.id}" data-vai="1"><td>${esc(s.nome)}</td><td>${G.nomeTipoStazione(s)}</td><td>${att}</td></tr>`;
+        h += `<tr class="link" data-az="apriStazione" data-id="${s.id}" data-vai="1"><td>${esc(s.nome)}</td><td>${G.nomeTipoStazione(s)}</td><td class="num">${G.numero(s.popBacino || 0)}</td><td class="num">${mezziStazione(s)}</td><td>${att}</td></tr>`;
       }
+      if (!s0.stazioni.some(Boolean)) h += '<tr><td colspan="5" class="sotto">Nessuna stazione.</td></tr>';
     }
     h += '</table>';
     apriFinestra('Il mondo', h, true);
   }
 
-  // righe della tabella delle città: sulle mappe reali sono migliaia, quindi solo le 200 più grandi e quelle
-  // servite, oppure quelle che contengono il testo cercato
+  // righe della tabella delle città: sulle mappe reali sono migliaia, quindi solo le prime 200 nell'ordine scelto
+  // più quelle servite, oppure quelle che contengono il testo cercato
   function righeCitta(cerca) {
     const s0 = st(), t = cerca.trim().toLowerCase();
-    let el = [...s0.citta].sort((a, b) => b.pop - a.pop);
+    let el = ordinaMondo('citta', s0.citta);
     if (t) el = el.filter(c => c.nome.toLowerCase().includes(t)).slice(0, 200);
     else if (el.length > 200) el = el.filter((c, k) => k < 200 || c.nServite > 0);
     let h = '';
@@ -700,6 +734,14 @@
     vaiA: d => G.vaiA(+d.x, +d.y),
     finestra: d => ({ veicoli: finestraVeicoli, mondo: finestraMondo, finanze: () => G.apriGestione(), banca: () => G.apriBanca(), aiuto: () => finestraAiuto(d.s), info: finestraInfo, menu: () => finestraMenu(false) })[d.f](),
     schedaMondo: d => finestraMondo(d.s),
+    ordinaMondo: d => {
+      const o = ui.ordineMondo[d.s], col = COLONNE_MONDO[d.s].find(c => c.k === d.k);
+      if (o.k === d.k) o.dir = -o.dir; else { o.k = d.k; o.dir = col.num ? -1 : 1; } // numeri dal più grande, nomi dalla A
+      const cerca = $('#cercaCitta') ? $('#cercaCitta').value : '', sc = $('#finestra .corpo').scrollTop;
+      finestraMondo(d.s);
+      if (cerca) { $('#cercaCitta').value = cerca; $('#elencoCitta').innerHTML = righeCitta(cerca); }
+      $('#finestra .corpo').scrollTop = sc;
+    },
     schedaAiuto: d => finestraAiuto(d.s),
     schedaGestione: d => G.apriGestione(d.s),
     apriStazione: d => { const s = st().stazioni[+d.id]; if (!s) return; ui.apriPannello('stazione', +d.id); if (d.vai) { G.vaiA(s.x + 0.5, s.y + 0.5); chiudiFinestra(); } },
