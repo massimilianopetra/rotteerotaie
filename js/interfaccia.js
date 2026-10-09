@@ -76,11 +76,24 @@
     const div = document.createElement('div');
     div.className = 'notizia nuova';
     if (n.x !== undefined) { div.dataset.az = 'vaiA'; div.dataset.x = n.x; div.dataset.y = n.y; div.title = 'Clic per andare sul posto'; }
-    div.innerHTML = `<b>${esc(n.data)}</b> ${esc(n.testo)}`;
+    div.innerHTML = `<button class="chiudiNotizia" data-az="chiudiNotizia" title="Chiudi">✕</button><b>${esc(n.data)}</b> ${esc(n.testo)}`;
     box.prepend(div);
-    while (box.children.length > 4) box.lastChild.remove();
+    const tutte = box.querySelectorAll('.notizia');
+    for (let k = 4; k < tutte.length; k++) tutte[k].remove();
+    aggiornaChiudiTutte();
     setTimeout(() => div.classList.remove('nuova'), 1500);
   };
+  // con due o più notizie compare anche «✕ tutte», per toglierle in una volta
+  function aggiornaChiudiTutte() {
+    const box = $('#notizie'), n = box.querySelectorAll('.notizia').length;
+    let t = box.querySelector('.chiudiTutte');
+    if (n >= 2 && !t) {
+      t = document.createElement('button');
+      t.className = 'chiudiTutte'; t.dataset.az = 'chiudiTutte'; t.textContent = '✕ tutte'; t.title = 'Chiudi tutte le notizie';
+      box.append(t);
+    }
+    if (n < 2 && t) t.remove();
+  }
 
   // ---------------------------------------------------------------- camera
   G.vaiA = function (x, y, ts) {
@@ -657,6 +670,8 @@
       }), 30);
     },
     menuIniziale: () => finestraMenu(true),
+    chiudiNotizia: (d, el) => { el.closest('.notizia').remove(); aggiornaChiudiTutte(); },
+    chiudiTutte: () => { $('#notizie').innerHTML = ''; },
     griglia: () => impostaLivello('griglia', !ui.livelli.griglia),
     menuMappa: () => { if (menuMappaAperto()) chiudiMenuMappa(); else apriMenuMappa(); },
     livello: (d, el) => impostaLivello(d.k, el.checked),

@@ -140,6 +140,12 @@ ol.fermate label { font-size: 12px; color: var(--tenue); margin-left: 6px; }
   pointer-events: auto; transition: background 1s; }
 .notizia[data-az] { cursor: pointer; }
 .notizia b { color: var(--accento); margin-right: 4px; }
+.notizia { position: relative; padding-right: 30px; }
+.chiudiNotizia { position: absolute; top: 3px; right: 4px; width: 22px; height: 22px; padding: 0; border: none; background: transparent;
+  color: var(--tenue); font-size: 12px; line-height: 22px; border-radius: 5px; opacity: 0.55; }
+.notizia:hover .chiudiNotizia { opacity: 1; }
+.chiudiNotizia:hover { background: rgba(255, 255, 255, 0.12); color: var(--testo); }
+.chiudiTutte { align-self: flex-start; pointer-events: auto; padding: 2px 9px; font-size: 12px; border-radius: 6px; color: var(--tenue); }
 .notizia.nuova { background: #3a4d20; }
 
 /* minimappa */
