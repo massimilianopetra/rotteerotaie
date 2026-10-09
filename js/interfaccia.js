@@ -665,6 +665,24 @@
       <p>Con tre o più fermate scegli cosa fa il mezzo dopo l'ultima: <b>🔁 giro</b> (torna dritto alla prima: Milano → Vercelli →
       Torino → Milano, passando da Vercelli senza fermarsi) oppure <b>↔ andata e ritorno</b> (Milano → Vercelli → Torino → Vercelli →
       Milano). Sulla mappa il percorso del mezzo selezionato segue i binari; il tratto pieno è il viaggio in corso.</p>
+      <h4>⛰️ Montagne: gallerie e viadotti</h4>
+      <p>Non c'è un attrezzo apposta: <b>le gallerie e i viadotti li fa il gioco da solo</b> mentre costruisci ferrovie e strade
+      nel solito modo. Una ferrovia non sale né scende più del ${C.opere.pendenzaMax.binario}‰ (${C.opere.pendenzaMax.binario} m ogni km):
+      se il terreno è più ripido la linea passa <b>dentro</b> il monte (🚇 galleria) o <b>sopra</b> la valle (🌉 viadotto).
+      Prima di lasciare il tasto, il fumetto ti dice quante gallerie e viadotti servono, quanto costano e la pendenza massima.</p>
+      <ul><li>Il tracciato proposto è il <b>più economico</b>: una galleria costa ${C.opere.galleria} volte il binario, quindi spesso il gioco
+      preferisce girare attorno al monte. Per <b>forzare una galleria</b> costruisci a pezzi corti: dall'imbocco a subito oltre il monte,
+      poi collega i pezzi.</li>
+      <li>In <b>salita</b> i treni rallentano (il vapore molto più delle elettriche), quindi una galleria in piano può far guadagnare tempo.</li>
+      <li>Clicca con 🔍 su una casella della linea per sapere se è in galleria o su un viadotto e a che quota passa.</li></ul>
+      <h4>Cosa vedi sulla mappa</h4>
+      <table class="elenco legendaMappa">
+      <tr><td><svg viewBox="0 0 60 16"><rect width="60" height="16" rx="2" fill="#7f9a5c"/><line x1="2" y1="8" x2="58" y2="8" stroke="#6b5136" stroke-width="7" stroke-dasharray="1.5 2.2"/><line x1="2" y1="8" x2="58" y2="8" stroke="#c9ccd0" stroke-width="3.6"/><line x1="2" y1="8" x2="58" y2="8" stroke="#6e5841" stroke-width="1.8"/></svg></td><td>Ferrovia all'aperto: rotaie e traversine</td></tr>
+      <tr><td><svg viewBox="0 0 60 16"><rect width="60" height="16" rx="2" fill="#7f9a5c"/><line x1="14" y1="8" x2="46" y2="8" stroke="rgba(45,32,22,0.6)" stroke-width="2.5" stroke-dasharray="4 3"/><circle cx="8" cy="8" r="6" fill="#7a7266"/><circle cx="8" cy="8" r="4" fill="#16120e"/><circle cx="52" cy="8" r="6" fill="#7a7266"/><circle cx="52" cy="8" r="4" fill="#16120e"/></svg></td><td>🚇 Galleria: tratteggio sotto il terreno, con un imbocco di pietra a ogni estremità (il bosco sopra resta)</td></tr>
+      <tr><td><svg viewBox="0 0 60 16"><rect width="60" height="16" rx="2" fill="#7f9a5c"/><line x1="2" y1="8" x2="58" y2="8" stroke="#463e35" stroke-width="13"/><line x1="2" y1="8" x2="58" y2="8" stroke="#b9ab94" stroke-width="10"/><line x1="2" y1="8" x2="58" y2="8" stroke="#c9ccd0" stroke-width="3.6"/><line x1="2" y1="8" x2="58" y2="8" stroke="#6e5841" stroke-width="1.8"/></svg></td><td>🌉 Viadotto: impalcato di pietra chiara con i parapetti scuri e i piloni</td></tr>
+      <tr><td><svg viewBox="0 0 60 16"><rect width="60" height="16" rx="2" fill="#7f9a5c"/><rect x="16" y="1" width="28" height="14" fill="#7d6b55"/><line x1="2" y1="8" x2="58" y2="8" stroke="#c9ccd0" stroke-width="3.6"/><line x1="2" y1="8" x2="58" y2="8" stroke="#6e5841" stroke-width="1.8"/></svg></td><td>Ponte su un fiume: riquadro marrone sotto la linea</td></tr>
+      <tr><td><svg viewBox="0 0 60 16"><rect width="60" height="16" rx="2" fill="#7f9a5c"/><line x1="2" y1="8" x2="58" y2="8" stroke="rgba(255,235,59,0.85)" stroke-width="2" stroke-dasharray="5 4"/></svg></td><td>Percorso del mezzo selezionato (tratteggio giallo lungo binari, strade o mare)</td></tr>
+      </table>
       <h4>⚓ Porti e navi</h4>
       <p>Il <b>porto</b> (tasto P) va su una casella di terra che tocca il mare o un lago. Le navi non hanno bisogno di reti:
       navigano sull'acqua e girano da sole attorno a coste e isole, quindi due porti bastano per una linea. I <b>traghetti</b>
