@@ -48,7 +48,8 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
   Costruire in collina, in montagna o sopra un fiume (ponte) costa di più.
 - **Vista 3D assonometrica** (pulsante 🧊 3D, tasto `D`): il mondo visto di sbieco, con il terreno in rilievo, le montagne innevate,
   i viadotti sui piloni, le gallerie, case e palazzi, alberi, stazioni, industrie e mezzi come solidi. Si gira di 90° con `O`
-  (`Maiusc+O` al contrario) per guardare dietro ai monti e ai palazzi. Si gioca come nella vista dall'alto: si costruisce, si
+  (`Maiusc+O` al contrario) per guardare dietro ai monti e ai palazzi. Nel menu 🗺️ Mappa si sceglie quanto alte disegnare le
+  montagne (basse, alte, altissime). Si gioca come nella vista dall'alto: si costruisce, si
   clicca e si trascina allo stesso modo. La scelta si ricorda nel browser.
 - **Città inventate** (Castelvento, Roccalupo, Sant'Ilario, Porto Ceruleo…) che crescono se sono ben servite:
   le case nuove nascono lungo le vie e attorno alle stazioni, e diventano palazzine e palazzi.

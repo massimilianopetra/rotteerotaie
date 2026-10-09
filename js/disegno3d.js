@@ -11,13 +11,18 @@
   'use strict';
   const G = window.GIOCO, C = window.CATALOGO, T = G.T, OCC = G.OCC, D = G.disegno, F = D.f;
   const KX = Math.SQRT1_2, KY = KX / 2, KZ = 0.8;
-  const ESAGERA = 1.2; // il rilievo: metri → caselle, un po' esagerato perché si veda
+  // il rilievo: metri → caselle, esagerato perché i monti si vedano (una casella è larga 1–6 km, un monte alto 4)
+  const RILIEVI = [{ nome: 'Basso', k: 2 }, { nome: 'Alto', k: 4 }, { nome: 'Altissimo', k: 6.5 }];
+  G.RILIEVI = RILIEVI;
   const NESSUNA = -32768;
   const CHIAVE = 'rotaie-e-rotte-vista';
 
-  D.iso = false; D.rot = 0;
-  try { const v = JSON.parse(localStorage.getItem(CHIAVE) || '{}'); D.iso = !!v.iso; D.rot = (v.rot | 0) & 3; } catch (e) { /* niente */ }
-  function salva() { try { localStorage.setItem(CHIAVE, JSON.stringify({ iso: D.iso, rot: D.rot })); } catch (e) { /* niente */ } }
+  D.iso = false; D.rot = 0; D.rilievo = 1;
+  try {
+    const v = JSON.parse(localStorage.getItem(CHIAVE) || '{}');
+    D.iso = !!v.iso; D.rot = (v.rot | 0) & 3; if (RILIEVI[v.rilievo]) D.rilievo = v.rilievo;
+  } catch (e) { /* niente */ }
+  function salva() { try { localStorage.setItem(CHIAVE, JSON.stringify({ iso: D.iso, rot: D.rot, rilievo: D.rilievo })); } catch (e) { /* niente */ } }
 
   // ---------------------------------------------------------------- rotazione e proiezione
   // u = a1·x + b1·y + c1, v = a2·x + b2·y + c2 (la vista girata di 90° alla volta)
@@ -28,7 +33,13 @@
   let A = 1, B = 0.5, ZS = 1, OX = 0, OY = 0, R = coefficienti(0, 1, 1), SX = 0, SY = 0;
   let VWX = 1, VWY = 1; // direzione verso chi guarda, nel piano del mondo
   const VZ = 2 * KY / KZ; // e la sua parte verticale (verso l'alto)
-  const LUCE = (() => { const l = [-0.55, -0.75, 1], n = Math.hypot(...l); return l.map(k => k / n); })();
+  // la luce viene da davanti e da sinistra rispetto a chi guarda (gira con la vista): i versanti verso chi
+  // guarda sono illuminati, come nei giochi isometrici
+  function luceVista(rot) {
+    const p = daUV(0.45, 1, 0, 0, rot), o = daUV(0, 0, 0, 0, rot), l = [p.x - o.x, p.y - o.y, 1.6], n = Math.hypot(...l);
+    return l.map(k => k / n);
+  }
+  let LUCE = luceVista(0);
 
   function proietta(x, y, z) {
     const u = R[0] * x + R[1] * y + R[2], v = R[3] * x + R[4] * y + R[5];
@@ -53,6 +64,7 @@
     // la direzione (1, 1) del piano ruotato riportata nel mondo
     const d = daUV(1, 1, 0, 0, D.rot);
     const n = Math.hypot(d.x, d.y); VWX = d.x / n; VWY = d.y / n;
+    LUCE = luceVista(D.rot);
     D.isoV = { OX, OY, A, B, ZS, w, h, W: m.W, H: m.H, rot: D.rot };
   }
 
@@ -108,6 +120,9 @@
   function scurisci(c, f) {
     return 0xff000000 | (((c >>> 16) & 255) * f) << 16 | (((c >>> 8) & 255) * f) << 8 | ((c & 255) * f);
   }
+  function illumina(c, f) {
+    return 0xff000000 | Math.min(255, ((c >>> 16) & 255) * f) << 16 | Math.min(255, ((c >>> 8) & 255) * f) << 8 | Math.min(255, (c & 255) * f);
+  }
 
   // una colonna X dell'immagine: dal davanti verso il fondo, ogni pixel del terreno si disegna solo se sporge
   // sopra quanto già disegnato; i pixel sotto (i fianchi ripidi) sono più scuri, il primo fa da bordo del plastico
@@ -117,7 +132,7 @@
     let p = Math.min(Ut - 1, Vt - 1 + c), q = p - c;
     if (p < 0 || q < 0 || q > Vt - 1) return;
     let ybuf = ((p + q + 1) >> 1) + top + base, primo = true;
-    const W = m.W, H = m.H, rot = D.rot;
+    const W = m.W, H = m.H, rot = D.rot, L = luceVista(rot), L0 = L[0], L1 = L[1], L2 = L[2];
     while (p >= 0 && q >= 0) {
       const u = (p + 0.5) / Q, v = (q + 0.5) / Q;
       let x, y;
@@ -129,7 +144,13 @@
       const z = a + (b - a) * ax + (cc - a) * ay + (a - b - cc + d) * ax * ay;
       const yt = Math.round((p + q + 1) / 2 + top - z * ZPX);
       if (yt < ybuf) {
-        const col = src[Math.min(SW.h - 1, (y * SP) | 0) * SW.w + Math.min(SW.w - 1, (x * SP) | 0)];
+        let col = src[Math.min(SW.h - 1, (y * SP) | 0) * SW.w + Math.min(SW.w - 1, (x * SP) | 0)];
+        // luce sul pendio vero (la pendenza del rilievo 3D): versanti al sole più chiari, in ombra più scuri
+        const gx = (b - a) + (a - b - cc + d) * ay, gy = (cc - a) + (a - b - cc + d) * ax;
+        if (gx || gy) {
+          const l = (-L0 * gx - L1 * gy + L2) / Math.sqrt(gx * gx + gy * gy + 1) / L2;
+          col = illumina(col, Math.max(0.55, Math.min(1.35, 1 + (l - 1) * 0.8)));
+        }
         u32[yt * LW + X] = col;
         if (ybuf - yt > 1) {
           const sc = scurisci(col, primo ? 0.42 : Math.max(0.62, 0.97 - 0.05 * (ybuf - yt)));
@@ -144,7 +165,7 @@
 
   function costruisciTerreno(st) {
     const m = st.mondo, km = G.kmCasella(st), met = G.metriTerreno(m), Z = new Float32Array(m.N);
-    const fz = ESAGERA / 1000 / Math.pow(km, 0.4);
+    const fz = RILIEVI[D.rilievo].k / 1000 / Math.pow(km, 0.4);
     let zmax = 0;
     for (let i = 0; i < m.N; i++) { Z[i] = met[i] * fz; if (Z[i] > zmax) zmax = Z[i]; }
     const odd = D.rot & 1, Wr = odd ? m.H : m.W, Hr = odd ? m.W : m.H;
@@ -157,7 +178,7 @@
     const ctx = cv.getContext('2d'), img = ctx.createImageData(LW, LH);
     const T2 = D.terreno.img;
     const I = {
-      rot: D.rot, m, Z, fz, zmax, Q, Wr, Hr, Ut, Vt, ZPX, top, base, LW, LH, cv, ctx, img,
+      rot: D.rot, rilievo: D.rilievo, m, Z, fz, zmax, Q, Wr, Hr, Ut, Vt, ZPX, top, base, LW, LH, cv, ctx, img,
       u32: new Uint32Array(img.data.buffer), src: new Uint32Array(T2.data.buffer), SW: { w: T2.width, h: T2.height }, SP: D.terreno.px,
       sporco: null, abitato: null
     };
@@ -169,7 +190,7 @@
 
   function pronto(st) {
     const I = D.iso3d;
-    if (I && I.rot === D.rot && I.m === st.mondo) return I;
+    if (I && I.rot === D.rot && I.rilievo === D.rilievo && I.m === st.mondo) return I;
     return (D.iso3d = costruisciTerreno(st));
   }
 
@@ -478,7 +499,7 @@
   const MURI = ['#efe4cc', '#e6d6b8', '#f2ead8'];
   // palazzi (livello 3) color ocra, terracotta e crema; grattacieli (livello 4) di vetro e cemento
   const PALAZZI = ['#d9a86c', '#c98e6b', '#e6cfa6'], TORRI = ['#8fa3b8', '#a7b1bb', '#7d93a8'];
-  const ALT_CASA = [0, 0.2, 0.3, 0.75, 1.5];
+  const ALT_CASA = [0, 0.16, 0.24, 0.5, 0.95];
   function casa(V, x, y, i) {
     const { m, ts, ctx, I } = V;
     const l = m.liv[i], s = F.DIM[l], h1 = G.hash(x, y), h2 = G.hash(y + 91, x);
@@ -525,7 +546,7 @@
     scatola(ctx, cx, cy, z, 1.75, 1.75, 0, 0.12, '#6e675c', '#8e8778'); // cortile
     scatola(ctx, cx - 0.2, cy - 0.15, z + 0.12, 1.1, 1.0, 0, 0.45, def.colore, def.colore, ts >= 8 ? 'due' : null, 0.25);
     scatola(ctx, cx + 0.55, cy + 0.45, z + 0.12, 0.5, 0.5, 0, 0.3, def.colore, '#77706a');
-    if (ts >= 5) scatola(ctx, cx + 0.55, cy - 0.55, z + 0.12, 0.16, 0.16, 0, 1.3, '#8a5a44', '#3a2a22'); // ciminiera
+    if (ts >= 5) scatola(ctx, cx + 0.55, cy - 0.55, z + 0.12, 0.16, 0.16, 0, 0.9, '#8a5a44', '#3a2a22'); // ciminiera
     if (ts >= 6) {
       proietta(cx, cy, z + 1.2);
       F.emoji(ctx, def.icona, SX, SY, ts * 0.9);
@@ -963,6 +984,11 @@
     D.cam.x = prima.x; D.cam.y = prima.y;
     salva();
     return D.iso;
+  };
+  G.impostaRilievo = function (n) {
+    if (!RILIEVI[n]) return;
+    D.rilievo = n; D.iso3d = null;
+    salva();
   };
   // dir = +1 in senso orario, −1 antiorario: la camera resta sullo stesso punto del mondo
   G.ruotaVista = function (dir) {
