@@ -72,6 +72,9 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
   tempo (giorni, ore, minuti) per riempirsi di più.
 - **Economia**: ogni consegna è pagata in base alla distanza e alla rapidità; ci sono costi di esercizio,
   manutenzione delle linee, guasti dei mezzi vecchi, prestiti con interesse e il bilancio di fine anno.
+- **Livelli della mappa** (🗺️ Mappa, tasto `L`): si sceglie cosa vedere (case, vie dei paesi, strade, ferrovie, stazioni,
+  industrie, mezzi, nomi, griglia, terreno attenuato) oppure una vista pronta: Tutto, Solo ferrovia, Reti e stazioni,
+  Industrie e merci. Con un attrezzo in mano si vede sempre ciò che serve. La scelta si ricorda nel browser.
 - **Salvataggio** nel browser (anche automatico ogni 1° gennaio).
 
 ## Comandi
@@ -81,7 +84,8 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
 | Spostare la mappa | trascinare col tasto destro (o sinistro con 🔍), frecce |
 | Zoom | rotellina, tasti `+` e `−` |
 | Strumenti | `I` info · `B` ferrovia · `R` strada · `U` autostrada · `T` stazione (apre il menu delle dimensioni) · `F` autostazione · `A` aeroporto · `X` demolisci |
-| Finestre | `V` mezzi · `M` mondo · `E` finanze · `H` aiuto · `G` griglia · `C` mostra/nascondi le vie dei paesi (anche col pulsante 🏘️ Vie) |
+| Finestre | `V` mezzi · `M` mondo · `E` finanze · `H` aiuto |
+| Mappa | `L` livelli della mappa (pulsante 🗺️ Mappa) · `C` vie dei paesi · `G` griglia |
 | Tempo | `spazio` pausa · `1` normale (1 s = 5 minuti) · `2` veloce (1 ora al secondo) · `3` velocissimo (1 giorno) · `4` turbo (1 settimana) |
 | Annulla / chiudi | `Esc` |
 

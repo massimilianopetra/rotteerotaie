@@ -122,7 +122,7 @@
     ctx.fillStyle = '#7d6b55';
     for (let y = V.y0; y <= V.y1; y++) for (let x = V.x0; x <= V.x1; x++) {
       const i = y * m.W + x;
-      if (m.tipo[i] === T.FIUME && (m.mBin[i] || m.mStr[i])) {
+      if (m.tipo[i] === T.FIUME && ((m.mBin[i] && V.vis.ferrovie) || (m.mStr[i] && (m.strCitta[i] ? V.vis.vie : V.vis.strade)))) {
         ctx.fillRect(ox + (x + 0.12) * ts, oy + (y + 0.12) * ts, ts * 0.76, ts * 0.76);
       }
     }
@@ -130,8 +130,11 @@
 
   function disegnaStrade(V) {
     const { m, ts, ctx } = V;
-    // le vie comunali non si disegnano da lontano (stanno nell'immagine dell'abitato) né quando il giocatore le nasconde
-    const r = percorsiRete(V, m.mStr, (i, j) => m.tipoStr[i] === 2 && m.tipoStr[j] === 2, V.lontano || V.senzaVie ? (i, j) => m.strCitta[i] && m.strCitta[j] : null);
+    // le vie comunali non si disegnano da lontano (stanno nell'immagine dell'abitato) né quando sono nascoste;
+    // le strade del giocatore quando è nascosto il loro livello
+    const vie = !V.lontano && V.vis.vie, strade = V.vis.strade;
+    const r = percorsiRete(V, m.mStr, (i, j) => m.tipoStr[i] === 2 && m.tipoStr[j] === 2,
+      vie && strade ? null : (i, j) => (m.strCitta[i] && m.strCitta[j] ? !vie : !strade));
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     if (r.n1) {
       ctx.strokeStyle = '#5f5b52'; ctx.lineWidth = Math.max(1.6, ts * 0.36); ctx.stroke(r.p1);
@@ -153,6 +156,8 @@
     if (!r.n1) return;
     if (ts < 10) {
       ctx.lineCap = 'round';
+      // sul terreno attenuato i binari hanno un bordo chiaro e si vedono anche da lontano
+      if (V.vis.attenua) { ctx.strokeStyle = '#f3e3bf'; ctx.lineWidth = Math.max(3.5, ts * 0.5); ctx.stroke(r.p1); }
       ctx.strokeStyle = '#3a281a'; ctx.lineWidth = Math.max(1.5, ts * 0.28); ctx.stroke(r.p1);
       return;
     }
@@ -184,10 +189,10 @@
     const px = (X, Y, k) => { const o = (Y * L + X) * 4; d[o] = k[0]; d[o + 1] = k[1]; d[o + 2] = k[2]; d[o + 3] = 255; };
     for (let y = 0; y < m.H; y++) for (let x = 0; x < m.W; x++) {
       const i = y * m.W + x, X = x * PA, Y = y * PA;
-      if (m.occ[i] === OCC.CASA) { // un quadrato più grande per i palazzi
+      if (m.occ[i] === OCC.CASA && G.ui.livelli.case) { // un quadrato più grande per i palazzi
         const l = m.liv[i], k = col[l][Math.floor(G.hash(x, y) * 3)], s = l >= 3 ? 3 : 2, o = l >= 3 ? 0 : 1;
         for (let a = 0; a < s; a++) for (let b = 0; b < s; b++) px(X + o + b, Y + o + a, k);
-      } else if (m.strCitta[i] && m.mStr[i] && !(G.ui && G.ui.nascondiVie)) { // il centro e i tratti verso le vie vicine
+      } else if (m.strCitta[i] && m.mStr[i] && G.ui.livelli.vie) { // il centro e i tratti verso le vie vicine
         const mk = m.mStr[i];
         px(X + 1, Y + 1, via); px(X + 2, Y + 1, via); px(X + 1, Y + 2, via); px(X + 2, Y + 2, via);
         for (let dd = 0; dd < 8; dd++) if ((mk >> dd) & 1) {
@@ -205,12 +210,14 @@
   function disegnaCase(V) {
     const { m, ts, ox, oy, ctx } = V;
     if (V.lontano) {
+      if (!V.vis.case && !V.vis.vie) return;
       if (!D.abitato || D.abitatoSporco) preparaAbitato(V.st);
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(D.abitato, V.x0 * PA, V.y0 * PA, (V.x1 - V.x0 + 1) * PA, (V.y1 - V.y0 + 1) * PA,
         ox + V.x0 * ts, oy + V.y0 * ts, (V.x1 - V.x0 + 1) * ts, (V.y1 - V.y0 + 1) * ts);
       return;
     }
+    if (!V.vis.case) return;
     for (let y = V.y0; y <= V.y1; y++) for (let x = V.x0; x <= V.x1; x++) {
       const i = y * m.W + x;
       if (m.occ[i] !== OCC.CASA) continue;
@@ -510,7 +517,7 @@
         settori.get(k).push(r);
       }
     };
-    for (const c of st._cittaOrd.elenco) {
+    for (const c of V.vis.nomi ? st._cittaOrd.elenco : []) {
       if (!visibile(V, c.x - 4, c.y - 2, 8)) continue;
       const x = ox + (c.x + 0.5) * ts, y = oy + (c.y + 0.5) * ts - Math.max(ts * 1.2, 16);
       const mezza = Math.max(c.nome.length * dim * 0.3, 2.2 * dim) + 3;
@@ -523,13 +530,13 @@
       etichetta(ctx, c.nome, x, y, dim, '#fff');
       etichetta(ctx, G.numero(c.pop) + ' ab.', x, y + dim * 0.95, dim * 0.68, '#ffe9a8');
     }
-    if (ts >= 20) {
+    if (ts >= 20 && V.vis.stazioni) {
       for (const s of st.stazioni) {
         if (!s || !visibile(V, s.x, s.y, s.lato)) continue;
         etichetta(ctx, s.nome, ox + (s.x + s.lato / 2) * ts, oy + (s.y + s.lato) * ts + 7, 10, '#cfe6ff');
       }
     }
-    if (ts >= 22) {
+    if (ts >= 22 && V.vis.industrie) {
       for (const ind of st.industrie) {
         if (ind.chiusa || !visibile(V, ind.x, ind.y, 2)) continue;
         etichetta(ctx, C.industrie[ind.tipo].nome, ox + (ind.x + 1) * ts, oy + (ind.y + 2) * ts + 7, 10, '#e8e0ff');
@@ -623,8 +630,13 @@
     ctx.imageSmoothingEnabled = ts < PX;
     ctx.drawImage(D.terreno.cv, x0 * PX, y0 * PX, (x1 - x0 + 1) * PX, (y1 - y0 + 1) * PX,
       ox + x0 * ts, oy + y0 * ts, (x1 - x0 + 1) * ts, (y1 - y0 + 1) * ts);
-    const V = { m, st, ts, ox, oy, x0, y0, x1, y1, ctx, lontano: G.lontano(m, ts), senzaVie: !!ui.nascondiVie };
-    if (ui.griglia && ts >= 8) {
+    const vis = ui.livelliVisibili ? ui.livelliVisibili() : { case: true, vie: true, strade: true, ferrovie: true, stazioni: true, industrie: true, mezzi: true, nomi: true };
+    const V = { m, st, ts, ox, oy, x0, y0, x1, y1, ctx, lontano: G.lontano(m, ts), vis };
+    if (vis.attenua) { // terreno più scuro e meno colorato: binari e stazioni risaltano
+      ctx.fillStyle = 'rgba(16, 24, 32, 0.55)';
+      ctx.fillRect(ox + x0 * ts, oy + y0 * ts, (x1 - x0 + 1) * ts, (y1 - y0 + 1) * ts);
+    }
+    if (vis.griglia && ts >= 8) {
       ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 1; ctx.beginPath();
       for (let x = x0; x <= x1 + 1; x++) { ctx.moveTo(ox + x * ts + 0.5, oy + y0 * ts); ctx.lineTo(ox + x * ts + 0.5, oy + (y1 + 1) * ts); }
       for (let y = y0; y <= y1 + 1; y++) { ctx.moveTo(ox + x0 * ts, oy + y * ts + 0.5); ctx.lineTo(ox + (x1 + 1) * ts, oy + y * ts + 0.5); }
@@ -632,14 +644,14 @@
     }
     disegnaPonti(V);
     disegnaStrade(V);
-    disegnaBasiStazioni(st, V);
-    disegnaBinari(V);
+    if (vis.stazioni) disegnaBasiStazioni(st, V);
+    if (vis.ferrovie) disegnaBinari(V);
     disegnaCase(V);
-    disegnaIndustrie(st, V);
-    disegnaStazioni(st, V, ui);
+    if (vis.industrie) disegnaIndustrie(st, V);
+    if (vis.stazioni) disegnaStazioni(st, V, ui);
     disegnaSovrapposizioni(st, V, ui);
-    disegnaVeicoli(st, V, ui);
-    disegnaSegnali(st, V);
+    if (vis.mezzi) disegnaVeicoli(st, V, ui);
+    if (vis.ferrovie) disegnaSegnali(st, V);
     disegnaEtichette(st, V);
     disegnaEffetti(st, V);
   };
