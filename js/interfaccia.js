@@ -310,6 +310,14 @@
       <tr><td title="Quanto ricaveresti vendendolo oggi">Valore se lo vendi</td><td class="num">${G.lire(G.valoreVeicolo(v))}</td></tr>
       <tr><td>Guasti</td><td class="num">${v.guasti}</td></tr></table>`;
     h += '<h4>Percorso</h4>';
+    if (v.fermate.length >= 3) {
+      // l'ordine vero delle fermate, con i nomi: si capisce subito da dove riparte dopo l'ultima
+      const nomi = G.ordineFermate(v).map(k => { const s = s0.stazioni[v.fermate[k].s]; return s ? esc(s.nome) : '?'; });
+      h += `<select class="modoPercorso" data-az="modoPercorso" title="Che cosa fa il mezzo dopo l'ultima fermata">
+        <option value="giro" ${v.andataRitorno ? '' : 'selected'}>🔁 Giro: dopo l'ultima torna alla prima</option>
+        <option value="ar" ${v.andataRitorno ? 'selected' : ''}>↔ Andata e ritorno: rifà le fermate al contrario</option></select>
+        <div class="nota ordineFermate">${nomi.join(' → ')} → ${nomi[0]} …</div>`;
+    }
     if (ui.percorso) h += '<div class="banda">Clicca sulle stazioni da aggiungere al percorso. <b>Esc</b> o il pulsante qui sotto per finire.</div>';
     h += '<ol class="fermate">';
     v.fermate.forEach((f, k) => {
@@ -585,6 +593,9 @@
       una notizia ti avvisa: seleziona uno dei due e premi <b>«↩ Torna indietro»</b>.</p>
       <p>In ogni fermata puoi scegliere se il mezzo <b>parte appena carico</b>, <b>attende il pieno</b> oppure
       <b>attende fino a</b> un certo tempo (giorni, ore, minuti) per riempirsi di più: riparte allo scadere o prima, se è pieno.</p>
+      <p>Con tre o più fermate scegli cosa fa il mezzo dopo l'ultima: <b>🔁 giro</b> (torna dritto alla prima: Milano → Vercelli →
+      Torino → Milano, passando da Vercelli senza fermarsi) oppure <b>↔ andata e ritorno</b> (Milano → Vercelli → Torino → Vercelli →
+      Milano). Sulla mappa il percorso del mezzo selezionato segue i binari; il tratto pieno è il viaggio in corso.</p>
       <h4>Le catene delle merci</h4>
       <p>⛏️ Carbone + ⛰️ Ferro → 🏭 Acciaieria → Acciaio · Acciaio + 🌲 Legname → 🏗️ Fabbrica → Merci → città<br>
       🌾 Grano → 🍝 Pastificio → Cibo → città · 🛢️ Petrolio → ⚗️ Raffineria → Carburante → città · ⚡ La centrale compra il carbone.</p>
@@ -715,6 +726,11 @@
       const f = v.fermate[+d.k];
       f.pieno = el.value === 'pieno';
       f.attesaMin = el.value === 'tempo' ? (f.attesaMin || 60) : 0; // di partenza un'ora
+      disegnaPannello();
+    },
+    modoPercorso: (d, el) => {
+      const v = veicoloSel(); if (!v) return;
+      G.impostaAndataRitorno(st(), v, el.value === 'ar');
       disegnaPannello();
     },
     durata: d => {

@@ -108,6 +108,36 @@
     G.aggiornaServizi(st);
   };
 
+  // Ordine delle fermate. Giro (normale): 1 → 2 → 3 → 1 → 2 …
+  // Andata e ritorno (v.andataRitorno): 1 → 2 → 3 → 2 → 1 → 2 …; v.verso (+1 o −1) dice da che parte si va.
+  const giroSemplice = v => !v.andataRitorno || v.fermate.length <= 2;
+  function prossimaFermata(v) {
+    const n = v.fermate.length;
+    if (giroSemplice(v)) { v.idx = (v.idx + 1) % n; return; }
+    let d = v.verso === -1 ? -1 : 1;
+    if (v.idx + d < 0 || v.idx + d >= n) d = -d; // al capolinea si torna indietro
+    v.verso = d;
+    v.idx = Math.max(0, Math.min(n - 1, v.idx + d));
+  }
+  // la fermata da cui il mezzo è arrivato (per «Torna indietro»)
+  function fermataPrecedente(v) {
+    const n = v.fermate.length;
+    if (giroSemplice(v)) return (v.idx - 1 + n) % n;
+    const k = v.idx - (v.verso === -1 ? -1 : 1);
+    return k >= 0 && k < n ? k : (v.idx - 1 + n) % n;
+  }
+  // l'ordine in cui il mezzo visita le fermate, una volta: [0, 1, 2] col giro, [0, 1, 2, 1] in andata e ritorno
+  G.ordineFermate = function (v) {
+    const n = v.fermate.length, el = [];
+    for (let k = 0; k < n; k++) el.push(k);
+    if (!giroSemplice(v)) for (let k = n - 2; k > 0; k--) el.push(k);
+    return el;
+  };
+  G.impostaAndataRitorno = function (st, v, si) {
+    v.andataRitorno = !!si;
+    v.verso = 1;
+  };
+
   // la stazione va bene per questo veicolo?
   G.fermataAdatta = (v, s) => s && s.tipo === TIPO_STAZ[v.tipo];
 
@@ -138,7 +168,9 @@
     else if (k < v.idx) v.idx--;
     else if (k === v.idx) {
       if (versoQuesta) { v.idx %= n; ripianifica(st, v); }
-      else v.idx = (v.idx - 1 + n) % n; // in sosta: la prossima partenza va alla fermata successiva
+      // in sosta: la prossima partenza va alla fermata successiva (al ritorno, quella prima)
+      else if (!giroSemplice(v) && v.verso === -1) v.idx = Math.min(v.idx, n - 1);
+      else v.idx = (v.idx - 1 + n) % n;
     }
     if (n) v.idx %= n;
     G.aggiornaServizi(st);
@@ -258,7 +290,7 @@
     if (v.stato !== 'viaggio' && v.stato !== 'bloccato') return 'Il mezzo non è in viaggio';
     const n = v.fermate.length;
     if (n < 2) return 'Il mezzo non ha una fermata a cui tornare';
-    v.idx = (v.idx - 1 + n) % n;
+    v.idx = fermataPrecedente(v);
     if (v.tipo === 'treno') { v.stallo = false; v.bloccatoDa = 0; v.attesaSegnale = 0; v.ricalcolo = -1; }
     ripianifica(st, v);
     return null;
@@ -326,7 +358,7 @@
     if (f && f.pieno && v.qta < v.cap - 0.5 && v.attesa < 120) return; // aspetta il carico pieno (al massimo 4 mesi)
     // attesa a tempo: resta fino all'ora indicata per riempirsi di più, ma parte prima se è pieno
     if (f && f.attesaMin > 0 && v.qta < v.cap - 0.5 && v.attesa < f.attesaMin * MINUTO) return;
-    v.idx = (v.idx + 1) % v.fermate.length;
+    prossimaFermata(v);
     pianifica(st, v);
   }
 
