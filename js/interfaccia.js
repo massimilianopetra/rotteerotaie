@@ -539,8 +539,23 @@
       (st() ? '' : '<div class="pulsanti"><button data-az="menuIniziale">← Torna al menu</button></div>'));
   }
 
+  // elenco delle partite salvate nel browser, con i pulsanti per aprirle o eliminarle
+  function elencoPartite() {
+    const el = G.elencoSalvataggi ? G.elencoSalvataggi() : [];
+    if (!el.length) return '<div class="nota">Nessuna partita salvata nel browser.</div>';
+    const quando = t => new Date(t).toLocaleString('it-IT', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    return `<table class="elenco partite"><tr><th>Compagnia</th><th>Data nel gioco</th><th>Salvata il</th><th></th></tr>` +
+      el.map(v => `<tr${st() && st().posto === v.id ? ' class="attuale" title="La partita in corso"' : ''}>
+        <td><b>${esc(v.nome)}</b>${v.mappa ? `<div class="sotto">${esc(v.mappa)}</div>` : ''}</td>
+        <td>${esc(v.data || '—')}${v.soldi !== undefined ? `<div class="sotto">${G.lire(v.soldi)}</div>` : ''}</td>
+        <td class="sotto">${quando(v.quando)}</td>
+        <td class="azioni"><button data-az="carica" data-id="${v.id}">📂 Apri</button>
+        <button data-az="eliminaPartita" data-id="${v.id}" title="Elimina questa partita salvata">🗑</button></td></tr>`).join('') +
+      '</table>';
+  }
+
   function finestraMenu(avvio) {
-    const salv = G.esisteSalvataggio && G.esisteSalvataggio();
     const seme = Math.floor(Math.random() * 1e6);
     let h = avvio ? '<p class="intro">Costruisci un impero dei trasporti: ferrovie, strade, autostrade e aeroporti fra città inventate, oppure sulla mappa vera dell\'Italia o dell\'Europa.</p>' : '';
     const mappe = (C.mappeReali || []).map(k => `<option value="${k.id}">${k.nome} (mappa reale)</option>`).join('');
@@ -552,9 +567,16 @@
       <div class="riga"><label>Città<select id="npCitta"><option>8</option><option selected>14</option><option>20</option><option>28</option></select></label>
       <label>Seme del mondo<input id="npSeme" type="number" value="${seme}"></label></div>
       <div class="pulsanti"><button class="primario" data-az="iniziaPartita">🚂 Nuova partita</button>
-      ${salv ? '<button data-az="carica">📂 Continua la partita salvata</button>' : ''}
-      ${!avvio ? '<button data-az="salva">💾 Salva</button><button data-az="chiudiFinestra">Annulla</button>' : ''}</div>
-      <div class="nota">Con lo stesso seme si ottiene lo stesso mondo. La partita si salva nel browser (anche da sola ogni 1° gennaio).</div>
+      ${!avvio ? '<button data-az="chiudiFinestra">Annulla</button>' : ''}</div>
+      <div class="nota">Con lo stesso seme si ottiene lo stesso mondo.</div>
+      <h3>Partite salvate</h3>
+      ${elencoPartite()}
+      <div class="pulsanti">
+      ${!avvio ? `<button class="primario" data-az="salva">💾 Salva</button><button data-az="salvaNuova" title="Tiene anche il salvataggio di prima">💾 Salva come nuova</button>
+        <button data-az="salvaFile">⬇ Salva su file</button>` : ''}
+      <button data-az="apriFile">📁 Apri da file…</button></div>
+      <div class="nota">Le partite si salvano nella memoria del browser (anche da sole ogni 1° gennaio), non in una cartella:
+      per averne una copia o portarla su un altro computer usa «Salva su file» (finisce nei Download) e poi «Apri da file».</div>
       <div class="versione">Rotaie &amp; Rotte ${G.testoVersione()} · di Massimiliano Petra · <span class="link" data-az="finestra" data-f="info">ℹ️ Informazioni</span></div>`;
     apriFinestra(avvio ? 'Rotaie & Rotte' : 'Partita', h);
   }
@@ -642,14 +664,29 @@
       if (e) G.avviso(e, true); else chiudiPannello();
     },
     prestito: d => { const e = +d.d > 0 ? G.prendiPrestito(st()) : G.rendiPrestito(st()); if (e) G.avviso(e, true); finestraFinanze(); },
-    salva: () => { const e = G.salvaPartita(st()); G.avviso(e || 'Partita salvata', !!e); },
-    carica: () => {
+    salva: () => { const e = G.salvaPartita(st()); G.avviso(e || 'Partita salvata', !!e); if (!e) finestraMenu(false); },
+    salvaNuova: () => { const e = G.salvaPartita(st(), true); G.avviso(e || 'Salvata come nuova partita', !!e); if (!e) finestraMenu(false); },
+    salvaFile: () => { const e = G.salvaSuFile(st()); G.avviso(e || 'File della partita creato: lo trovi nei Download', !!e); },
+    eliminaPartita: d => {
+      const v = G.elencoSalvataggi().find(x => x.id === d.id); if (!v) return;
+      if (!confirm(`Eliminare la partita salvata «${v.nome}» (${v.data || ''})?`)) return;
+      G.eliminaSalvataggio(d.id);
+      finestraMenu(!st());
+    },
+    // un attimo di respiro perché l'avviso si veda: le mappe reali richiedono qualche secondo
+    carica: d => {
       G.avviso('Caricamento della partita…');
-      // un attimo di respiro perché l'avviso si veda: le mappe reali richiedono qualche secondo
-      setTimeout(() => G.caricaPartita(e => {
-        if (e) { G.avviso(e, true); return; }
-        $('#finestra').classList.add('nascosto'); ui.finestra = null; G.avviso('Partita caricata');
-      }), 30);
+      setTimeout(() => G.caricaPartita(d.id, partitaCaricata), 30);
+    },
+    apriFile: () => {
+      const inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = '.rotaie,.txt';
+      inp.onchange = () => {
+        if (!inp.files.length) return;
+        G.avviso('Caricamento della partita…');
+        setTimeout(() => G.caricaDaFile(inp.files[0], partitaCaricata), 30);
+      };
+      inp.click();
     },
     // con una mappa reale dimensioni e numero di città vengono dalla mappa
     sceltaMappa: () => {
@@ -681,6 +718,10 @@
       salvaLivelli();
     }
   };
+  function partitaCaricata(e) {
+    if (e) { G.avviso(e, true); return; }
+    $('#finestra').classList.add('nascosto'); ui.finestra = null; G.avviso('Partita caricata');
+  }
   const veicoloSel = () => ui.selVeicolo && st() && st().veicoli.find(k => k.id === ui.selVeicolo);
 
   // ---------------------------------------------------------------- mouse sulla mappa
