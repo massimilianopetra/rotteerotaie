@@ -7,15 +7,25 @@
 
   // ---------------------------------------------------------------- conti
   G.nuovoConto = () => ({ entrate: {}, uscite: {} });
+  // conto del mese in corso (entrate, uscite, unità consegnate per merce): si chiude in G.mensile e va in
+  // st.conti.mesi, la storia mese per mese dei grafici del quadro di gestione (le partite vecchie non l'hanno)
+  G.contoMese = function (st) {
+    const co = st.conti;
+    if (!co.mesi) co.mesi = [];
+    if (!co.mese) co.mese = { entrate: {}, uscite: {}, unita: {} };
+    return co.mese;
+  };
   G.incassa = function (st, lire, voce) {
     st.soldi += lire;
-    const e = st.conti.corrente.entrate;
+    const e = st.conti.corrente.entrate, m = G.contoMese(st).entrate;
     e[voce] = (e[voce] || 0) + lire;
+    m[voce] = (m[voce] || 0) + lire;
   };
   G.spendi = function (st, lire, voce) {
     st.soldi -= lire;
-    const u = st.conti.corrente.uscite;
+    const u = st.conti.corrente.uscite, m = G.contoMese(st).uscite;
     u[voce] = (u[voce] || 0) + lire;
+    m[voce] = (m[voce] || 0) + lire;
   };
   G.somma = o => Object.values(o).reduce((a, b) => a + b, 0);
   G.lire = n => (n < 0 ? '−' : '') + 'L. ' + Math.abs(Math.round(n)).toLocaleString('it-IT');
@@ -266,6 +276,8 @@
 
   // merce scaricata in una stazione che la accetta
   G.consegna = function (st, s, merce, q) {
+    const u = G.contoMese(st).unita;
+    u[merce] = (u[merce] || 0) + q;
     if (s.citta >= 0) {
       const c = st.citta[s.citta];
       if (merce === 'passeggeri') c.mese.arrivati += q;
@@ -437,6 +449,12 @@
     st.mesiInRosso = st.soldi < 0 ? st.mesiInRosso + 1 : 0;
     if (st.mesiInRosso === 3) G.notizia(st, 'Attenzione: i conti sono in rosso da tre mesi! Chiedi un prestito o vendi qualche veicolo.');
     st.minimappaSporca = true;
+    // si chiude il conto del mese appena finito (con le spese qui sopra) e se ne apre uno nuovo: 20 anni di storia
+    const cm = G.contoMese(st), d = G.data(st, st.giornoInt - 1), tondi = o => { for (const k in o) o[k] = Math.round(o[k]); return o; };
+    st.conti.mesi.push({ anno: d.anno, mese: d.mese, entrate: tondi(cm.entrate), uscite: tondi(cm.uscite), unita: tondi(cm.unita),
+      soldi: Math.round(st.soldi), valore: Math.round(G.valoreAzienda(st)), prestito: st.prestito });
+    if (st.conti.mesi.length > 240) st.conti.mesi.shift();
+    st.conti.mese = { entrate: {}, uscite: {}, unita: {} };
   };
 
   // ---------------------------------------------------------------- un anno

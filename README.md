@@ -75,6 +75,10 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
 - **Livelli della mappa** (🗺️ Mappa, tasto `L`): si sceglie cosa vedere (case, vie dei paesi, strade, ferrovie, stazioni,
   industrie, mezzi, nomi, griglia, terreno attenuato) oppure una vista pronta: Tutto, Solo ferrovia, Reti e stazioni,
   Industrie e merci. Con un attrezzo in mano si vede sempre ciò che serve. La scelta si ricorda nel browser.
+- **Quadro di gestione** (📊 Gestione, tasto `E`, oppure clic sull'utile in alto): indicatori (cassa, utile, ricavi e costi
+  degli ultimi 12 mesi, margine, valore dell'azienda, rete, passeggeri), grafici mese per mese di entrate e uscite, cassa e
+  valore, da dove arrivano e dove vanno i soldi; schede con il conto economico e i prestiti, i mezzi migliori e peggiori,
+  le merci. In alto è sempre visibile l'utile dell'anno con l'andamento della cassa negli ultimi 12 mesi.
 - **Salvataggio** nel browser (anche automatico ogni 1° gennaio).
 
 ## Comandi
@@ -84,7 +88,7 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
 | Spostare la mappa | trascinare col tasto destro (o sinistro con 🔍), frecce |
 | Zoom | rotellina, tasti `+` e `−` |
 | Strumenti | `I` info · `B` ferrovia · `R` strada · `U` autostrada · `T` stazione (apre il menu delle dimensioni) · `F` autostazione · `A` aeroporto · `X` demolisci |
-| Finestre | `V` mezzi · `M` mondo · `E` finanze · `H` aiuto |
+| Finestre | `V` mezzi · `M` mondo · `E` quadro di gestione · `H` aiuto |
 | Mappa | `L` livelli della mappa (pulsante 🗺️ Mappa) · `C` vie dei paesi · `G` griglia |
 | Tempo | `spazio` pausa · `1` normale (1 s = 5 minuti) · `2` veloce (1 ora al secondo) · `3` velocissimo (1 giorno) · `4` turbo (1 settimana) |
 | Annulla / chiudi | `Esc` |
