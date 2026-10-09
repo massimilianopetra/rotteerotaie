@@ -46,6 +46,10 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
 
 - **Mappa vista dall'alto** generata a caso (o vera: Italia ed Europa): mare, laghi, fiumi, pianure, colline, montagne e boschi.
   Costruire in collina, in montagna o sopra un fiume (ponte) costa di più.
+- **Vista 3D assonometrica** (pulsante 🧊 3D, tasto `D`): il mondo visto di sbieco, con il terreno in rilievo, le montagne innevate,
+  i viadotti sui piloni, le gallerie, case e palazzi, alberi, stazioni, industrie e mezzi come solidi. Si gira di 90° con `O`
+  (`Maiusc+O` al contrario) per guardare dietro ai monti e ai palazzi. Si gioca come nella vista dall'alto: si costruisce, si
+  clicca e si trascina allo stesso modo. La scelta si ricorda nel browser.
 - **Città inventate** (Castelvento, Roccalupo, Sant'Ilario, Porto Ceruleo…) che crescono se sono ben servite:
   le case nuove nascono lungo le vie e attorno alle stazioni, e diventano palazzine e palazzi.
 - **Industrie e catene di produzione**:
@@ -105,6 +109,7 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
 | Strumenti | `I` info · `B` ferrovia · `R` strada · `U` autostrada · `T` stazione (apre il menu delle dimensioni) · `F` autostazione · `A` aeroporto · `P` porto · `X` demolisci |
 | Finestre | `V` mezzi · `M` mondo · `E` quadro di gestione · `K` banca · `H` aiuto |
 | Mappa | `L` livelli della mappa (pulsante 🗺️ Mappa) · `C` vie dei paesi · `G` griglia |
+| Vista 3D | `D` vista 3D assonometrica / vista dall'alto · `O` gira la vista 3D di 90° (`Maiusc+O` al contrario) |
 | Tempo | `spazio` pausa · `1` normale (1 s = 5 minuti) · `2` veloce (1 ora al secondo) · `3` velocissimo (1 giorno) · `4` turbo (1 settimana) |
 | Annulla / chiudi | `Esc` |
 
