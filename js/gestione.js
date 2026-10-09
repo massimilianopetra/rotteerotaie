@@ -47,19 +47,20 @@
     const p = Math.pow(10, Math.floor(Math.log10(r))), x = r / p;
     return (x <= 1 ? 1 : x <= 2 ? 2 : x <= 5 ? 5 : 10) * p;
   }
-  function scala(valori, H, sy, gy) {
+  function scala(valori, H, sy, gy, minimo) {
     let min = Math.min(0, ...valori), max = Math.max(0, ...valori);
-    if (max - min < 1000) max = min + 1000; // grafico ancora vuoto: un asse sensato
+    minimo = minimo || 1000;
+    if (max - min < minimo) max = min + minimo; // grafico ancora vuoto: un asse sensato
     const passo = passoAsse((max - min) / 4);
     min = Math.floor(min / passo) * passo; max = Math.ceil(max / passo) * passo;
     return { min, max, passo, Y: v => sy + (max - v) / (max - min) * (H - sy - gy) };
   }
-  function assi(sc, W, sx, dx) {
+  function assi(sc, W, sx, dx, fmtAsse) {
     let s = '';
     for (let v = sc.min; v <= sc.max + sc.passo * 1e-6; v += sc.passo) {
       const y = sc.Y(v).toFixed(1);
       s += `<line x1="${sx}" x2="${W - dx}" y1="${y}" y2="${y}" stroke="${Math.abs(v) < sc.passo * 1e-6 ? COL.zero : COL.griglia}"/>`;
-      s += `<text x="${sx - 6}" y="${(+y + 4).toFixed(1)}" text-anchor="end">${breveAsse(v)}</text>`;
+      s += `<text x="${sx - 6}" y="${(+y + 4).toFixed(1)}" text-anchor="end">${(fmtAsse || breveAsse)(v)}</text>`;
     }
     return s;
   }
@@ -70,13 +71,14 @@
     return s;
   }
 
-  // grafico a linee: serie = [{ nome, colore, valori, area }]; si passa sopra col mouse per leggere i valori
-  function graficoLinee(serie, etich, H) {
-    H = H || 190;
+  // grafico a linee: serie = [{ nome, colore, valori, area }]; si passa sopra col mouse per leggere i valori.
+  // fmt (facoltativo) per valori che non sono lire: { asse: v => testo, valore: v => testo, minimo: ampiezza minima dell'asse }
+  function graficoLinee(serie, etich, H, fmt) {
+    H = H || 190; fmt = fmt || {};
     const W = 640, sx = 62, dx = 12, sy = 12, gy = 24, n = etich.length;
-    const sc = scala(serie.flatMap(s => s.valori), H, sy, gy);
+    const sc = scala(serie.flatMap(s => s.valori), H, sy, gy, fmt.minimo);
     const X = k => sx + (n === 1 ? (W - sx - dx) / 2 : k * (W - sx - dx) / (n - 1));
-    let s = `<svg class="graficoG" viewBox="0 0 ${W} ${H}">` + assi(sc, W, sx, dx) + etichetteX(etich, X, H);
+    let s = `<svg class="graficoG" viewBox="0 0 ${W} ${H}">` + assi(sc, W, sx, dx, fmt.asse) + etichetteX(etich, X, H);
     const base = sc.Y(Math.max(sc.min, 0)).toFixed(1);
     for (const se of serie) {
       const pts = se.valori.map((v, k) => `${X(k).toFixed(1)},${sc.Y(v).toFixed(1)}`).join(' ');
@@ -87,7 +89,7 @@
     // fasce invisibili: il suggerimento mostra tutte le serie di quel mese
     const l = n === 1 ? W - sx - dx : (W - sx - dx) / (n - 1);
     etich.forEach((e, k) => {
-      const t = e.lungo + serie.map(se => '\n' + se.nome + ': ' + G.lire(se.valori[k])).join('');
+      const t = e.lungo + serie.map(se => '\n' + se.nome + ': ' + (fmt.valore || G.lire)(se.valori[k])).join('');
       s += `<rect x="${(X(k) - l / 2).toFixed(1)}" y="${sy}" width="${l.toFixed(1)}" height="${H - sy - gy}" fill="transparent"><title>${esc(t)}</title></rect>`;
     });
     return s + '</svg>';
@@ -226,9 +228,9 @@
     h += '<div class="kpis tre">';
     h += kpi('🔧 Manutenzione annua', G.lire(G.somma(inf)), `binari ${G.lireBreve(inf.binari)} · strade ${G.lireBreve(inf.strade)} · stazioni ${G.lireBreve(inf.stazioni)}`);
     h += kpi('⛽ Esercizio annuo dei mezzi', G.lire(st.veicoli.reduce((a, v) => a + G.esercizioVeicolo(v), 0)), 'si paga un dodicesimo al mese');
-    h += kpi('🏦 Prestito', G.lire(st.prestito), `su ${G.lireBreve(C.inizio.prestitoMax)} · interesse ${Math.round(C.inizio.interesse * 100)}% l'anno`);
+    h += kpi('🏦 Debito con la banca', G.lire(st.prestito), st.prestito ? `interessi ≈ ${G.lire(G.interessiMese(st))} al mese` : `tasso di riferimento ${G.percento(G.tassoRiferimento(st))}`);
     h += '</div>';
-    h += `<div class="pulsanti"><button data-az="prestito" data-d="1">🏦 Prendi ${G.lire(C.inizio.passoPrestito)}</button><button data-az="prestito" data-d="-1">↩ Restituisci ${G.lire(C.inizio.passoPrestito)}</button></div>`;
+    h += '<div class="pulsanti"><button data-az="finestra" data-f="banca">🏦 Vai in banca: prestiti e tassi</button></div>';
     if (co.storico.length > 1) {
       h += '<h4>Gli anni passati</h4>' + graficoLinee([
         { nome: 'Profitto', colore: COL.utile, valori: co.storico.map(a => G.bilancio(a).profitto), area: true },
@@ -285,6 +287,9 @@
     h += '<p class="sotto">Ogni consegna si paga per unità × prezzo × distanza in linea d\'aria; se il viaggio dura troppo il prezzo cala.</p>';
     return h;
   }
+
+  // per altre finestre (la banca) che usano gli stessi grafici e riquadri
+  Object.assign(G, { graficoLinee, legendaG: legenda, kpiG: kpi, etichettaMese: etichetta, mesiConti: mesi });
 
   // ---------------------------------------------------------------- finestra
   const SCHEDE = { riepilogo: ['📊 Riepilogo', riepilogo], conti: ['📒 Conto economico', conti], mezzi: ['🚂 Mezzi', mezzi], merci: ['📦 Merci', merci] };

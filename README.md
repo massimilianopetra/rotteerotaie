@@ -75,6 +75,8 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
   selezionato si vede sulla mappa lungo i binari o le strade, con il viaggio in corso evidenziato.
 - **Economia**: ogni consegna è pagata in base alla distanza e alla rapidità; ci sono costi di esercizio,
   manutenzione delle linee, guasti dei mezzi vecchi, prestiti con interesse e il bilancio di fine anno.
+- **Banca** (🏦 Banca, tasto `K`): prestiti a tasso variabile o fisso con un tasso che cambia ogni mese, spread secondo il
+  rischio della compagnia (rating da AAA a D) e fido che cresce con il valore dell'azienda.
 - **Livelli della mappa** (🗺️ Mappa, tasto `L`): si sceglie cosa vedere (case, vie dei paesi, strade, ferrovie, stazioni,
   industrie, mezzi, nomi, griglia, terreno attenuato) oppure una vista pronta: Tutto, Solo ferrovia, Reti e stazioni,
   Industrie e merci. Con un attrezzo in mano si vede sempre ciò che serve. La scelta si ricorda nel browser.
@@ -94,7 +96,7 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
 | Spostare la mappa | trascinare col tasto destro (o sinistro con 🔍), frecce |
 | Zoom | rotellina, tasti `+` e `−` |
 | Strumenti | `I` info · `B` ferrovia · `R` strada · `U` autostrada · `T` stazione (apre il menu delle dimensioni) · `F` autostazione · `A` aeroporto · `X` demolisci |
-| Finestre | `V` mezzi · `M` mondo · `E` quadro di gestione · `H` aiuto |
+| Finestre | `V` mezzi · `M` mondo · `E` quadro di gestione · `K` banca · `H` aiuto |
 | Mappa | `L` livelli della mappa (pulsante 🗺️ Mappa) · `C` vie dei paesi · `G` griglia |
 | Tempo | `spazio` pausa · `1` normale (1 s = 5 minuti) · `2` veloce (1 ora al secondo) · `3` velocissimo (1 giorno) · `4` turbo (1 settimana) |
 | Annulla / chiudi | `Esc` |
@@ -148,6 +150,21 @@ Per ogni mezzo il gioco mostra ricavi, costi (il suo esercizio, +4% per anno di 
 più «Prezzo già ripagato» (il profitto da quando è stato comprato rispetto al prezzo). Manutenzione e interessi sono di tutta la
 compagnia, quindi la somma dei profitti dei mezzi è più alta del profitto della compagnia. Nel gioco: aiuto (`H`), scheda
 «Soldi e profitti», e il quadro di gestione (`E`).
+
+## La banca
+
+Dalla finestra 🏦 Banca (tasto `K`) si chiede un prestito e lo si restituisce quando si vuole; ogni mese si pagano gli interessi.
+
+- **Tasso di riferimento**: segue a grandi linee la storia dei tassi italiani (circa 4–5% nell'Ottocento, 7% negli anni Venti,
+  oltre il 15% intorno al 1980, quasi zero intorno al 2015) e ogni mese si muove un po' a caso attorno a quel valore,
+  con qualche scossa improvvisa. Quando cambia di un punto arriva una notizia.
+- **Spread**: si aggiunge al riferimento ed è il rischio della compagnia: 1,5 punti di base, fino a 6 in più con tanto debito rispetto
+  a quanto si possiede, +1,5 con la cassa in rosso, +1 se si è in perdita. Il rating va da AAA (ottimo) a D (molto rischioso).
+- **Variabile o fisso**: il variabile cambia ogni mese con riferimento e spread; il fisso si blocca alla firma e costa un po' di più
+  (guarda dove andranno i tassi nei prossimi 10 anni, più un premio). Restituire un fisso in anticipo costa l'1% di penale.
+  Strategia: fisso prima che i tassi salgano, variabile quando scendono.
+- **Fido**: si può avere in prestito fino al valore dell'azienda (almeno L. 600.000).
+- Tutti i numeri sono in `dati/catalogo.js` (`banca`), compresa la curva storica dei tassi.
 
 ## Versione e build
 

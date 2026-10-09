@@ -51,19 +51,7 @@
     return v;
   };
 
-  G.prendiPrestito = function (st) {
-    const p = C.inizio.passoPrestito;
-    if (st.prestito + p > C.inizio.prestitoMax) return 'Hai raggiunto il prestito massimo';
-    st.prestito += p; st.soldi += p;
-    return null;
-  };
-  G.rendiPrestito = function (st) {
-    const p = Math.min(C.inizio.passoPrestito, st.prestito);
-    if (p <= 0) return 'Non hai debiti';
-    if (st.soldi < p) return 'Fondi insufficienti';
-    st.prestito -= p; st.soldi -= p;
-    return null;
-  };
+  // i prestiti stanno in banca.js
 
   // ---------------------------------------------------------------- calendario
   const MESI = G.MESI = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
@@ -459,9 +447,9 @@
     const inf = G.costiInfrastruttura(st);
     const man = G.somma(inf) / 12;
     if (man) G.spendi(st, man, 'manutenzione');
-    if (st.prestito) G.spendi(st, st.prestito * C.inizio.interesse / 12, 'interessi');
+    G.bancaMensile(st); // interessi del mese e nuovo tasso
     st.mesiInRosso = st.soldi < 0 ? st.mesiInRosso + 1 : 0;
-    if (st.mesiInRosso === 3) G.notizia(st, 'Attenzione: i conti sono in rosso da tre mesi! Chiedi un prestito o vendi qualche veicolo.');
+    if (st.mesiInRosso === 3) G.notizia(st, 'Attenzione: i conti sono in rosso da tre mesi! Chiedi un prestito in banca (tasto K) o vendi qualche veicolo.');
     st.minimappaSporca = true;
     // si chiude il conto del mese appena finito (con le spese qui sopra) e se ne apre uno nuovo: 20 anni di storia
     const cm = G.contoMese(st), d = G.data(st, st.giornoInt - 1), tondi = o => { for (const k in o) o[k] = Math.round(o[k]); return o; };

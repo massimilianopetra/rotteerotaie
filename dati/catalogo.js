@@ -4,6 +4,23 @@
 window.CATALOGO = {
   inizio: { soldi: 400000, prestitoMax: 600000, passoPrestito: 50000, interesse: 0.05 },
 
+  // Banca: tassi in percento all'anno. Il tasso di riferimento segue "curva" (anno, tasso: più o meno lo sconto in Italia,
+  // fra un punto e l'altro si interpola) e ogni mese si muove a caso attorno a quel valore (ritorno: quanto si riavvicina
+  // in un mese; oscillazione: ampiezza della mossa casuale; scossa: probabilità al mese di un salto improvviso).
+  // Il tasso della compagnia = riferimento + spread (rischio: debito rispetto al valore, mesi in rosso, perdite).
+  // Il fisso si blocca alla firma: guarda anche dove andranno i tassi nei prossimi anni, più un premio.
+  banca: {
+    curva: [[1820, 4.5], [1850, 4.5], [1866, 6], [1873, 5], [1893, 5.5], [1900, 4.5], [1913, 5], [1915, 6], [1919, 5.5],
+      [1925, 7], [1929, 7], [1932, 5], [1936, 4.5], [1944, 4], [1947, 5.5], [1950, 4], [1958, 3.5], [1969, 4], [1973, 6.5],
+      [1974, 9], [1976, 15], [1980, 16.5], [1982, 18], [1985, 15], [1987, 12], [1990, 12.5], [1992, 13], [1993, 10], [1995, 9],
+      [1997, 6], [1999, 3], [2001, 4], [2003, 2], [2006, 3.5], [2008, 4.25], [2009, 1], [2012, 0.75], [2015, 0.05], [2020, 0],
+      [2022, 2.5], [2023, 4.5], [2024, 4], [2026, 2.5], [2100, 3]],
+    ritorno: 0.12, oscillazione: 0.1, scossa: 0.02,
+    spreadBase: 1.5, spreadDebito: 6, spreadRosso: 1.5, spreadPerdita: 1,
+    premioFisso: 0.75, anniFisso: 10, penaleFisso: 0.01,
+    fidoMin: 600000, passo: 50000, minimo: 0.5
+  },
+
   // minuti di gioco che passano in un secondo vero, per ogni velocità (0 = pausa).
   // Normale: 1 secondo = 5 minuti; poi avanti veloce: 1 ora, 1 giorno, 1 settimana al secondo.
   velocita: [0, 5, 60, 1440, 10080],
