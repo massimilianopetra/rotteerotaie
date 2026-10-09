@@ -348,7 +348,7 @@
   }
 
   // Galleria scavata dal giocatore: dritta (una linea di caselle da a a b), dalla quota dell'imbocco a a quella
-  // dell'uscita b in pendenza costante, al massimo quella della rete (35‰ ferrovia, 45‰ autostrada). Le caselle in
+  // dell'uscita b in pendenza costante, al massimo quella della rete (50‰ ferrovia, 45‰ autostrada). Le caselle in
   // mezzo devono stare sotto il terreno (almeno sogliaMetri di roccia sopra). Restituisce un tracciato come cercaTracciato; se non si può,
   // tr.impossibile dice perché e tr.blocchi sono le caselle da segnare in rosso.
   // rete: 'binario' (predefinita) o 'autostrada'
