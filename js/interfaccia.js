@@ -171,7 +171,7 @@
     const voce = (k, ic, nome, testo) => `<button data-az="modoBinario" data-r="${rete}" data-m="${k}" class="${ui.modoRete[rete] === k ? 'attivo' : ''}">
       <span class="icona">${ic}</span><span><b>${nome}</b><span class="sotto">${testo}</span></span></button>`;
     menu.innerHTML = `<div class="titolo">${M.titolo}</div>` +
-      voce('normale', M.icona, M.normale, `Segue il terreno, sale al massimo del ${O.pendenzaMax[rete]}‰.<br>Sulle valli fa da sola i viadotti (×${O.viadotto}); dove servirebbe una galleria non si costruisce.`) +
+      voce('normale', M.icona, M.normale, `Segue il terreno, sale al massimo del ${O.pendenzaMax[rete]}‰.<br>Per scavalcare un dosso o salire a una città si sopraeleva da sola, già prima, su rilevati e viadotti (più alti, più cari). Se nemmeno così ce la fa non si costruisce: il monte da forare diventa rosso.`) +
       voce('galleria', '🚇', 'Galleria', `Dritta, dalla quota dell'imbocco a quella dell'uscita: può salire o scendere fino al ${O.pendenzaMax[rete]}‰.<br>Trascina dall'imbocco all'uscita, dall'altra parte del monte; sopra servono almeno ${O.sogliaMetri} m di monte. ×${O.galleria} il costo.`);
     const r = b.getBoundingClientRect();
     menu.classList.remove('nascosto');
@@ -604,7 +604,7 @@
       Dove servirebbe una galleria la <b>ferrovia</b> e l'<b>autostrada non si costruiscono</b>: la galleria la scavi tu con 🚇 Galleria
       (menu della ferrovia, tasto B, o dell'autostrada, tasto U), dritta, che sale o scende al massimo con la stessa pendenza della rete. Le strade normali invece fanno ancora le gallerie da sole.</p>
       <table class="elenco"><tr><td>🚇 <b>Galleria</b></td><td>la linea passa più di ${O.sogliaMetri} m sotto il terreno</td><td class="num">×${O.galleria} il costo al km della rete</td></tr>
-      <tr><td>🌉 <b>Viadotto</b></td><td>la linea passa più di ${O.sogliaMetri} m sopra il terreno</td><td class="num">×${O.viadotto} il costo al km</td></tr>
+      <tr><td>🌉 <b>Viadotto</b></td><td>la linea passa più di ${O.sogliaMetri} m sopra il terreno</td><td class="num">×${O.viadotto} il costo al km, +100% ogni 100 m d'altezza</td></tr>
       <tr><td>⛏️ Trincea o rilevato</td><td>scarti più piccoli</td><td class="num">${G.lire(O.scavoAlMetro * km)} per metro a casella</td></tr></table>
       <p>Mentre trascini vedi quante gallerie e viadotti servono e la pendenza più forte. La ricerca del tracciato ne tiene conto:
       spesso conviene girare attorno a un monte invece di forarlo. In galleria e sul viadotto il bosco non si taglia.</p>
@@ -694,8 +694,9 @@
       <h4>⛰️ Montagne: gallerie e viadotti</h4>
       <p>Il pulsante della ferrovia (tasto B) apre un menu con due voci; quello dell'autostrada (tasto U) uguale, con il limite del ${C.opere.pendenzaMax.autostrada}‰:</p>
       <ul><li><b>🛤️ Ferrovia normale</b>: segue il terreno e non sale né scende più del ${C.opere.pendenzaMax.binario}‰
-      (${C.opere.pendenzaMax.binario} m ogni km). Sopra le valli fa da sola i <b>viadotti</b> 🌉. Se per passare dovrebbe forare un monte,
-      <b>non si costruisce</b>: le caselle troppo ripide diventano rosse. Gira attorno al monte oppure scava una galleria.</li>
+      (${C.opere.pendenzaMax.binario} m ogni km). Sopra le valli fa da sola i <b>viadotti</b> 🌉 e, per scavalcare un dosso o salire
+      a una città in alto, <b>si sopraeleva già prima</b> su rilevati e viadotti, a rampa (più è alto il viadotto, più costa). Se nemmeno così ce la fa
+      <b>non si costruisce</b>: il monte da forare diventa rosso. Scava lì una galleria (anche più di una, se serve) oppure gira attorno.</li>
       <li><b>🚇 Galleria</b>: la scavi tu. Trascina dall'<b>imbocco</b> fino all'<b>uscita</b> dall'altra parte del monte: la galleria è
       <b>dritta</b> e va dalla quota dell'imbocco a quella dell'uscita: può <b>salire o scendere</b> al massimo del ${C.opere.pendenzaMax.binario}‰
       (l'autostrada del ${C.opere.pendenzaMax.autostrada}‰), come la linea all'aperto. Sopra deve esserci almeno ${C.opere.sogliaMetri} m di monte (vicino agli imbocchi

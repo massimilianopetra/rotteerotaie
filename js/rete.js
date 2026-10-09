@@ -199,6 +199,27 @@
   // la rete se ne va dalla casella: si dimentica anche la sua quota
   function liberaQuota(m, i, rete) { m[grQuota(rete)][i] = NESSUNA; m[grOpera(rete)][i] = 0; }
 
+  // Profilo delle reti che non fanno gallerie da sole (ferrovia, autostrada): la linea non passa mai più di
+  // soglia metri sotto il terreno; per scavalcare un dosso o arrivare a una città in alto si sopraeleva prima
+  // (rilevato o viadotto), a rampa, senza superare la pendenza massima. Le quote fisse restano fisse.
+  // lb/ub: la quota più bassa e più alta possibile in ogni casella, propagate con la pendenza massima;
+  // dove lb > ub la linea non si può fare (lo segnala poi il controllo della pendenza).
+  function profiloSopraelevato(h, terra, L, fisso, pmax, soglia) {
+    const n = h.length, lb = new Float64Array(n), ub = new Float64Array(n);
+    for (let k = 0; k < n; k++) { lb[k] = fisso[k] ? h[k] : terra[k] - soglia; ub[k] = fisso[k] ? h[k] : Infinity; }
+    for (let k = 1; k < n; k++) { lb[k] = Math.max(lb[k], lb[k - 1] - pmax * L[k]); ub[k] = Math.min(ub[k], ub[k - 1] + pmax * L[k]); }
+    for (let k = n - 2; k >= 0; k--) { lb[k] = Math.max(lb[k], lb[k + 1] - pmax * L[k + 1]); ub[k] = Math.min(ub[k], ub[k + 1] + pmax * L[k + 1]); }
+    const dentro = (k, v) => (fisso[k] ? h[k] : Math.max(lb[k], Math.min(ub[k], v)));
+    // si segue il terreno finché si può, poi si smussa avanti e indietro restando fra lb e ub
+    for (let k = 0; k < n; k++) h[k] = dentro(k, terra[k]);
+    for (let k = 1; k < n; k++) h[k] = dentro(k, Math.min(h[k - 1] + pmax * L[k], Math.max(h[k - 1] - pmax * L[k], h[k])));
+    for (let k = n - 2; k >= 0; k--) h[k] = dentro(k, Math.min(h[k + 1] + pmax * L[k + 1], Math.max(h[k + 1] - pmax * L[k + 1], h[k])));
+    // dove il monte è più alto di quanto la linea possa salire partendo dalle quote fisse: lì serve una galleria
+    const monti = [];
+    for (let k = 0; k < n; k++) if (!fisso[k] && terra[k] - soglia > ub[k] + 0.5) monti.push(k);
+    return monti;
+  }
+
   // Profilo di un tracciato: la linea segue il terreno ma non sale né scende più della pendenza massima.
   // Si fa una passata in avanti e una all'indietro: davanti a un monte la linea sale al massimo e poi lo
   // attraversa (galleria), su una valle scende al massimo e la scavalca (viadotto). Restano fisse le quote dei
@@ -214,8 +235,12 @@
       if (qR[i] !== NESSUNA) { h[k] = qR[i]; fisso[k] = 1; } else if (c0[k] === 0 || k === 0 || k === n - 1) fisso[k] = 1;
       if (k) L[k] = km * 1000 * LUN[G.direzione(m, caselle[k - 1], i)];
     }
-    for (let k = 1; k < n; k++) if (!fisso[k]) h[k] = Math.min(h[k - 1] + pmax * L[k], Math.max(h[k - 1] - pmax * L[k], h[k]));
-    for (let k = n - 2; k >= 0; k--) if (!fisso[k]) h[k] = Math.min(h[k + 1] + pmax * L[k + 1], Math.max(h[k + 1] - pmax * L[k + 1], h[k]));
+    let monti = [];
+    if (GALLERIE_A_MANO[rete]) monti = profiloSopraelevato(h, terra, L, fisso, pmax, O.sogliaMetri);
+    else {
+      for (let k = 1; k < n; k++) if (!fisso[k]) h[k] = Math.min(h[k - 1] + pmax * L[k], Math.max(h[k - 1] - pmax * L[k], h[k]));
+      for (let k = n - 2; k >= 0; k--) if (!fisso[k]) h[k] = Math.min(h[k + 1] + pmax * L[k + 1], Math.max(h[k + 1] - pmax * L[k + 1], h[k]));
+    }
     const prezzo = C.reti[rete].costo * km, opere = new Uint8Array(n), costi = new Float64Array(n);
     const r = { quote: h, opere, costi, costo: 0, pendenza: 0, gallerie: 0, kmGallerie: 0, viadotti: 0, kmViadotti: 0, scavo: 0, ripidi: [] };
     for (let k = 0; k < n; k++) {
@@ -234,7 +259,8 @@
         // la ferrovia non fora i monti da sola: le gallerie le scava il giocatore (G.cercaGalleria)
         if (GALLERIE_A_MANO[rete]) r.ripidi.push(i);
       }
-      else if (d > O.sogliaMetri) { opere[k] = OPERA.VIADOTTO; c = prezzo * O.viadotto; }
+      // viadotto: più è alto, più costa (+100% ogni 100 m oltre la soglia)
+      else if (d > O.sogliaMetri) { opere[k] = OPERA.VIADOTTO; c = prezzo * O.viadotto * (1 + (d - O.sogliaMetri) / 100); }
       else { const s = Math.abs(d) * O.scavoAlMetro * km; c = c0[k] + s; r.scavo += s; }
       costi[k] = c; r.costo += c;
       if (opere[k]) {
@@ -243,7 +269,12 @@
       }
     }
     r.costo = Math.round(r.costo);
-    if (r.ripidi.length) {
+    if (monti.length) {
+      // si segnano in rosso le caselle del monte da forare, non quelle dove la pendenza salta fuori
+      r.ripidi = monti.map(k => caselle[k]);
+      r.impossibile = 'Il monte nelle caselle in rosso è troppo alto: anche sopraelevando la linea su rilevati e viadotti, ' + GALLERIE_A_MANO[rete] +
+        ' non ci arriva salendo al massimo del ' + O.pendenzaMax[rete] + '‰. Lì scava una 🚇 Galleria (' + MENU_RETE[rete] + ') oppure fai un giro diverso, più lungo.';
+    } else if (r.ripidi.length) {
       r.impossibile = 'Troppo ripido: ' + GALLERIE_A_MANO[rete] + ' sale e scende al massimo del ' + O.pendenzaMax[rete] + '‰ (caselle in rosso). ' +
         'Gira attorno al monte, oppure scegli 🚇 Galleria ' + MENU_RETE[rete] + ' e scavala tu.';
     }
@@ -259,8 +290,8 @@
     if (!isFinite(G.costoCasella(st, a, rete)) || !isFinite(G.costoCasella(st, b, rete))) return null;
     if (a === b) { const p = G.profiloTracciato(st, [a], rete); return { caselle: [a], costo: p.costo, profilo: p }; }
     let tr = null;
-    for (const molt of GALLERIE_A_MANO[rete] ? [4, 40] : [1]) {
-      const caselle = ricercaTracciato(st, a, b, rete, molt);
+    for (const [molt, salita] of GALLERIE_A_MANO[rete] ? [[4, 0.003], [40, 0.015], [40, 0.06]] : [[1, 0]]) {
+      const caselle = ricercaTracciato(st, a, b, rete, molt, salita);
       if (!caselle) return tr;
       const profilo = G.profiloTracciato(st, caselle, rete);
       const t = { caselle, costo: profilo.costo, profilo };
@@ -272,7 +303,7 @@
   };
 
   // A*: le caselle del tracciato più economico; molt = quanto pesa un passo troppo ripido
-  function ricercaTracciato(st, a, b, rete, molt) {
+  function ricercaTracciato(st, a, b, rete, molt, salita) {
     const m = st.mondo, W = m.W, N = m.N;
     const km = G.kmCasella(st), base = C.reti[rete].costo * km * 0.35;
     const Hm = G.metriTerreno(m), O = C.opere, pmax = O.pendenzaMax[rete] / 1000, prezzo = C.reti[rete].costo * km;
@@ -300,6 +331,9 @@
           // (la ferrovia non fa gallerie da sola: un passo troppo ripido costa molto di più, meglio girare attorno)
           if (p > pmax) cj = Math.max(cj, prezzo * (Hm[j] > Hm[i] ? O.galleria : O.viadotto) * Math.min(1, 0.5 + (p - pmax) / pmax) * molt);
           else cj += Math.min(dh, O.sogliaMetri) * 0.5 * O.scavoAlMetro * km;
+          // ferrovia e autostrada: ogni metro di dislivello costa (salire su un monte vuol dire poi rampe e viadotti
+          // per scendere), così si preferiscono i fondovalle anche se il giro è più lungo
+          if (GALLERIE_A_MANO[rete]) cj += dh * prezzo * salita;
         }
         const passo = giaCollegati(m, i, d, rete) ? base * 0.5 * LUN[d] : (cj + base) * LUN[d];
         const ng = g[i] + passo;
