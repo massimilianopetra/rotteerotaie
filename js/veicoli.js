@@ -45,6 +45,28 @@
   };
   G.valoreVeicolo = v => v.prezzo * Math.max(0.1, 1 - 0.07 * v.eta);
 
+  // conti di un mezzo: ricavi (consegne) e costi (esercizio) tenuti separati; profitto = ricavi − costi.
+  // profittoTot è il profitto da quando l'hai comprato: serve a capire se ha già ripagato il suo prezzo.
+  G.contoVeicolo = function (v, ricavo, costo) {
+    v.ricaviAnno += ricavo; v.costiAnno += costo;
+    v.profittoAnno += ricavo - costo; v.profittoTot += ricavo - costo;
+  };
+  // fine anno: quest'anno diventa l'anno scorso
+  G.chiudiAnnoVeicolo = function (v) {
+    v.profittoScorso = v.profittoAnno; v.ricaviScorso = v.ricaviAnno; v.costiScorso = v.costiAnno;
+    v.profittoAnno = v.ricaviAnno = v.costiAnno = 0;
+  };
+  // partite salvate prima che i conti dei mezzi fossero separati: una stima dai mesi già pagati
+  // (per un mezzo comprato a metà anno i costi risultano un po' più alti del vero)
+  function completaConti(st, v) {
+    if (v.ricaviAnno !== undefined) return;
+    v.costiAnno = Math.round(G.esercizioVeicolo(v) / 12 * G.data(st).mese);
+    v.ricaviAnno = Math.max(0, v.profittoAnno + v.costiAnno);
+    v.costiScorso = v.eta > 0 ? Math.round(G.esercizioVeicolo(v) / (1 + 0.04 * v.eta) * (1 + 0.04 * (v.eta - 1))) : 0;
+    v.ricaviScorso = Math.max(0, v.profittoScorso + v.costiScorso);
+    v.profittoTot = v.profittoAnno + v.profittoScorso;
+  }
+
   G.compraVeicolo = function (st, modId, merce, vagoni, sid) {
     const mod = G.modello(modId), s = st.stazioni[sid];
     if (!s || s.tipo !== TIPO_STAZ[mod.tipo]) return 'Stazione non adatta a questo mezzo';
@@ -64,7 +86,8 @@
       stato: 'sosta', timer: TM.sostaMinuti[mod.tipo] * MINUTO, attesa: 0, motivo: '',
       caselle: null, punti: null, lun: null, lunTot: 0, pos: 0, seg: 0,
       x: c.x, y: c.y, ang: 0, tile: t0,
-      carico: [], qta: 0, profittoAnno: 0, profittoScorso: 0, eta: 0, prezzo, guasti: 0, fermoManuale: false
+      carico: [], qta: 0, profittoAnno: 0, profittoScorso: 0, eta: 0, prezzo, guasti: 0, fermoManuale: false,
+      ricaviAnno: 0, costiAnno: 0, ricaviScorso: 0, costiScorso: 0, profittoTot: 0
     };
     if (mod.tipo === 'treno') { // circolazione: caselle prenotate e distanza percorsa
       Object.assign(v, { pr: [], odo: 0, odo0: 0, limite: 0, bloccatoDa: 0, attesaSegnale: 0, stallo: false, ricalcolo: -1 });
@@ -271,7 +294,7 @@
       incasso = Math.round(incasso);
       if (incasso > 0) {
         G.incassa(st, incasso, v.merce);
-        v.profittoAnno += incasso;
+        G.contoVeicolo(v, incasso, 0);
         st.effetti.push({ x: c.x, y: c.y, testo: '+' + G.lire(incasso), t: 0 });
       }
     }
@@ -371,6 +394,7 @@
   G.riprendiVeicoli = function (st) {
     G.ricostruisciPrenotazioni(st);
     for (const v of st.veicoli) {
+      completaConti(st, v);
       if (v.stato === 'viaggio' || v.stato === 'guasto') {
         if (v.tipo !== 'aereo') { v.x = (v.tile % st.mondo.W) + 0.5; v.y = ((v.tile / st.mondo.W) | 0) + 0.5; }
         pianifica(st, v);
