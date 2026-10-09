@@ -923,6 +923,11 @@
       G.avviso(si ? '🧊 Vista 3D: O per girarla, D per tornare alla vista dall’alto' : '🗺️ Vista dall’alto (2D)');
       aggiornaPulsanteVista();
     },
+    rilievo: d => {
+      G.impostaRilievo(+d.n);
+      if (!G.disegno.iso) G.vista3d(true);
+      aggiornaPulsanteVista();
+    },
     ruota: d => {
       if (!G.disegno.iso) G.vista3d(true);
       G.ruotaVista(+d.dir || 1);
@@ -1215,7 +1220,9 @@
       `<button data-az="vista3d" data-si="0" class="${iso ? '' : 'attivo'}"><span class="ic">🗺️</span>Dall'alto (2D)</button>` +
       `<button data-az="vista3d" data-si="1" class="${iso ? 'attivo' : ''}"><span class="ic">🧊</span>3D assonometrica</button>` +
       '<button data-az="ruota" data-dir="-1" title="Gira a sinistra (Maiusc+O)"><span class="ic">⟲</span>Gira</button>' +
-      '<button data-az="ruota" data-dir="1" title="Gira a destra (O)"><span class="ic">⟳</span>Gira</button></div>';
+      '<button data-az="ruota" data-dir="1" title="Gira a destra (O)"><span class="ic">⟳</span>Gira</button></div>' +
+      '<div class="titolo">Montagne nella vista 3D</div><div class="viste">' +
+      G.RILIEVI.map((r, n) => `<button data-az="rilievo" data-n="${n}" class="${G.disegno.rilievo === n ? 'attivo' : ''}"><span class="ic">⛰️</span>${r.nome}</button>`).join('') + '</div>';
     h += '<div class="titolo">Viste pronte</div><div class="viste">';
     for (const v of VISTE) h += `<button data-az="vista" data-v="${v.id}" class="${att === v.id ? 'attivo' : ''}"><span class="ic">${v.icona}</span>${v.nome}</button>`;
     h += '</div><div class="titolo">Cosa mostrare</div>';
