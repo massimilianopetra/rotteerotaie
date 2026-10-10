@@ -780,4 +780,6 @@ window.LINGUE.en = {
   "Fondi insufficienti per un vagone nuovo": "Not enough money for a new wagon",
   "Il carico non ci sta: il vagone si stacca alla prossima fermata, dopo lo scarico": "The load doesn't fit: the wagon will be uncoupled at the next stop, after unloading",
   "Nessun vagone di questo tipo nel deposito": "No wagon of this type in the depot",
+  "<div class=\"sotto\"><span class=\"link\" data-az=\"finestra\" data-f=\"veicoli\">🏚️ Deposito dei vagoni</span> · {0} adatti a questo treno</div>": "<div class=\"sotto\"><span class=\"link\" data-az=\"finestra\" data-f=\"veicoli\">🏚️ Wagon depot</span> · {0} suitable for this train</div>",
+  "<h4>🏚️ Deposito dei vagoni</h4><p class=\"sotto\">Vuoto. Ci finiscono i vagoni che togli a un treno (pulsante − nel suo pannello) e quelli che tieni vendendo solo la locomotiva.</p>": "<h4>🏚️ Wagon depot</h4><p class=\"sotto\">Empty. Wagons you remove from a train (− button in its panel) and those you keep when selling only the locomotive end up here.</p>",
 };

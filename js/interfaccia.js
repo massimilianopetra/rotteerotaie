@@ -327,7 +327,8 @@
     else if (voluti >= mod.vagoni) nota = _('al completo per questa locomotiva');
     else nota = inDep ? _`il prossimo arriva dal deposito (ce ne sono ${inDep})` : _`un vagone nuovo costa ${G.lire(C.vagone.costo)}`;
     return `<div class="composizione">${G.treni.htmlMiniatura(v.modello, v.merce, v.vagoni, ts)}</div>` +
-      _`<div class="vagoni"><span>Vagoni</span><button class="mini" data-az="vagoni" data-d="-1" title="Togli un vagone: va nel deposito">−</button><b>${v.vagoni}</b><button class="mini" data-az="vagoni" data-d="1" title="Aggiungi un vagone: dal deposito se c'è, altrimenti nuovo">+</button><span class="sotto">al massimo ${mod.vagoni} · ${nota}</span></div>`;
+      _`<div class="vagoni"><span>Vagoni</span><button class="mini" data-az="vagoni" data-d="-1" title="Togli un vagone: va nel deposito">−</button><b>${v.vagoni}</b><button class="mini" data-az="vagoni" data-d="1" title="Aggiungi un vagone: dal deposito se c'è, altrimenti nuovo">+</button><span class="sotto">al massimo ${mod.vagoni} · ${nota}</span></div>` +
+      _`<div class="sotto"><span class="link" data-az="finestra" data-f="veicoli">🏚️ Deposito dei vagoni</span> · ${inDep} adatti a questo treno</div>`;
   }
 
   function htmlVeicolo(s0, v) {
@@ -520,7 +521,7 @@
   // il deposito dei vagoni tolti ai treni: si rimontano gratis su altri treni della stessa famiglia, o si vendono
   function htmlDeposito(s0) {
     const dep = s0.depositoVagoni || {}, fam = Object.keys(G.FAMIGLIE_VAGONI).filter(k => dep[k] > 0);
-    if (!fam.length) return '';
+    if (!fam.length) return _('<h4>🏚️ Deposito dei vagoni</h4><p class="sotto">Vuoto. Ci finiscono i vagoni che togli a un treno (pulsante − nel suo pannello) e quelli che tieni vendendo solo la locomotiva.</p>');
     let h = _('<h4>🏚️ Deposito dei vagoni</h4><div class="deposito">');
     for (const k of fam) {
       const [nome, merce] = G.FAMIGLIE_VAGONI[k];
@@ -533,7 +534,7 @@
   function finestraVeicoli() {
     const s0 = st();
     let h = '';
-    if (!s0.veicoli.length) h = _('<p>Non hai ancora mezzi. Costruisci due stazioni collegate, poi clicca su una stazione e premi «Compra».</p>');
+    if (!s0.veicoli.length) h = _('<p>Non hai ancora mezzi. Costruisci due stazioni collegate, poi clicca su una stazione e premi «Compra».</p>') + htmlDeposito(s0);
     else {
       const a = s0.conti.anno;
       h = htmlDeposito(s0) + _`<table class="elenco"><tr><th>Mezzo</th><th>Merce</th><th>Stato</th><th class="num">Ricavi ${a}</th><th class="num">Costi ${a}</th><th class="num">Profitto ${a}</th><th class="num">Profitto anno scorso</th><th class="num">Età</th></tr>`;
