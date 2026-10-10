@@ -410,7 +410,7 @@
     const corpo = document.querySelector('#finestra .corpo'), giaAperta = G.ui.finestra === TITOLO, sc = corpo.scrollTop;
     let h = '<div class="schede">' + Object.keys(SCHEDE).map(k => `<button class="${k === scheda ? 'attivo' : ''}" data-az="schedaGestione" data-s="${k}">${SCHEDE[k][0]}</button>`).join('') + '</div>';
     h += '<div class="gestione">' + SCHEDE[scheda][1](st) + '</div>';
-    G.ui.apriFinestra(TITOLO, h, true);
+    G.ui.apriFinestra(TITOLO, h, true, () => G.apriGestione());
     if (giaAperta) corpo.scrollTop = sc; // aggiornata da sola: si resta dove si stava leggendo
     mesiVisti = st.conti.mesi.length;
   };

@@ -415,6 +415,7 @@
     ui.pannello = null; ui.selVeicolo = null; ui.percorso = false; ui.segui = false;
     $('#pannello').classList.add('nascosto');
   }
+  let pannelloVisto = '';
   function disegnaPannello() {
     const s0 = st(), p = ui.pannello, el = $('#pannello');
     if (!p || !s0) { el.classList.add('nascosto'); return; }
@@ -425,23 +426,47 @@
     else if (p.tipo === 'veicolo') { const v = s0.veicoli.find(k => k.id === p.id); if (v) h = htmlVeicolo(s0, v); }
     else if (p.tipo === 'casella') h = htmlCasella(s0, p.id);
     if (!h) { chiudiPannello(); return; }
-    el.innerHTML = '<button class="chiudi" data-az="chiudiPannello" title="Chiudi (Esc)">✕</button>' + h;
+    h = '<button class="chiudi" data-az="chiudiPannello" title="Chiudi (Esc)">✕</button>' + h;
+    if (h !== pannelloVisto) { const sc = el.scrollTop; el.innerHTML = h; el.scrollTop = sc; pannelloVisto = h; }
     el.classList.remove('nascosto');
   }
 
   // ---------------------------------------------------------------- finestre
-  function apriFinestra(titolo, corpo, larga) {
+  // rifai: funzione che ridisegna la finestra con i numeri del momento (aggiornamento in diretta), o niente
+  let corpoVisto = '', inDiretta = false;
+  function apriFinestra(titolo, corpo, larga, rifai) {
     $('#finestra .testa span').textContent = titolo;
-    $('#finestra .corpo').innerHTML = corpo;
+    const el = $('#finestra .corpo');
+    if (!inDiretta || ui.finestra !== titolo || corpo !== corpoVisto) { const sc = el.scrollTop; el.innerHTML = corpo; if (inDiretta) el.scrollTop = sc; }
+    corpoVisto = corpo;
     $('#finestra .riquadro').classList.toggle('larga', !!larga);
     $('#finestra').classList.remove('nascosto');
     ui.finestra = titolo;
+    ui.rifaiFinestra = rifai || null;
   }
   function chiudiFinestra() {
     if (!st()) return; // senza partita la finestra di avvio resta
     $('#finestra').classList.add('nascosto');
-    ui.finestra = null;
+    ui.finestra = null; ui.rifaiFinestra = null;
   }
+
+  // ---------------------------------------------------------------- aggiornamento in diretta
+  // ogni secondo si rifanno la finestra aperta (se lo prevede: gestione, mezzi) e il pannello a destra, così i
+  // guadagni dei treni salgono sotto gli occhi. Si salta se il gioco è fermo, se si sta scrivendo in un campo,
+  // se il tasto del mouse è giù (il clic andrebbe perso) o se il mouse è su un grafico (sparirebbe il suggerimento);
+  // la pagina cambia solo se il testo è diverso. ui.tempoDiretta = durata dell'ultimo aggiornamento (ms).
+  ui.tempoDiretta = 0;
+  let premuto = false;
+  document.addEventListener('pointerdown', () => { premuto = true; }, true);
+  document.addEventListener('pointerup', () => { premuto = false; }, true);
+  setInterval(() => {
+    if (!st() || !C.velocita[ui.velocita] || premuto) return;
+    const att = document.activeElement, scrive = att && /^(INPUT|SELECT|TEXTAREA)$/.test(att.tagName);
+    const t0 = performance.now();
+    if (ui.finestra && ui.rifaiFinestra && !(scrive && $('#finestra').contains(att)) && !$('#finestra').classList.contains('nascosto') && !document.querySelector('#finestra svg:hover')) { inDiretta = true; try { ui.rifaiFinestra(); } finally { inDiretta = false; } }
+    if (ui.pannello && !(scrive && $('#pannello').contains(att))) disegnaPannello();
+    ui.tempoDiretta = performance.now() - t0;
+  }, 1000);
 
   function finestraAcquisto(sid) {
     const s0 = st(), s = s0.stazioni[sid];
@@ -488,7 +513,7 @@
       }
       h += '</table><div class="nota">Profitto = ricavi (le consegne) − costi (l\'esercizio del mezzo). Il prezzo d\'acquisto è un investimento e non entra nel profitto.</div>';
     }
-    apriFinestra(`Mezzi (${s0.veicoli.length})`, h, true);
+    apriFinestra(`Mezzi (${s0.veicoli.length})`, h, true, finestraVeicoli);
   }
 
   // Colonne delle tabelle del mondo: ogni colonna si ordina con un clic sull'intestazione (un altro clic inverte).
@@ -568,7 +593,7 @@
   }
 
   // il quadro di gestione sta in gestione.js e la banca in banca.js: usano questa per aprire la finestra
-  ui.apriFinestra = (titolo, corpo, larga) => apriFinestra(titolo, corpo, larga);
+  ui.apriFinestra = (titolo, corpo, larga, rifai) => apriFinestra(titolo, corpo, larga, rifai);
 
   // l'aiuto a schede: come si gioca, quanto costa costruire, come leggere i conti, comandi
   const SCHEDE_AIUTO = { gioco: '🚂 Come si gioca', costi: '🏗️ Costi', soldi: '💰 Soldi e profitti', comandi: '⌨️ Comandi' };
