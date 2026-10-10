@@ -71,7 +71,17 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
   hanno bisogno di reti: navigano sull'acqua girando attorno a coste e isole (rotta calcolata casella per casella).
   Traghetti per passeggeri e posta (piroscafo a ruote, piroscafo postale, traghetto, aliscafo), navi da carico per
   le merci (brigantino, piroscafo a elica, motonave, portacontainer): lente ma capienti. Porti su acque diverse non
-  si collegano.
+  si collegano. Il porto si può costruire anche sulle vie del paese, sulla costa.
+- **Trasbordo treno ↔ nave**: se un binario passa sopra il porto, anche i treni ci si fermano e la merce passa da un
+  mezzo all'altro. Esempio: miniera —treno→ porto —nave→ porto —treno→ acciaieria oltre il mare, con tre mezzi che
+  portano la stessa merce, ognuno pagato per il suo pezzo. Il passaggio è automatico quando il porto non accetta la
+  merce e lì la ritira un mezzo di un altro tipo; la casella «⇄ trasbordo» di una fermata lo forza (per esempio
+  per i passeggeri che proseguono in traghetto).
+- **Vagoni e deposito**: nel pannello di un treno i pulsanti − e + tolgono e aggiungono vagoni (in stazione subito,
+  altrimenti alla prossima fermata). I vagoni tolti vanno nel deposito, in cima alla finestra Mezzi, e si rimontano
+  gratis su altri treni o all'acquisto di un treno nuovo; «Vendi solo la locomotiva» tiene i vagoni.
+- **Progettazione** (menu della ferrovia e dell'autostrada): si disegna una linea punto per punto senza costruire,
+  con il profilo altimetrico, gallerie, viadotti, pendenza e costo; poi «Costruisci tutto».
 - **Tempo realistico**: a velocità normale un secondo vero è 5 minuti di gioco e i mezzi viaggiano alla
   loro velocità vera (una casella è un chilometro): un treno a vapore fa 40 km in poco più di un'ora.
   Per far passare in fretta mesi e anni c'è l'avanti veloce: 1 ora, 1 giorno o 1 settimana al secondo.
@@ -110,7 +120,7 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
 |---|---|
 | Spostare la mappa | trascinare col tasto destro (o sinistro con 🔍), frecce |
 | Zoom | rotellina, tasti `+` e `−` |
-| Strumenti | `I` info · `B` ferrovia (menu: normale o galleria) · `R` strada · `U` autostrada (menu: normale o galleria) · `T` stazione (apre il menu delle dimensioni) · `F` autostazione · `A` aeroporto · `P` porto · `X` demolisci |
+| Strumenti | `I` info · `B` ferrovia (menu: normale, galleria o progettazione) · `R` strada · `U` autostrada (menu: normale, galleria o progettazione) · `T` stazione (apre il menu delle dimensioni) · `F` autostazione · `A` aeroporto · `P` porto · `X` demolisci |
 | Finestre | `V` mezzi · `M` mondo · `E` quadro di gestione · `K` banca · `H` aiuto |
 | Mappa | `L` livelli della mappa (pulsante 🗺️ Mappa) · `C` vie dei paesi · `G` griglia |
 | Vista 3D | `D` vista 3D assonometrica / vista dall'alto · `O` gira la vista 3D di 90° (`Maiusc+O` al contrario) |

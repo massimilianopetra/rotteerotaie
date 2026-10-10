@@ -774,6 +774,8 @@
       <p>Con tre o più fermate scegli cosa fa il mezzo dopo l'ultima: <b>🔁 giro</b> (torna dritto alla prima: Milano → Vercelli →
       Torino → Milano, passando da Vercelli senza fermarsi) oppure <b>↔ andata e ritorno</b> (Milano → Vercelli → Torino → Vercelli →
       Milano). Sulla mappa il percorso del mezzo selezionato segue i binari; il tratto pieno è il viaggio in corso.</p>
+      <h4>🚃 Vagoni e deposito</h4>
+      <p>Nel pannello di un treno i pulsanti <b>−</b> e <b>+</b> tolgono e aggiungono vagoni, da 1 al massimo della locomotiva. Se il treno è in stazione cambia subito, altrimenti alla prossima fermata (un vagone carico si stacca solo dopo lo scarico). I vagoni tolti vanno nel <b>deposito dei vagoni</b>, in cima alla finestra 🚂 Mezzi (tasto V), divisi per tipo: carrozze, vagoni postali, carri aperti (carbone e ferro), pianali (legname e acciaio), cisterne (petrolio e carburante), tramogge, frigo, carri coperti. Con il + si prende prima un vagone del deposito, <b>gratis</b>, e solo se manca se ne compra uno nuovo; anche comprando un treno nuovo si usano prima quelli del deposito. Dal deposito un vagone si può vendere a metà prezzo. «Vendi solo la locomotiva» manda tutti i vagoni nel deposito: così si cambia locomotiva tenendo i vagoni.</p>
       <h4>⛰️ Montagne: gallerie e viadotti</h4>
       <p>Il pulsante della ferrovia (tasto B) apre un menu con tre voci; quello dell'autostrada (tasto U) uguale, con il limite del ${C.opere.pendenzaMax.autostrada}‰:</p>
       <ul><li><b>🛤️ Ferrovia normale</b>: segue il terreno e non sale né scende più del ${C.opere.pendenzaMax.binario}‰
@@ -802,7 +804,13 @@
       navigano sull'acqua e girano da sole attorno a coste e isole, quindi due porti bastano per una linea. I <b>traghetti</b>
       portano passeggeri e posta, le <b>navi da carico</b> tutte le altre merci. Sono lente ma molto capienti, e si pagano come
       gli altri mezzi: in base alla distanza in linea d'aria fra i due porti. Due porti su acque diverse (un lago e il mare) non si collegano.</p>
-      <p><b>Treni e navi insieme</b>: se un binario passa sopra il porto, anche i treni ci si fermano. La merce che il treno porta al porto e che lì non serve resta in porto e la carica la nave (e al contrario, dalla nave al treno): per esempio il carbone va in treno dalla miniera al porto e poi in nave fino all'acciaieria. Ogni mezzo è pagato per il suo pezzo di viaggio. Con la casella <b>⇄ trasbordo</b> di una fermata il mezzo lascia lì tutto il carico anche quando la merce sarebbe accettata (per esempio i passeggeri che proseguono in traghetto). Il porto si può costruire anche sulle vie del paese, sulla costa.</p>
+      <h4>⇄ Trasbordo: treni e navi insieme</h4>
+      <p>Se un <b>binario passa sopra il porto</b> (il pannello del porto dice «🛤️ Collegato alla ferrovia»), anche i treni ci si fermano. Il treno non sale sulla nave: passa di mano la <b>merce</b>. Per portare il carbone da una miniera a un'acciaieria oltre il mare servono tre mezzi, tutti con la stessa merce:</p>
+      <p class="sotto">Miniera —🚂 treno A→ porto P —🚢 nave→ porto Q —🚂 treno B→ stazione dell'acciaieria</p>
+      <ul><li>il treno A va dalla miniera al porto P, la nave da P a Q, il treno B (comprato in una stazione: i treni si comprano solo lì) da Q alla stazione dell'acciaieria;</li>
+      <li>in P il treno lascia il carbone, la nave lo carica e lo lascia in Q, dove lo prende il treno B, che lo consegna. Ognuno è pagato per il suo pezzo di viaggio;</li>
+      <li>nel pannello del porto vedi la merce «⇄ in attesa di trasbordo»; nel percorso del mezzo la fermata dove la merce passa di mano ha il segno ⇄.</li></ul>
+      <p>Tre regole: 1) la merce passa solo fra mezzi di <b>tipo diverso</b> (treno ↔ nave), così non torna indietro col mezzo che l'ha portata; 2) il passaggio è automatico solo se quel porto <b>non accetta</b> la merce: per passeggeri e posta (accettati quasi ovunque) metti la spunta <b>⇄ trasbordo</b> sulla fermata del porto, nel percorso del treno e in quello della nave; 3) la stazione finale deve <b>accettare</b> la merce. Il porto si può costruire anche sulle vie del paese, sulla costa.</p>
       <h4>Le catene delle merci</h4>
       <p>⛏️ Carbone + ⛰️ Ferro → 🏭 Acciaieria → Acciaio · Acciaio + 🌲 Legname → 🏗️ Fabbrica → Merci → città<br>
       🌾 Grano → 🍝 Pastificio → Cibo → città · 🛢️ Petrolio → ⚗️ Raffineria → Carburante → città · ⚡ La centrale compra il carbone.</p>
