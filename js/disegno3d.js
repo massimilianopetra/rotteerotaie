@@ -890,6 +890,22 @@
       ctx.stroke();
     }
     if (a && a.blocchi) for (const i of a.blocchi) poligonoCaselle(V, i % m.W, (i / m.W) | 0, 1, 1, 'rgba(240,70,60,0.35)', 'rgba(255,90,70,0.95)');
+    // progettazione: i tratti alla quota del loro profilo (verde, viola in galleria, rosso se impossibili) e i punti
+    if (G.progetto && G.progetto.attivo()) {
+      for (const { t, prova } of G.progetto.trattiDaDisegnare()) {
+        ctx.globalAlpha = prova ? 0.55 : 1;
+        if (t.caselle) {
+          const pq = t.profilo && t.profilo.quote, ok = pq && pq.length === t.caselle.length;
+          ctx.strokeStyle = t.impossibile ? 'rgba(255,80,70,0.9)' : t.galleria ? 'rgba(180,140,255,0.95)' : 'rgba(90,255,140,0.9)';
+          ctx.lineWidth = Math.max(3, ts * 0.26); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+          lineaCaselle(V, t.caselle, (i, k) => (ok ? pq[k] * I.fz : I.Z[i]) + 0.04);
+          ctx.stroke();
+        }
+        if (t.blocchi) for (const i of t.blocchi) poligonoCaselle(V, i % m.W, (i / m.W) | 0, 1, 1, 'rgba(240,70,60,0.35)', 'rgba(255,90,70,0.95)');
+      }
+      ctx.globalAlpha = 1;
+      for (const i of G.progetto.dati().punti) poligonoCaselle(V, i % m.W, (i / m.W) | 0, 1, 1, 'rgba(255,213,79,0.6)', '#ffd54f');
+    }
     if (ui.cursore >= 0 && ui.strumento !== 'info' && !ui.bacino) {
       poligonoCaselle(V, ui.cursore % m.W, (ui.cursore / m.W) | 0, 1, 1, null, 'rgba(255,255,255,0.85)');
     }
