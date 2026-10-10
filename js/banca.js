@@ -5,10 +5,10 @@
 (function () {
   'use strict';
   const G = window.GIOCO, C = window.CATALOGO, B = C.banca;
-  const TITOLO = 'Banca';
+  const TITOLO = _('Banca');
   const tondo = x => Math.round(x * 20) / 20; // i tassi vanno a passi di 0,05 punti
 
-  G.percento = x => x.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+  G.percento = x => x.toLocaleString(G.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
 
   // tasso "storico" di un anno (con i decimali per i mesi), interpolato fra i punti della curva
   G.tassoStorico = function (anno) {
@@ -49,15 +49,15 @@
     const debito = st.prestito + (debitoInPiu || 0), valore = G.valoreAzienda(st);
     const leva = debito <= 0 ? 0 : valore <= 0 ? 1 : debito / (debito + valore);
     let spread = B.spreadBase + B.spreadDebito * leva;
-    const motivi = [`base ${G.percento(B.spreadBase)}`];
-    if (leva > 0) motivi.push(`debito ${Math.round(leva * 100)}% di quanto possiedi: +${G.percento(B.spreadDebito * leva)}`);
-    if (st.mesiInRosso > 0) { spread += B.spreadRosso; motivi.push(`cassa in rosso: +${G.percento(B.spreadRosso)}`); }
-    if ((st.conti.mesi || []).length >= 3 && profitto12(st) < 0) { spread += B.spreadPerdita; motivi.push(`in perdita nell'ultimo anno: +${G.percento(B.spreadPerdita)}`); }
+    const motivi = [_`base ${G.percento(B.spreadBase)}`];
+    if (leva > 0) motivi.push(_`debito ${Math.round(leva * 100)}% di quanto possiedi: +${G.percento(B.spreadDebito * leva)}`);
+    if (st.mesiInRosso > 0) { spread += B.spreadRosso; motivi.push(_`cassa in rosso: +${G.percento(B.spreadRosso)}`); }
+    if ((st.conti.mesi || []).length >= 3 && profitto12(st) < 0) { spread += B.spreadPerdita; motivi.push(_`in perdita nell'ultimo anno: +${G.percento(B.spreadPerdita)}`); }
     spread = tondo(spread);
     const rating = spread <= 1.75 ? 'AAA' : spread <= 2.5 ? 'A' : spread <= 3.5 ? 'B' : spread <= 5 ? 'C' : 'D';
     return { spread, rating, leva, motivi };
   };
-  const GIUDIZI = { AAA: 'ottimo', A: 'buono', B: 'discreto', C: 'rischioso', D: 'molto rischioso' };
+  const GIUDIZI = { AAA: _('ottimo'), A: _('buono'), B: _('discreto'), C: _('rischioso'), D: _('molto rischioso') };
 
   G.tassoVariabile = (st, debitoInPiu) => tondo(G.tassoRiferimento(st) + G.rischio(st, debitoInPiu).spread);
   // il fisso guarda avanti: metà il tasso di oggi, metà la media dei prossimi anni della curva, più un premio
@@ -82,8 +82,8 @@
   G.chiediPrestito = function (st, importo, tipo) {
     const b = G.statoBanca(st);
     importo = Math.round(importo / B.passo) * B.passo;
-    if (importo <= 0) return 'Scegli quanto chiedere';
-    if (importo > G.fidoDisponibile(st)) return `La banca ti presta al massimo ${G.lire(G.fidoDisponibile(st))}`;
+    if (importo <= 0) return _('Scegli quanto chiedere');
+    if (importo > G.fidoDisponibile(st)) return _`La banca ti presta al massimo ${G.lire(G.fidoDisponibile(st))}`;
     // il tasso tiene conto anche del debito nuovo
     if (tipo === 'fisso') b.prestiti.push({ id: b.prossimoId++, tipo, importo, tasso: G.tassoFisso(st, importo), dal: st.giornoInt });
     else {
@@ -99,10 +99,10 @@
   G.penale = (p, importo) => (p.tipo === 'fisso' ? Math.round(importo * B.penaleFisso) : 0);
   G.restituisciPrestito = function (st, id, importo) {
     const b = G.statoBanca(st), p = b.prestiti.find(x => x.id === id);
-    if (!p) return 'Prestito non trovato';
+    if (!p) return _('Prestito non trovato');
     importo = Math.min(p.importo, importo || p.importo);
     const penale = G.penale(p, importo);
-    if (st.soldi < importo + penale) return 'Fondi insufficienti';
+    if (st.soldi < importo + penale) return _('Fondi insufficienti');
     st.soldi -= importo;
     if (penale) G.spendi(st, penale, 'penali');
     p.importo -= importo;
@@ -127,8 +127,8 @@
     // notizia quando il tasso si è mosso di almeno un punto dall'ultima volta
     if (Math.abs(b.tasso - b.avvisato) >= 1) {
       const su = b.tasso > b.avvisato;
-      G.notizia(st, `🏦 La banca ${su ? 'alza' : 'abbassa'} il tasso di riferimento al ${G.percento(b.tasso)}` +
-        (b.prestiti.some(p => p.tipo === 'variabile') ? `: i tuoi prestiti a tasso variabile ${su ? 'costano di più' : 'costano meno'}.` : '.'));
+      G.notizia(st, _`🏦 La banca ${su ? _('alza') : _('abbassa')} il tasso di riferimento al ${G.percento(b.tasso)}` +
+        (b.prestiti.some(p => p.tipo === 'variabile') ? _`: i tuoi prestiti a tasso variabile ${su ? _('costano di più') : _('costano meno')}.` : '.'));
       b.avvisato = b.tasso;
     }
   };
@@ -137,10 +137,10 @@
   function consiglio(st) {
     const b = st.banca, s = b.storia, prima = s.length > 12 ? s[s.length - 13].r : s[0].r, ora = b.tasso;
     const fisso = G.tassoFisso(st), varia = G.tassoVariabile(st);
-    if (ora - prima >= 0.75) return `I tassi stanno <b>salendo</b> (${G.percento(prima)} un anno fa): un prestito a tasso fisso ti protegge dagli aumenti.`;
-    if (prima - ora >= 0.75) return `I tassi stanno <b>scendendo</b> (${G.percento(prima)} un anno fa): il variabile segue il calo; se hai un fisso caro, valuta di estinguerlo.`;
-    if (fisso - varia <= 0.6) return 'Oggi il fisso costa poco più del variabile: bloccare il tasso è un buon affare.';
-    return `Tassi stabili: il variabile costa meno (${G.percento(varia)} contro ${G.percento(fisso)}), ma può cambiare ogni mese.`;
+    if (ora - prima >= 0.75) return _`I tassi stanno <b>salendo</b> (${G.percento(prima)} un anno fa): un prestito a tasso fisso ti protegge dagli aumenti.`;
+    if (prima - ora >= 0.75) return _`I tassi stanno <b>scendendo</b> (${G.percento(prima)} un anno fa): il variabile segue il calo; se hai un fisso caro, valuta di estinguerlo.`;
+    if (fisso - varia <= 0.6) return _('Oggi il fisso costa poco più del variabile: bloccare il tasso è un buon affare.');
+    return _`Tassi stabili: il variabile costa meno (${G.percento(varia)} contro ${G.percento(fisso)}), ma può cambiare ogni mese.`;
   }
 
   let ultimoImporto = B.passo * 2, ultimoTipo = 'variabile', meseVisto = -1;
@@ -150,27 +150,27 @@
     const b = G.statoBanca(st), ris = G.rischio(st), varia = G.tassoVariabile(st), fisso = G.tassoFisso(st);
     const disp = G.fidoDisponibile(st), kpi = G.kpiG, s = b.storia, anno = s.length > 12 ? s[s.length - 13] : null;
     const corpo = document.querySelector('#finestra .corpo'), giaAperta = G.ui.finestra === TITOLO, sc = corpo.scrollTop;
-    let h = `<p class="sotto">La banca ti presta soldi subito; tu paghi ogni mese gli <b>interessi</b> (sono un costo e abbassano il profitto)
+    let h = _`<p class="sotto">La banca ti presta soldi subito; tu paghi ogni mese gli <b>interessi</b> (sono un costo e abbassano il profitto)
       e restituisci il prestito quando vuoi. Il tasso cambia ogni mese con il mercato e con il tuo rischio.</p><div class="kpis">`;
-    h += kpi('📉 Tasso di riferimento', G.percento(b.tasso), anno ? `un anno fa ${G.percento(anno.r)}` : 'cambia ogni mese');
-    h += kpi('🔄 Variabile per te', G.percento(varia), `riferimento + spread ${G.percento(ris.spread)}`);
-    h += kpi('🔒 Fisso per te', G.percento(fisso), `bloccato per sempre · penale ${Math.round(B.penaleFisso * 100)}% se restituisci`);
-    h += kpi('⭐ Rating', ris.rating, `${GIUDIZI[ris.rating]} · ${ris.motivi.slice(1).join(' · ') || 'nessun debito, conti in ordine'}`, ['AAA', 'A', 'B'].includes(ris.rating) ? 'verde' : 'rosso');
-    h += kpi('🏦 Debito', G.lire(st.prestito), b.prestiti.length ? `${b.prestiti.length} ${b.prestiti.length === 1 ? 'prestito' : 'prestiti'}` : 'nessun prestito');
-    h += kpi('💸 Interessi al mese', G.lire(G.interessiMese(st)), st.prestito ? `${G.lire(G.interessiMese(st) * 12)} l'anno` : '—');
-    h += kpi('💳 Fido disponibile', G.lire(disp), `su ${G.lireBreve(G.fido(st))}: cresce con il valore dell'azienda`);
+    h += kpi(_('📉 Tasso di riferimento'), G.percento(b.tasso), anno ? _`un anno fa ${G.percento(anno.r)}` : _('cambia ogni mese'));
+    h += kpi(_('🔄 Variabile per te'), G.percento(varia), _`riferimento + spread ${G.percento(ris.spread)}`);
+    h += kpi(_('🔒 Fisso per te'), G.percento(fisso), _`bloccato per sempre · penale ${Math.round(B.penaleFisso * 100)}% se restituisci`);
+    h += kpi(_('⭐ Rating'), ris.rating, `${GIUDIZI[ris.rating]} · ${ris.motivi.slice(1).join(' · ') || _('nessun debito, conti in ordine')}`, ['AAA', 'A', 'B'].includes(ris.rating) ? 'verde' : 'rosso');
+    h += kpi(_('🏦 Debito'), G.lire(st.prestito), b.prestiti.length ? `${b.prestiti.length} ${b.prestiti.length === 1 ? _('prestito') : _('prestiti')}` : _('nessun prestito'));
+    h += kpi(_('💸 Interessi al mese'), G.lire(G.interessiMese(st)), st.prestito ? _`${G.lire(G.interessiMese(st) * 12)} l'anno` : '—');
+    h += kpi(_('💳 Fido disponibile'), G.lire(disp), _`su ${G.lireBreve(G.fido(st))}: cresce con il valore dell'azienda`);
     h += '</div>';
     h += `<div class="consiglioBanca">💡 ${consiglio(st)}</div>`;
 
     // nuovo prestito
-    h += '<h4>Chiedi un prestito</h4>';
-    if (disp < B.passo) h += '<p class="rosso">Hai usato tutto il fido: restituisci qualcosa o fai crescere il valore dell\'azienda.</p>';
+    h += _('<h4>Chiedi un prestito</h4>');
+    if (disp < B.passo) h += _('<p class="rosso">Hai usato tutto il fido: restituisci qualcosa o fai crescere il valore dell\'azienda.</p>');
     else {
       const scelte = [];
       for (const x of [50000, 100000, 200000, 300000, 500000, 1e6, 2e6, 5e6, 1e7]) if (x <= disp) scelte.push(x);
       if (!scelte.includes(Math.floor(disp / B.passo) * B.passo)) scelte.push(Math.floor(disp / B.passo) * B.passo);
       if (!scelte.includes(ultimoImporto)) ultimoImporto = scelte[Math.min(1, scelte.length - 1)];
-      h += `<div class="riga"><label>Quanto<select id="bancaImporto">${scelte.map(x => `<option value="${x}" ${x === ultimoImporto ? 'selected' : ''}>${G.lire(x)}${x === scelte[scelte.length - 1] && x > 1e5 ? ' (tutto il fido)' : ''}</option>`).join('')}</select></label>
+      h += _`<div class="riga"><label>Quanto<select id="bancaImporto">${scelte.map(x => `<option value="${x}" ${x === ultimoImporto ? 'selected' : ''}>${G.lire(x)}${x === scelte[scelte.length - 1] && x > 1e5 ? _(' (tutto il fido)') : ''}</option>`).join('')}</select></label>
         <label>Tasso<select id="bancaTipo">
           <option value="variabile" ${ultimoTipo === 'variabile' ? 'selected' : ''}>🔄 Variabile: ${G.percento(varia)} oggi, cambia ogni mese</option>
           <option value="fisso" ${ultimoTipo === 'fisso' ? 'selected' : ''}>🔒 Fisso: ${G.percento(fisso)} per sempre</option></select></label></div>
@@ -180,13 +180,13 @@
 
     // prestiti in corso
     if (b.prestiti.length) {
-      h += '<h4>I tuoi prestiti</h4><table class="elenco"><tr><th>Tipo</th><th class="num">Debito</th><th class="num">Tasso</th><th class="num">Interessi al mese</th><th>Dal</th><th></th></tr>';
+      h += _('<h4>I tuoi prestiti</h4><table class="elenco"><tr><th>Tipo</th><th class="num">Debito</th><th class="num">Tasso</th><th class="num">Interessi al mese</th><th>Dal</th><th></th></tr>');
       for (const p of b.prestiti) {
         const t = tassoDi(st, p), parte = Math.min(p.importo, B.passo);
-        h += `<tr><td>${p.tipo === 'fisso' ? '🔒 Fisso' : '🔄 Variabile'}</td><td class="num">${G.lire(p.importo)}</td><td class="num">${G.percento(t)}</td>
+        h += `<tr><td>${p.tipo === 'fisso' ? _('🔒 Fisso') : _('🔄 Variabile')}</td><td class="num">${G.lire(p.importo)}</td><td class="num">${G.percento(t)}</td>
           <td class="num">${G.lire(p.importo * t / 100 / 12)}</td><td>${G.testoData(st, p.dal)}</td>
-          <td class="azioniBanca"><button data-az="restituisci" data-id="${p.id}" data-q="${parte}" title="${G.penale(p, parte) ? `penale ${G.lire(G.penale(p, parte))}` : 'senza penale'}">↩ ${G.lireBreve(parte)}</button>
-          ${p.importo > parte ? `<button data-az="restituisci" data-id="${p.id}" data-q="${p.importo}" title="${G.penale(p, p.importo) ? `penale ${G.lire(G.penale(p, p.importo))}` : 'senza penale'}">Estingui tutto</button>` : ''}</td></tr>`;
+          <td class="azioniBanca"><button data-az="restituisci" data-id="${p.id}" data-q="${parte}" title="${G.penale(p, parte) ? _`penale ${G.lire(G.penale(p, parte))}` : _('senza penale')}">↩ ${G.lireBreve(parte)}</button>
+          ${p.importo > parte ? _`<button data-az="restituisci" data-id="${p.id}" data-q="${p.importo}" title="${G.penale(p, p.importo) ? _`penale ${G.lire(G.penale(p, p.importo))}` : _('senza penale')}">Estingui tutto</button>` : ''}</td></tr>`;
       }
       h += '</table>';
     }
@@ -194,14 +194,14 @@
     // andamento dei tassi
     const el = s.slice(-120);
     if (el.length > 1) {
-      h += '<h4>Tassi mese per mese</h4>' + G.graficoLinee([
-        { nome: 'Il tuo variabile', colore: '#f2b134', valori: el.map(x => x.v) },
-        { nome: 'Riferimento', colore: '#5b8def', valori: el.map(x => x.r), area: true }
+      h += _('<h4>Tassi mese per mese</h4>') + G.graficoLinee([
+        { nome: _('Il tuo variabile'), colore: '#f2b134', valori: el.map(x => x.v) },
+        { nome: _('Riferimento'), colore: '#5b8def', valori: el.map(x => x.r), area: true }
       ], el.map(x => G.etichettaMese({ anno: x.a, mese: x.m })), 180,
-      { asse: v => v.toLocaleString('it-IT', { maximumFractionDigits: 1 }) + '%', valore: G.percento, minimo: 2 }) +
-        G.legendaG([['Riferimento', '#5b8def'], ['Il tuo variabile (riferimento + spread)', '#f2b134']]);
+      { asse: v => v.toLocaleString(G.locale, { maximumFractionDigits: 1 }) + '%', valore: G.percento, minimo: 2 }) +
+        G.legendaG([[_('Riferimento'), '#5b8def'], [_('Il tuo variabile (riferimento + spread)'), '#f2b134']]);
     }
-    h += `<p class="sotto"><b>Come si decidono i tassi.</b> Il riferimento segue a grandi linee la storia dei tassi italiani (circa 4–5%
+    h += _`<p class="sotto"><b>Come si decidono i tassi.</b> Il riferimento segue a grandi linee la storia dei tassi italiani (circa 4–5%
       nell'Ottocento, oltre il 15% intorno al 1980, quasi zero intorno al 2015) e ogni mese si muove un po' a caso, a volte con una
       scossa improvvisa. Lo <b>spread</b> è il tuo rischio: parte da ${G.percento(B.spreadBase)} e sale con il debito rispetto a quanto
       possiedi, con la cassa in rosso e con le perdite. Il <b>fisso</b> costa un po' di più ma non cambia mai: conviene quando i tassi
@@ -227,12 +227,12 @@
       const st = G.st, imp = +document.getElementById('bancaImporto').value, tipo = document.getElementById('bancaTipo').value;
       ultimoImporto = imp; ultimoTipo = tipo;
       const e = G.chiediPrestito(st, imp, tipo);
-      G.avviso(e || `Prestito di ${G.lire(imp)} ottenuto`, !!e);
+      G.avviso(e || _`Prestito di ${G.lire(imp)} ottenuto`, !!e);
       G.apriBanca();
     },
     restituisci: d => {
       const st = G.st, e = G.restituisciPrestito(st, +d.id, +d.q);
-      G.avviso(e || 'Prestito restituito', !!e);
+      G.avviso(e || _('Prestito restituito'), !!e);
       G.apriBanca();
     }
   };

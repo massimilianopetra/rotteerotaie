@@ -57,11 +57,11 @@
     for (const k of Object.keys(M)) if (k !== id) delete M[k];
     if (M[id]) { fatto(null); return; }
     const def = (C.mappeReali || []).find(k => k.id === id);
-    if (!def) { fatto('Mappa sconosciuta: ' + id); return; }
+    if (!def) { fatto(_('Mappa sconosciuta: ') + id); return; }
     const s = document.createElement('script');
     s.src = def.file;
-    s.onload = () => { s.remove(); fatto(M[id] ? null : 'Il file della mappa non è valido: ' + def.file); };
-    s.onerror = () => { s.remove(); fatto('Impossibile caricare la mappa ' + def.file); };
+    s.onload = () => { s.remove(); fatto(M[id] ? null : _('Il file della mappa non è valido: ') + def.file); };
+    s.onerror = () => { s.remove(); fatto(_('Impossibile caricare la mappa ') + def.file); };
     document.head.appendChild(s);
   };
 
@@ -74,7 +74,7 @@
   // terreno di una mappa reale: tipi e quote vengono dal file, i boschi dal seme
   function terrenoReale(opz) {
     const R = window.MAPPE_REALI && window.MAPPE_REALI[opz.mappa];
-    if (!R) throw new Error('Mappa non caricata: ' + opz.mappa);
+    if (!R) throw new Error(_('Mappa non caricata: ') + opz.mappa);
     const m = G.creaGriglie(R.W, R.H), alt = daBase64(R.alt);
     m.tipo.set(daBase64(R.tipo));
     for (let i = 0; i < m.N; i++) m.alt[i] = alt[i] / 255;
@@ -235,7 +235,7 @@
       if (rnd() < 0.12) n += rnd.scegli(costiera ? P.aggiunteMare : montana ? P.aggiunteMonte : P.aggiunte);
       if (!usati.has(n)) { usati.add(n); return n; }
     }
-    return 'Borgo Nuovo ' + usati.size;
+    return _('Borgo Nuovo ') + usati.size;
   };
 
   function contaIntorno(m, x, y, r, tipo) {
@@ -360,7 +360,7 @@
   const PASSO_VIE = 3;
   const sullaGriglia = (v, centro) => (((v - centro) % PASSO_VIE) + PASSO_VIE) % PASSO_VIE === 0;
   G.livelloMax = pop => (pop < 250 ? 2 : pop < 1200 ? 3 : 4);
-  G.classeCitta = pop => (pop < 300 ? 'villaggio' : pop < 1000 ? 'paese' : pop < 3000 ? 'cittadina' : pop < 10000 ? 'città' : 'metropoli');
+  G.classeCitta = pop => (pop < 300 ? _('villaggio') : pop < 1000 ? _('paese') : pop < 3000 ? _('cittadina') : pop < 10000 ? _('città') : _('metropoli'));
 
   function livelloNuovaCasa(c, d, R, rnd) {
     const max = G.livelloMax(Math.max(c.pop, c.obiettivo || 0)); // obiettivo: grandezza finale durante la fondazione
@@ -506,7 +506,7 @@
       // sulle mappe reali i paesi sono fitti: le industrie stanno più vicine alle case
       if (m.reale ? (def.vicinoCitta ? (dc < 2 || dc > 10) : dc < 3) : (def.vicinoCitta ? (dc < 4 || dc > 14) : dc < 6)) continue;
       if (st.industrie.some(s => !s.chiusa && Math.abs(s.x - x) < 5 && Math.abs(s.y - y) < 5)) continue;
-      const base = def.nome + ' di ' + (c ? c.nome : 'Campagna');
+      const base = c ? _`${def.nome} di ${c.nome}` : _`${def.nome} di Campagna`;
       let nome = base, k = 1;
       // II, III… VI, poi 7, 8…: sulle mappe reali le industrie omonime possono essere molte
       while (st.industrie.some(s => s.nome === nome)) { k++; nome = base + (k <= 6 ? ROMANI[k] : ' ' + k); }

@@ -49,15 +49,15 @@
   G.iconaStazione = iconaStazione;
 
   const STRUMENTI = [
-    { id: 'info', icona: '🔍', nome: 'Informazioni / sposta la mappa', tasto: 'I' },
-    { id: 'binario', icona: '🛤️', nome: 'Costruisci ferrovia (trascina)', tasto: 'B' },
-    { id: 'strada', icona: '🛣️', nome: 'Costruisci strada (trascina)', tasto: 'R' },
-    { id: 'autostrada', icona: '🚧', nome: 'Costruisci autostrada (trascina)', tasto: 'U' },
-    { id: 'stazione', icona: '🚉', nome: 'Stazione ferroviaria: clic per scegliere le dimensioni', tasto: 'T' },
-    { id: 'deposito', icona: '🚏', nome: 'Autostazione (bus e camion)', tasto: 'F' },
-    { id: 'aeroporto', icona: '✈️', nome: 'Aeroporto', tasto: 'A' },
-    { id: 'porto', icona: '⚓', nome: 'Porto (navi): sulla costa del mare o di un lago', tasto: 'P' },
-    { id: 'demolisci', icona: '💥', nome: 'Demolisci', tasto: 'X' }
+    { id: 'info', icona: '🔍', nome: _('Informazioni / sposta la mappa'), tasto: 'I' },
+    { id: 'binario', icona: '🛤️', nome: _('Costruisci ferrovia (trascina)'), tasto: 'B' },
+    { id: 'strada', icona: '🛣️', nome: _('Costruisci strada (trascina)'), tasto: 'R' },
+    { id: 'autostrada', icona: '🚧', nome: _('Costruisci autostrada (trascina)'), tasto: 'U' },
+    { id: 'stazione', icona: '🚉', nome: _('Stazione ferroviaria: clic per scegliere le dimensioni'), tasto: 'T' },
+    { id: 'deposito', icona: '🚏', nome: _('Autostazione (bus e camion)'), tasto: 'F' },
+    { id: 'aeroporto', icona: '✈️', nome: _('Aeroporto'), tasto: 'A' },
+    { id: 'porto', icona: '⚓', nome: _('Porto (navi): sulla costa del mare o di un lago'), tasto: 'P' },
+    { id: 'demolisci', icona: '💥', nome: _('Demolisci'), tasto: 'X' }
   ];
   const RETI = ['binario', 'strada', 'autostrada'];
   const STAZIONI = ['stazione', 'deposito', 'aeroporto', 'porto'];
@@ -76,7 +76,7 @@
     const box = $('#notizie');
     const div = document.createElement('div');
     div.className = 'notizia nuova';
-    if (n.x !== undefined) { div.dataset.az = 'vaiA'; div.dataset.x = n.x; div.dataset.y = n.y; div.title = 'Clic per andare sul posto'; }
+    if (n.x !== undefined) { div.dataset.az = 'vaiA'; div.dataset.x = n.x; div.dataset.y = n.y; div.title = _('Clic per andare sul posto'); }
     div.innerHTML = `<button class="chiudiNotizia" data-az="chiudiNotizia" title="Chiudi">✕</button><b>${esc(n.data)}</b> ${esc(n.testo)}`;
     box.prepend(div);
     const tutte = box.querySelectorAll('.notizia');
@@ -90,7 +90,7 @@
     let t = box.querySelector('.chiudiTutte');
     if (n >= 2 && !t) {
       t = document.createElement('button');
-      t.className = 'chiudiTutte'; t.dataset.az = 'chiudiTutte'; t.textContent = '✕ tutte'; t.title = 'Chiudi tutte le notizie';
+      t.className = 'chiudiTutte'; t.dataset.az = 'chiudiTutte'; t.textContent = _('✕ tutte'); t.title = _('Chiudi tutte le notizie');
       box.append(t);
     }
     if (n < 2 && t) t.remove();
@@ -142,12 +142,12 @@
   function apriMenuStazioni() {
     const s0 = st(), menu = $('#menuStazioni'), b = document.querySelector('#attrezzi button[data-id="stazione"]');
     const anno = s0 ? G.anno(s0) : 0;
-    let h = '<div class="titolo">Dimensioni della stazione</div>';
+    let h = _('<div class="titolo">Dimensioni della stazione</div>');
     for (const k in C.taglieStazione) {
       const t = G.defStazione('stazione', k), lb = t.lato + 2 * t.raggio, ok = anno >= t.anno;
-      h += `<button data-az="taglia" data-t="${k}" class="${k === ui.tagliaStazione ? 'attivo' : ''}" ${ok ? '' : 'disabled'}>
+      h += _`<button data-az="taglia" data-t="${k}" class="${k === ui.tagliaStazione ? 'attivo' : ''}" ${ok ? '' : 'disabled'}>
         ${iconaStazione(k)}<span><b>${t.nome}</b><span class="sotto">${t.lato}×${t.lato} caselle · bacino ${lb}×${lb}<br>
-        ${G.lire(t.costo)} · manutenzione ${G.lire(t.manutenzione)} l'anno<br>carico e scarico ×${String(t.carico).replace('.', ',')}${ok ? '' : ` · dal ${t.anno}`}</span></span></button>`;
+        ${G.lire(t.costo)} · manutenzione ${G.lire(t.manutenzione)} l'anno<br>carico e scarico ×${G.fmt(t.carico)}${ok ? '' : _` · dal ${t.anno}`}</span></span></button>`;
     }
     menu.innerHTML = h;
     const r = b.getBoundingClientRect();
@@ -156,8 +156,8 @@
   }
   // i pulsanti della ferrovia e dell'autostrada aprono lo stesso tipo di menu: rete normale oppure galleria
   const MENU_GALLERIA = {
-    binario: { titolo: 'Ferrovia', icona: '🛤️', normale: 'Ferrovia normale' },
-    autostrada: { titolo: 'Autostrada', icona: '🚧', normale: 'Autostrada normale' }
+    binario: { titolo: _('Ferrovia'), icona: '🛤️', normale: _('Ferrovia normale') },
+    autostrada: { titolo: _('Autostrada'), icona: '🚧', normale: _('Autostrada normale') }
   };
   const inGalleria = rete => !!MENU_GALLERIA[rete] && ui.modoRete[rete] === 'galleria';
   function aggiornaPulsanteBinario() {
@@ -171,8 +171,8 @@
     const voce = (k, ic, nome, testo) => `<button data-az="modoBinario" data-r="${rete}" data-m="${k}" class="${ui.modoRete[rete] === k ? 'attivo' : ''}">
       <span class="icona">${ic}</span><span><b>${nome}</b><span class="sotto">${testo}</span></span></button>`;
     menu.innerHTML = `<div class="titolo">${M.titolo}</div>` +
-      voce('normale', M.icona, M.normale, `Segue il terreno, sale al massimo del ${O.pendenzaMax[rete]}‰.<br>Per scavalcare un dosso o salire a una città si sopraeleva da sola, già prima, su rilevati e viadotti (più alti, più cari). Se nemmeno così ce la fa non si costruisce: il monte da forare diventa rosso.`) +
-      voce('galleria', '🚇', 'Galleria', `Dritta, dalla quota dell'imbocco a quella dell'uscita: può salire o scendere fino al ${O.pendenzaMax[rete]}‰.<br>Trascina dall'imbocco all'uscita, dall'altra parte del monte; sopra servono almeno ${O.sogliaMetri} m di monte. ×${O.galleria} il costo.`);
+      voce('normale', M.icona, M.normale, _`Segue il terreno, sale al massimo del ${O.pendenzaMax[rete]}‰.<br>Per scavalcare un dosso o salire a una città si sopraeleva da sola, già prima, su rilevati e viadotti (più alti, più cari). Se nemmeno così ce la fa non si costruisce: il monte da forare diventa rosso.`) +
+      voce('galleria', '🚇', _('Galleria'), _`Dritta, dalla quota dell'imbocco a quella dell'uscita: può salire o scendere fino al ${O.pendenzaMax[rete]}‰.<br>Trascina dall'imbocco all'uscita, dall'altra parte del monte; sopra servono almeno ${O.sogliaMetri} m di monte. ×${O.galleria} il costo.`);
     const r = b.getBoundingClientRect();
     menu.classList.remove('nascosto');
     menu.style.top = Math.max(50, Math.min(r.top, window.innerHeight - menu.offsetHeight - 10)) + 'px';
@@ -187,11 +187,12 @@
     document.querySelectorAll('#attrezzi button').forEach(b => b.classList.toggle('attivo', b.dataset.id === id));
     $('#suggerimento').style.display = 'none';
     const s = st();
-    if (s && RETI.includes(id) && G.anno(s) < C.reti[id].anno) G.avviso(`${C.reti[id].nome}: disponibile dal ${C.reti[id].anno}`, true);
-    if (s && STAZIONI.includes(id) && G.anno(s) < G.defStazione(id, ui.tagliaStazione).anno) G.avviso(`${C.stazioni[id].nome}: disponibile dal ${C.stazioni[id].anno}`, true);
+    if (s && RETI.includes(id) && G.anno(s) < C.reti[id].anno) G.avviso(_`${C.reti[id].nome}: disponibile dal ${C.reti[id].anno}`, true);
+    if (s && STAZIONI.includes(id) && G.anno(s) < G.defStazione(id, ui.tagliaStazione).anno) G.avviso(_`${C.stazioni[id].nome}: disponibile dal ${C.stazioni[id].anno}`, true);
     $('#mappa').style.cursor = id === 'info' ? 'grab' : 'crosshair';
   }
 
+  ui.impostaVelocita = v => impostaVelocita(v);
   function impostaVelocita(v) {
     if (v > 0) ui.ultimaVel = v;
     ui.velocita = v;
@@ -210,20 +211,20 @@
   // La barra mostra quanti carichi pieni sono: la riempie un carico del mezzo più capiente che la ritira qui.
   function schedeFornisce(s0, s) {
     const merci = Object.keys(C.merci).filter(k => s.fornisce[k] || (s.attesa[k] || 0) >= 1);
-    if (!merci.length) return '<h4>Fornisce</h4><div class="sotto">Nulla: nel bacino non ci sono case né industrie che producono.</div>';
-    let h = '<h4>Fornisce · pronti a partire</h4><div class="schede-merci">';
+    if (!merci.length) return _('<h4>Fornisce</h4><div class="sotto">Nulla: nel bacino non ci sono case né industrie che producono.</div>');
+    let h = _('<h4>Fornisce · pronti a partire</h4><div class="schede-merci">');
     for (const k of merci) {
       const def = C.merci[k], q = Math.floor(s.attesa[k] || 0);
       const mezzi = s0.veicoli.filter(v => v.merce === k && v.fermate.some(f => f.s === s.id));
       const cap = Math.max(0, ...mezzi.map(v => v.cap));
       let nota, frac = 0;
-      if (!s.servite[k]) nota = '<span class="avviso-merce">Nessun mezzo la ritira: compra un mezzo per farla partire</span>';
+      if (!s.servite[k]) nota = _('<span class="avviso-merce">Nessun mezzo la ritira: compra un mezzo per farla partire</span>');
       else {
         const val = G.valutazione(s0, s, k), pv = Math.round(val * 100);
         const colVal = pv >= 66 ? 'var(--verde)' : pv >= 33 ? 'var(--accento)' : 'var(--rosso)';
         frac = cap ? q / cap : 0;
-        const carichi = cap ? (frac >= 10 ? Math.round(frac) : frac.toFixed(1).replace('.', ',')) : '—';
-        nota = `≈ ${carichi} ${frac >= 0.95 && frac < 1.05 ? 'carico' : 'carichi'} · ${mezzi.length} ${mezzi.length === 1 ? 'mezzo' : 'mezzi'} · valutazione <b style="color:${colVal}">${pv}%</b>`;
+        const carichi = cap ? (frac >= 10 ? Math.round(frac) : G.fmt(frac, { minimumFractionDigits: 1, maximumFractionDigits: 1 })) : '—';
+        nota = _`≈ ${carichi} ${frac >= 0.95 && frac < 1.05 ? _('carico') : _('carichi')} · ${mezzi.length} ${mezzi.length === 1 ? _('mezzo') : _('mezzi')} · valutazione <b style="color:${colVal}">${pv}%</b>`;
       }
       h += `<div class="scheda-merce${s.servite[k] ? '' : ' spenta'}" style="--c:${def.colore}" title="${def.nome}: ${G.numero(q)} ${def.unita} in attesa in stazione">
         <div class="sm-icona">${def.icona}</div>
@@ -233,7 +234,7 @@
           <div class="sm-nota">${nota}</div>
         </div></div>`;
     }
-    return h + '</div><div class="nota">La valutazione sale quando i mezzi passano spesso: più è alta, più passeggeri e merci arrivano alla stazione.</div>';
+    return h + _('</div><div class="nota">La valutazione sale quando i mezzi passano spesso: più è alta, più passeggeri e merci arrivano alla stazione.</div>');
   }
 
   function htmlStazione(s0, s) {
@@ -242,35 +243,35 @@
     let h = `<h3>${icona} ${esc(s.nome)}</h3><div class="sotto">${G.nomeTipoStazione(s)}</div>`;
     if (s.tipo === 'stazione') {
       const lb = s.lato + 2 * def.raggio;
-      h += `<p><b>Dimensioni:</b> ${s.lato}×${s.lato} caselle · bacino ${lb}×${lb} · carico ×${String(def.carico).replace('.', ',')}</p>`;
+      h += _`<p><b>Dimensioni:</b> ${s.lato}×${s.lato} caselle · bacino ${lb}×${lb} · carico ×${G.fmt(def.carico)}</p>`;
     }
     if (!G.stazioneCollegata(s0, s)) {
       h += `<p class="rosso">⚠ ${s.tipo === 'stazione'
-        ? 'Nessun binario passa sulla stazione: i treni non possono arrivarci. Trascina una ferrovia fin sopra una delle sue caselle.'
-        : 'Nessuna strada arriva all\'autostazione: costruiscine una fin sopra la sua casella.'}</p>`;
+        ? _('Nessun binario passa sulla stazione: i treni non possono arrivarci. Trascina una ferrovia fin sopra una delle sue caselle.')
+        : _('Nessuna strada arriva all\'autostazione: costruiscine una fin sopra la sua casella.')}</p>`;
     }
-    h += `<p><b>Abitanti nel bacino:</b> ${G.numero(s.popBacino)}</p>`;
+    h += _`<p><b>Abitanti nel bacino:</b> ${G.numero(s.popBacino)}</p>`;
     h += schedeFornisce(s0, s);
     const acc = Object.keys(C.merci).filter(k => s.accetta[k]);
-    h += `<h4>Accetta</h4><div class="chips">${acc.length ? acc.map(k => `<span class="chip" style="--c:${C.merci[k].colore}">${C.merci[k].icona} ${nomeMerce(k)}</span>`).join('') : '<span class="sotto">nulla</span>'}</div>`;
+    h += _`<h4>Accetta</h4><div class="chips">${acc.length ? acc.map(k => `<span class="chip" style="--c:${C.merci[k].colore}">${C.merci[k].icona} ${nomeMerce(k)}</span>`).join('') : _('<span class="sotto">nulla</span>')}</div>`;
     if (s.industrie.length) {
-      h += '<h4>Industrie vicine</h4>';
+      h += _('<h4>Industrie vicine</h4>');
       for (const id of s.industrie) { const ind = s0.industrie[id]; h += `<div class="link" data-az="apriIndustria" data-id="${id}">${C.industrie[ind.tipo].icona} ${esc(ind.nome)}</div>`; }
     }
     const veic = s0.veicoli.filter(v => v.fermate.some(f => f.s === s.id));
-    h += `<h4>Mezzi che si fermano qui (${veic.length})</h4>`;
+    h += _`<h4>Mezzi che si fermano qui (${veic.length})</h4>`;
     for (const v of veic) h += `<div class="link" data-az="apriVeicolo" data-id="${v.id}">${esc(v.nome)} · ${pallino(v.merce)}${nomeMerce(v.merce)}</div>`;
-    const cosa = { stazione: 'un treno', deposito: 'un autobus o un camion', aeroporto: 'un aereo', porto: 'una nave' }[s.tipo];
-    h += `<div class="pulsanti"><button class="primario" data-az="acquista" data-id="${s.id}">🛒 Compra ${cosa}</button>`;
-    h += `<button data-az="demolisciStazione" data-id="${s.id}">💥 Demolisci</button></div>`;
+    const cosa = { stazione: _('un treno'), deposito: _('un autobus o un camion'), aeroporto: _('un aereo'), porto: _('una nave') }[s.tipo];
+    h += _`<div class="pulsanti"><button class="primario" data-az="acquista" data-id="${s.id}">🛒 Compra ${cosa}</button>`;
+    h += _`<button data-az="demolisciStazione" data-id="${s.id}">💥 Demolisci</button></div>`;
     return h;
   }
 
   function htmlCitta(s0, c) {
     const ms = c.meseScorso;
-    let h = `<h3>🏙️ ${esc(c.nome)}</h3><div class="sotto">${G.classeCitta(c.pop)} · ${G.numero(c.pop)} abitanti · ${c.case} edifici</div>`;
-    h += `<p><b>Crescita del mese scorso:</b> ${c.crescita >= 0 ? '+' : ''}${G.numero(c.crescita)} abitanti</p>`;
-    h += `<p><b>Stazioni servite:</b> ${c.nServite}</p><h4>Mese scorso</h4><table>
+    let h = _`<h3>🏙️ ${esc(c.nome)}</h3><div class="sotto">${G.classeCitta(c.pop)} · ${G.numero(c.pop)} abitanti · ${c.case} edifici</div>`;
+    h += _`<p><b>Crescita del mese scorso:</b> ${c.crescita >= 0 ? '+' : ''}${G.numero(c.crescita)} abitanti</p>`;
+    h += _`<p><b>Stazioni servite:</b> ${c.nServite}</p><h4>Mese scorso</h4><table>
       <tr><td>Passeggeri partiti</td><td class="num">${G.numero(ms.partiti)}</td></tr>
       <tr><td>Passeggeri arrivati</td><td class="num">${G.numero(ms.arrivati)}</td></tr>
       <tr><td>Posta</td><td class="num">${G.numero(ms.posta)}</td></tr>
@@ -278,7 +279,7 @@
       <tr><td>Cibo consegnato</td><td class="num">${G.numero(ms.cibo)}</td></tr>
       <tr><td>Carburante consegnato</td><td class="num">${G.numero(ms.carburante)}</td></tr></table>`;
     h += grafico(c.storico.slice(-120), '#f2c94c');
-    h += '<div class="nota">Una città cresce se è collegata: stazioni servite, passeggeri e posta in movimento, e consegne di merci, cibo e carburante. Le case nuove nascono lungo le strade e attorno alle stazioni.</div>';
+    h += _('<div class="nota">Una città cresce se è collegata: stazioni servite, passeggeri e posta in movimento, e consegne di merci, cibo e carburante. Le case nuove nascono lungo le strade e attorno alle stazioni.</div>');
     return h;
   }
 
@@ -292,65 +293,65 @@
   function htmlIndustria(s0, ind) {
     const def = C.industrie[ind.tipo];
     let h = `<h3>${def.icona} ${esc(ind.nome)}</h3>`;
-    if (ind.chiusa) return h + '<p>Chiusa.</p>';
+    if (ind.chiusa) return h + _('<p>Chiusa.</p>');
     if (def.produce) {
-      h += `<p><b>Produce:</b> ${pallino(def.produce)}${nomeMerce(def.produce)}, circa ${G.numero(ind.produzione)} ${C.merci[def.produce].unita} al mese</p>`;
-      h += `<p><b>Trasportato il mese scorso:</b> ${Math.round(ind.perc * 100)}% ${barra(ind.perc, '#4caf50')}</p>`;
+      h += _`<p><b>Produce:</b> ${pallino(def.produce)}${nomeMerce(def.produce)}, circa ${G.numero(ind.produzione)} ${C.merci[def.produce].unita} al mese</p>`;
+      h += _`<p><b>Trasportato il mese scorso:</b> ${Math.round(ind.perc * 100)}% ${barra(ind.perc, '#4caf50')}</p>`;
       if (def.riserva) {
         const f = ind.riserva / ind.riservaIniziale;
-        h += `<p><b>Riserva del giacimento:</b> ${G.numero(ind.riserva)} ${C.merci[def.produce].unita} ${barra(f, f < 0.2 ? '#e74c3c' : '#c9a227')}</p>`;
+        h += _`<p><b>Riserva del giacimento:</b> ${G.numero(ind.riserva)} ${C.merci[def.produce].unita} ${barra(f, f < 0.2 ? '#e74c3c' : '#c9a227')}</p>`;
         const anni = ind.produzione > 0 ? ind.riserva / ind.produzione / 12 : 0;
-        h += `<div class="nota">Al ritmo attuale si esaurisce in circa ${anni.toFixed(1)} anni.</div>`;
-      } else h += '<div class="nota">Risorsa rinnovabile: non si esaurisce.</div>';
+        h += _`<div class="nota">Al ritmo attuale si esaurisce in circa ${G.fmt(anni, { maximumFractionDigits: 1 })} anni.</div>`;
+      } else h += _('<div class="nota">Risorsa rinnovabile: non si esaurisce.</div>');
     }
     if (def.accetta) {
-      h += `<p><b>Accetta:</b> ${def.accetta.map(k => pallino(k) + nomeMerce(k)).join(', ')}</p>`;
+      h += _`<p><b>Accetta:</b> ${def.accetta.map(k => pallino(k) + nomeMerce(k)).join(', ')}</p>`;
       if (def.uscita) {
-        h += `<p><b>Produce:</b> ${pallino(def.uscita)}${nomeMerce(def.uscita)} (${Math.round(def.resa * 100)}% di quanto riceve)</p>`;
-        h += `<p><b>Prodotto il mese scorso:</b> ${G.numero(ind.prodScorso)} · trasportato ${Math.round(ind.perc * 100)}%</p>`;
-      } else h += '<div class="nota">Consuma il carbone per produrre elettricità: paga le consegne ma non produce merci.</div>';
+        h += _`<p><b>Produce:</b> ${pallino(def.uscita)}${nomeMerce(def.uscita)} (${Math.round(def.resa * 100)}% di quanto riceve)</p>`;
+        h += _`<p><b>Prodotto il mese scorso:</b> ${G.numero(ind.prodScorso)} · trasportato ${Math.round(ind.perc * 100)}%</p>`;
+      } else h += _('<div class="nota">Consuma il carbone per produrre elettricità: paga le consegne ma non produce merci.</div>');
       const ric = ind.ricevutoScorso || {};
-      if (Object.keys(ric).length) h += '<p><b>Ricevuto il mese scorso:</b> ' + Object.keys(ric).map(k => `${G.numero(ric[k])} ${C.merci[k].unita} di ${nomeMerce(k).toLowerCase()}`).join(', ') + '</p>';
+      if (Object.keys(ric).length) h += _('<p><b>Ricevuto il mese scorso:</b> ') + Object.keys(ric).map(k => _`${G.numero(ric[k])} ${C.merci[k].unita} di ${nomeMerce(k).toLowerCase()}`).join(', ') + '</p>';
     }
     const staz = ind.stazioni.map(id => s0.stazioni[id]).filter(Boolean);
-    h += `<p><b>Stazioni vicine:</b> ${staz.length ? staz.map(s => `<span class="link" data-az="apriStazione" data-id="${s.id}">${esc(s.nome)}</span>`).join(', ') : 'nessuna'}</p>`;
+    h += _`<p><b>Stazioni vicine:</b> ${staz.length ? staz.map(s => `<span class="link" data-az="apriStazione" data-id="${s.id}">${esc(s.nome)}</span>`).join(', ') : _('nessuna')}</p>`;
     return h;
   }
 
   function htmlVeicolo(s0, v) {
     const mod = G.modello(v.modello);
     let h = `<h3>${{ treno: '🚂', bus: '🚌', camion: '🚚', aereo: '✈️', traghetto: '⛴️', cargo: '🚢' }[v.classe]} ${esc(v.nome)}</h3>`;
-    h += `<div class="sotto">${esc(mod.nome)}${v.vagoni ? ` · ${v.vagoni} vagoni` : ''} · ${mod.kmh} km/h · ${v.eta} anni</div>`;
-    h += `<p class="${v.stato === 'bloccato' || v.stato === 'guasto' ? 'rosso' : ''}"><b>Stato:</b> ${esc(G.statoVeicolo(s0, v))}</p>`;
+    h += _`<div class="sotto">${esc(mod.nome)}${v.vagoni ? _` · ${v.vagoni} vagoni` : ''} · ${mod.kmh} km/h · ${v.eta} anni</div>`;
+    h += _`<p class="${v.stato === 'bloccato' || v.stato === 'guasto' ? 'rosso' : ''}"><b>Stato:</b> ${esc(G.statoVeicolo(s0, v))}</p>`;
     if (v.tipo === 'treno' && v.stato === 'viaggio') {
       const p = G.pendenzaTreno(s0, v), f = G.fattorePendenza(mod, v, p), q = Math.round(Math.abs(p));
       const op = v.caselle && G.operaRete(s0, v.caselle[v.seg], 'binario');
-      h += `<p class="sotto">${q < 1 ? '➡ In piano' : p > 0 ? `↗ In salita ${q}‰` : `↘ In discesa ${q}‰`}` +
-        `${op === G.OPERA.GALLERIA ? ' · 🚇 in galleria' : op === G.OPERA.VIADOTTO ? ' · 🌉 sul viadotto' : ''}` +
-        `${f < 0.995 ? ` · velocità ${Math.round(f * 100)}%` : ''}</p>`;
+      h += `<p class="sotto">${q < 1 ? _('➡ In piano') : p > 0 ? _`↗ In salita ${q}‰` : _`↘ In discesa ${q}‰`}` +
+        `${op === G.OPERA.GALLERIA ? _(' · 🚇 in galleria') : op === G.OPERA.VIADOTTO ? _(' · 🌉 sul viadotto') : ''}` +
+        `${f < 0.995 ? _` · velocità ${Math.round(f * 100)}%` : ''}</p>`;
     }
-    h += `<p><b>Carico:</b> ${pallino(v.merce)}${G.numero(Math.floor(v.qta))} / ${G.numero(v.cap)} ${C.merci[v.merce].unita} di ${nomeMerce(v.merce).toLowerCase()} ${barra(v.qta / v.cap, C.merci[v.merce].colore)}</p>`;
+    h += _`<p><b>Carico:</b> ${pallino(v.merce)}${G.numero(Math.floor(v.qta))} / ${G.numero(v.cap)} ${C.merci[v.merce].unita} di ${nomeMerce(v.merce).toLowerCase()} ${barra(v.qta / v.cap, C.merci[v.merce].colore)}</p>`;
     // conti del mezzo: ricavi − costi = profitto, quest'anno e l'anno scorso; il prezzo d'acquisto a parte
     const cl = n => (n < 0 ? 'rosso' : 'verde'), ripagato = v.prezzo > 0 ? Math.max(0, v.profittoTot / v.prezzo) : 0;
-    h += `<table class="contiMezzo"><tr><th></th><th class="num">${s0.conti.anno}</th><th class="num">anno scorso</th></tr>
+    h += _`<table class="contiMezzo"><tr><th></th><th class="num">${s0.conti.anno}</th><th class="num">anno scorso</th></tr>
       <tr><td title="Quanto ha incassato con le consegne">🟢 Ricavi</td><td class="num verde">${G.lire(v.ricaviAnno)}</td><td class="num sotto">${G.lire(v.ricaviScorso)}</td></tr>
       <tr><td title="Esercizio del mezzo: si paga un dodicesimo al mese">🔴 Costi</td><td class="num">${G.lire(-v.costiAnno)}</td><td class="num sotto">${G.lire(-v.costiScorso)}</td></tr>
       <tr class="totale"><td title="Ricavi − costi">📈 Profitto</td><td class="num ${cl(v.profittoAnno)}">${G.lire(v.profittoAnno)}</td><td class="num ${cl(v.profittoScorso)}">${G.lire(v.profittoScorso)}</td></tr></table>`;
-    h += `<table><tr><td>Costo annuo (esercizio)</td><td class="num">${G.lire(G.esercizioVeicolo(v))}</td></tr>
+    h += _`<table><tr><td>Costo annuo (esercizio)</td><td class="num">${G.lire(G.esercizioVeicolo(v))}</td></tr>
       <tr><td title="Investimento: non entra nel profitto">Prezzo d'acquisto</td><td class="num">${G.lire(v.prezzo)}</td></tr>
       <tr><td title="Profitto da quando l'hai comprato, rispetto al prezzo">Prezzo già ripagato</td><td class="num ${ripagato >= 1 ? 'verde' : ''}">${Math.round(ripagato * 100)}%${ripagato >= 1 ? ' ✔' : ''}</td></tr>
       <tr><td title="Quanto ricaveresti vendendolo oggi">Valore se lo vendi</td><td class="num">${G.lire(G.valoreVeicolo(v))}</td></tr>
       <tr><td>Guasti</td><td class="num">${v.guasti}</td></tr></table>`;
-    h += '<h4>Percorso</h4>';
+    h += _('<h4>Percorso</h4>');
     if (v.fermate.length >= 3) {
       // l'ordine vero delle fermate, con i nomi: si capisce subito da dove riparte dopo l'ultima
       const nomi = G.ordineFermate(v).map(k => { const s = s0.stazioni[v.fermate[k].s]; return s ? esc(s.nome) : '?'; });
-      h += `<select class="modoPercorso" data-az="modoPercorso" title="Che cosa fa il mezzo dopo l'ultima fermata">
+      h += _`<select class="modoPercorso" data-az="modoPercorso" title="Che cosa fa il mezzo dopo l'ultima fermata">
         <option value="giro" ${v.andataRitorno ? '' : 'selected'}>🔁 Giro: dopo l'ultima torna alla prima</option>
         <option value="ar" ${v.andataRitorno ? 'selected' : ''}>↔ Andata e ritorno: rifà le fermate al contrario</option></select>
         <div class="nota ordineFermate">${nomi.join(' → ')} → ${nomi[0]} …</div>`;
     }
-    if (ui.percorso) h += '<div class="banda">Clicca sulle stazioni da aggiungere al percorso. <b>Esc</b> o il pulsante qui sotto per finire.</div>';
+    if (ui.percorso) h += _('<div class="banda">Clicca sulle stazioni da aggiungere al percorso. <b>Esc</b> o il pulsante qui sotto per finire.</div>');
     h += '<ol class="fermate">';
     v.fermate.forEach((f, k) => {
       const s = s0.stazioni[f.s];
@@ -362,46 +363,46 @@
       const modo = f.pieno ? 'pieno' : f.attesaMin > 0 ? 'tempo' : '';
       const am = f.attesaMin || 0;
       const campo = (u, val, max) => `<input type="number" class="durata" data-az="durata" data-k="${k}" data-u="${u}" min="0" max="${max}" value="${val}">`;
-      h += `<li class="${k === v.idx ? 'attuale' : ''}">${avv}<span class="link" data-az="apriStazione" data-id="${f.s}">${s ? esc(s.nome) : '?'}</span>
+      h += _`<li class="${k === v.idx ? 'attuale' : ''}">${avv}<span class="link" data-az="apriStazione" data-id="${f.s}">${s ? esc(s.nome) : '?'}</span>
         <button class="mini" data-az="suFermata" data-k="${k}" title="Sposta su">▲</button><button class="mini" data-az="togliFermata" data-k="${k}" title="Togli">✕</button>
         <div class="attesaFermata"><select data-az="modoAttesa" data-k="${k}" title="Quanto aspetta in questa stazione prima di ripartire">
           <option value="" ${modo === '' ? 'selected' : ''}>parte appena carico</option>
           <option value="pieno" ${modo === 'pieno' ? 'selected' : ''}>attende il pieno</option>
           <option value="tempo" ${modo === 'tempo' ? 'selected' : ''}>attende fino a…</option></select>
-        ${modo === 'tempo' ? `<span class="durate" title="Riparte allo scadere del tempo, o prima se è pieno">${campo('g', Math.floor(am / 1440), 120)} g ${campo('h', Math.floor((am % 1440) / 60), 23)} h ${campo('m', am % 60, 59)} min</span>` : ''}</div></li>`;
+        ${modo === 'tempo' ? _`<span class="durate" title="Riparte allo scadere del tempo, o prima se è pieno">${campo('g', Math.floor(am / 1440), 120)} g ${campo('h', Math.floor((am % 1440) / 60), 23)} h ${campo('m', am % 60, 59)} min</span>` : ''}</div></li>`;
     });
     h += '</ol>';
-    if (v.fermate.length) h += '<div class="nota">⬆ qui si carica soltanto · ⬇ qui si scarica soltanto · ⚠ qui questa merce non si carica né si scarica</div>';
-    if (v.fermate.length < 2 && !ui.percorso) h += '<div class="nota">Servono almeno due fermate: premi «Aggiungi fermate» e clicca sulle stazioni.</div>';
-    h += `<div class="pulsanti">
-      <button class="${ui.percorso ? 'attivo' : 'primario'}" data-az="fermate">${ui.percorso ? '✔ Fine fermate' : '➕ Aggiungi fermate'}</button>
+    if (v.fermate.length) h += _('<div class="nota">⬆ qui si carica soltanto · ⬇ qui si scarica soltanto · ⚠ qui questa merce non si carica né si scarica</div>');
+    if (v.fermate.length < 2 && !ui.percorso) h += _('<div class="nota">Servono almeno due fermate: premi «Aggiungi fermate» e clicca sulle stazioni.</div>');
+    h += _`<div class="pulsanti">
+      <button class="${ui.percorso ? 'attivo' : 'primario'}" data-az="fermate">${ui.percorso ? _('✔ Fine fermate') : _('➕ Aggiungi fermate')}</button>
       <button class="${ui.segui ? 'attivo' : ''}" data-az="segui">🎥 Segui</button>
-      <button data-az="fermaVeicolo">${v.fermoManuale ? '▶ Riparti' : '⏸ Resta in stazione'}</button>
-      ${v.tipo !== 'aereo' && (v.stato === 'viaggio' || v.stato === 'bloccato') ? `<button class="${v.stallo ? 'attivo' : ''}" data-az="tornaIndietro" title="Torna alla fermata precedente (per sbloccare due treni che si bloccano a vicenda)">↩ Torna indietro</button>` : ''}
+      <button data-az="fermaVeicolo">${v.fermoManuale ? _('▶ Riparti') : _('⏸ Resta in stazione')}</button>
+      ${v.tipo !== 'aereo' && (v.stato === 'viaggio' || v.stato === 'bloccato') ? _`<button class="${v.stallo ? 'attivo' : ''}" data-az="tornaIndietro" title="Torna alla fermata precedente (per sbloccare due treni che si bloccano a vicenda)">↩ Torna indietro</button>` : ''}
       <button data-az="vendi">💰 Vendi (${G.lire(G.valoreVeicolo(v))})</button></div>`;
     return h;
   }
 
   function htmlCasella(s0, i) {
     const m = s0.mondo, x = i % m.W, y = (i / m.W) | 0, t = G.NOMI_TERRENO[m.tipo[i]];
-    let h = `<h3>📍 Casella ${x}, ${y}</h3><p><b>Terreno:</b> ${t}${m.bosco[i] ? ', bosco' : ''} · quota ${G.numero(G.metriTerreno(m)[i])} m</p>`;
+    let h = _`<h3>📍 Casella ${x}, ${y}</h3><p><b>Terreno:</b> ${G.tr(t)}${m.bosco[i] ? _(', bosco') : ''} · quota ${G.numero(G.metriTerreno(m)[i])} m</p>`;
     if (m.tipo[i] !== G.T.ACQUA) {
       const km = G.kmCasella(s0), bosco = m.bosco[i] ? C.costoBosco * km : 0, costo = r => C.reti[r].costo * C.moltTerreno[t] * km + bosco;
-      h += `<p><b>Costo per casella</b> (${G.numero(km)} km${C.moltTerreno[t] > 1 ? `, terreno ×${C.moltTerreno[t]}` : ''}${bosco ? ', bosco da tagliare' : ''}): ferrovia ${G.lire(costo('binario'))}, strada ${G.lire(costo('strada'))}</p>`;
-      if (m.tipo[i] === G.T.FIUME) h += '<div class="nota">Sul fiume serve un ponte: costa di più.</div>';
-      h += '<div class="nota">Tutti i costi nell\'aiuto (H), scheda «Costi».</div>';
+      h += _`<p><b>Costo per casella</b> (${G.numero(km)} km${C.moltTerreno[t] > 1 ? _`, terreno ×${C.moltTerreno[t]}` : ''}${bosco ? _(', bosco da tagliare') : ''}): ferrovia ${G.lire(costo('binario'))}, strada ${G.lire(costo('strada'))}</p>`;
+      if (m.tipo[i] === G.T.FIUME) h += _('<div class="nota">Sul fiume serve un ponte: costa di più.</div>');
+      h += _('<div class="nota">Tutti i costi nell\'aiuto (H), scheda «Costi».</div>');
     }
     const c = G.cittaVicina(s0, x, y);
-    if (c) h += `<p><b>Città più vicina:</b> <span class="link" data-az="apriCitta" data-id="${c.id}">${esc(c.nome)}</span></p>`;
+    if (c) h += _`<p><b>Città più vicina:</b> <span class="link" data-az="apriCitta" data-id="${c.id}">${esc(c.nome)}</span></p>`;
     // la rete nella casella, con l'opera (galleria o viadotto) e la quota a cui passa
     const opera = (rete, op) => {
       const q = G.quotaRete(s0, i, rete), d = Math.round(q - G.metriTerreno(m)[i]);
-      if (op === G.OPERA.GALLERIA) return ` in galleria, a ${G.numero(q)} m (${G.numero(-d)} m sotto il terreno)`;
-      if (op === G.OPERA.VIADOTTO) return ` su un viadotto, a ${G.numero(q)} m (${G.numero(d)} m sopra il terreno)`;
-      return Math.abs(d) >= 3 ? ` in ${d < 0 ? 'trincea' : 'rilevato'} di ${G.numero(Math.abs(d))} m` : '';
+      if (op === G.OPERA.GALLERIA) return _` in galleria, a ${G.numero(q)} m (${G.numero(-d)} m sotto il terreno)`;
+      if (op === G.OPERA.VIADOTTO) return _` su un viadotto, a ${G.numero(q)} m (${G.numero(d)} m sopra il terreno)`;
+      return Math.abs(d) >= 3 ? _` in ${d < 0 ? _('trincea') : _('rilevato')} di ${G.numero(Math.abs(d))} m` : '';
     };
-    if (m.mBin[i]) h += `<p>🛤️ Binario${opera('binario', m.operaBin[i])}</p>`;
-    if (m.mStr[i]) h += `<p>${m.tipoStr[i] === 2 ? '🚧 Autostrada' : m.strCitta[i] ? '🛣️ Strada comunale' : '🛣️ Strada'}${m.strCitta[i] ? '' : opera('strada', m.operaStr[i])}</p>`;
+    if (m.mBin[i]) h += _`<p>🛤️ Binario${opera('binario', m.operaBin[i])}</p>`;
+    if (m.mStr[i]) h += `<p>${m.tipoStr[i] === 2 ? _('🚧 Autostrada') : m.strCitta[i] ? _('🛣️ Strada comunale') : _('🛣️ Strada')}${m.strCitta[i] ? '' : opera('strada', m.operaStr[i])}</p>`;
     return h;
   }
 
@@ -472,13 +473,13 @@
     const s0 = st(), s = s0.stazioni[sid];
     const tipo = { stazione: 'treno', deposito: 'strada', aeroporto: 'aereo', porto: 'nave' }[s.tipo];
     const mod = G.modelliDisponibili(s0, tipo);
-    if (!mod.length) { G.avviso('Nessun mezzo disponibile in questo anno', true); return; }
-    let h = `<p>Il mezzo parte da <b>${esc(s.nome)}</b>. Dopo l'acquisto aggiungi le altre fermate cliccando sulle stazioni.</p>`;
-    h += `<label>Modello<select id="acqModello" data-cambia="acquisto">${mod.map(k => `<option value="${k.id}">${esc(k.nome)} — ${k.kmh} km/h — ${G.lire(k.costo)}</option>`).join('')}</select></label>`;
-    h += '<label>Merce<select id="acqMerce" data-cambia="acquisto"></select></label>';
-    if (tipo === 'treno') h += '<label>Vagoni: <b id="acqNumVag">3</b><input type="range" id="acqVagoni" min="1" max="4" value="3" data-cambia="acquisto"></label>';
-    h += `<div id="acqRiepilogo" class="riepilogo"></div><div class="pulsanti"><button class="primario" data-az="confermaAcquisto" data-id="${sid}">🛒 Compra</button><button data-az="chiudiFinestra">Annulla</button></div>`;
-    apriFinestra('Acquista un mezzo', h);
+    if (!mod.length) { G.avviso(_('Nessun mezzo disponibile in questo anno'), true); return; }
+    let h = _`<p>Il mezzo parte da <b>${esc(s.nome)}</b>. Dopo l'acquisto aggiungi le altre fermate cliccando sulle stazioni.</p>`;
+    h += _`<label>Modello<select id="acqModello" data-cambia="acquisto">${mod.map(k => `<option value="${k.id}">${esc(k.nome)} — ${k.kmh} km/h — ${G.lire(k.costo)}</option>`).join('')}</select></label>`;
+    h += _('<label>Merce<select id="acqMerce" data-cambia="acquisto"></select></label>');
+    if (tipo === 'treno') h += _('<label>Vagoni: <b id="acqNumVag">3</b><input type="range" id="acqVagoni" min="1" max="4" value="3" data-cambia="acquisto"></label>');
+    h += _`<div id="acqRiepilogo" class="riepilogo"></div><div class="pulsanti"><button class="primario" data-az="confermaAcquisto" data-id="${sid}">🛒 Compra</button><button data-az="chiudiFinestra">Annulla</button></div>`;
+    apriFinestra(_('Acquista un mezzo'), h);
     // merce suggerita: la prima che la stazione fornisce
     aggiornaAcquisto(true, s);
   }
@@ -494,16 +495,16 @@
     if (r) { r.max = mod.vagoni; if (+r.value > mod.vagoni) r.value = mod.vagoni; vag = +r.value; $('#acqNumVag').textContent = vag; }
     const merce = selM.value, cap = G.capacita(mod, merce, vag);
     const prezzo = G.prezzoVeicolo(mod, vag);
-    $('#acqRiepilogo').innerHTML = `Capacità: <b>${G.numero(cap)} ${C.merci[merce].unita}</b> · Prezzo: <b class="${prezzo > st().soldi ? 'rosso' : ''}">${G.lire(prezzo)}</b> · Costo annuo: ${G.lire(mod.esercizio + vag * C.vagone.esercizio)}`;
+    $('#acqRiepilogo').innerHTML = _`Capacità: <b>${G.numero(cap)} ${C.merci[merce].unita}</b> · Prezzo: <b class="${prezzo > st().soldi ? 'rosso' : ''}">${G.lire(prezzo)}</b> · Costo annuo: ${G.lire(mod.esercizio + vag * C.vagone.esercizio)}`;
   }
 
   function finestraVeicoli() {
     const s0 = st();
     let h = '';
-    if (!s0.veicoli.length) h = '<p>Non hai ancora mezzi. Costruisci due stazioni collegate, poi clicca su una stazione e premi «Compra».</p>';
+    if (!s0.veicoli.length) h = _('<p>Non hai ancora mezzi. Costruisci due stazioni collegate, poi clicca su una stazione e premi «Compra».</p>');
     else {
       const a = s0.conti.anno;
-      h = `<table class="elenco"><tr><th>Mezzo</th><th>Merce</th><th>Stato</th><th class="num">Ricavi ${a}</th><th class="num">Costi ${a}</th><th class="num">Profitto ${a}</th><th class="num">Profitto anno scorso</th><th class="num">Età</th></tr>`;
+      h = _`<table class="elenco"><tr><th>Mezzo</th><th>Merce</th><th>Stato</th><th class="num">Ricavi ${a}</th><th class="num">Costi ${a}</th><th class="num">Profitto ${a}</th><th class="num">Profitto anno scorso</th><th class="num">Età</th></tr>`;
       for (const v of [...s0.veicoli].sort((a, b) => b.profittoAnno - a.profittoAnno)) {
         h += `<tr class="link" data-az="apriVeicolo" data-id="${v.id}"><td>${esc(v.nome)}<div class="sotto">${esc(G.modello(v.modello).nome)}</div></td>
           <td>${pallino(v.merce)}${nomeMerce(v.merce)}</td><td>${esc(G.statoVeicolo(s0, v))}</td>
@@ -511,9 +512,9 @@
           <td class="num ${v.profittoAnno < 0 ? 'rosso' : 'verde'}"><b>${G.lire(v.profittoAnno)}</b></td>
           <td class="num ${v.profittoScorso < 0 ? 'rosso' : 'verde'}">${G.lire(v.profittoScorso)}</td><td class="num">${v.eta}</td></tr>`;
       }
-      h += '</table><div class="nota">Profitto = ricavi (le consegne) − costi (l\'esercizio del mezzo). Il prezzo d\'acquisto è un investimento e non entra nel profitto.</div>';
+      h += _('</table><div class="nota">Profitto = ricavi (le consegne) − costi (l\'esercizio del mezzo). Il prezzo d\'acquisto è un investimento e non entra nel profitto.</div>');
     }
-    apriFinestra(`Mezzi (${s0.veicoli.length})`, h, true, finestraVeicoli);
+    apriFinestra(_`Mezzi (${s0.veicoli.length})`, h, true, finestraVeicoli);
   }
 
   // Colonne delle tabelle del mondo: ogni colonna si ordina con un clic sull'intestazione (un altro clic inverte).
@@ -523,16 +524,16 @@
   const mezziStazione = s => st().veicoli.filter(v => v.fermate.some(f => f.s === s.id)).length;
   const COLONNE_MONDO = {
     citta: [
-      { k: 'nome', t: 'Città', v: c => c.nome }, { k: 'pop', t: 'Abitanti', v: c => c.pop, num: true },
-      { k: 'crescita', t: 'Crescita', v: c => c.crescita, num: true }, { k: 'servite', t: 'Stazioni servite', v: c => c.nServite, num: true }],
+      { k: 'nome', t: _('Città'), v: c => c.nome }, { k: 'pop', t: _('Abitanti'), v: c => c.pop, num: true },
+      { k: 'crescita', t: _('Crescita'), v: c => c.crescita, num: true }, { k: 'servite', t: _('Stazioni servite'), v: c => c.nServite, num: true }],
     industrie: [
-      { k: 'nome', t: 'Industria', v: k => k.nome }, { k: 'tipo', t: 'Tipo', v: k => C.industrie[k.tipo].nome },
-      { k: 'prod', t: 'Produzione / mese', v: prodIndustria, num: true }, { k: 'perc', t: 'Trasportato', v: k => k.perc, num: true },
-      { k: 'riserva', t: 'Riserva', v: k => (C.industrie[k.tipo].riserva ? k.riserva / k.riservaIniziale : -1), num: true }],
+      { k: 'nome', t: _('Industria'), v: k => k.nome }, { k: 'tipo', t: _('Tipo'), v: k => C.industrie[k.tipo].nome },
+      { k: 'prod', t: _('Produzione / mese'), v: prodIndustria, num: true }, { k: 'perc', t: _('Trasportato'), v: k => k.perc, num: true },
+      { k: 'riserva', t: _('Riserva'), v: k => (C.industrie[k.tipo].riserva ? k.riserva / k.riservaIniziale : -1), num: true }],
     stazioni: [
-      { k: 'nome', t: 'Stazione', v: s => s.nome }, { k: 'tipo', t: 'Tipo', v: s => G.nomeTipoStazione(s) },
-      { k: 'pop', t: 'Abitanti nel bacino', v: s => s.popBacino || 0, num: true }, { k: 'mezzi', t: 'Mezzi', v: mezziStazione, num: true },
-      { k: 'attesa', t: 'In attesa', v: attesaTot, num: true }]
+      { k: 'nome', t: _('Stazione'), v: s => s.nome }, { k: 'tipo', t: _('Tipo'), v: s => G.nomeTipoStazione(s) },
+      { k: 'pop', t: _('Abitanti nel bacino'), v: s => s.popBacino || 0, num: true }, { k: 'mezzi', t: _('Mezzi'), v: mezziStazione, num: true },
+      { k: 'attesa', t: _('In attesa'), v: attesaTot, num: true }]
   };
   ui.ordineMondo = { citta: { k: 'pop', dir: -1 }, industrie: { k: 'tipo', dir: 1 }, stazioni: { k: 'nome', dir: 1 } };
   function ordinaMondo(scheda, el) {
@@ -552,7 +553,7 @@
     const s0 = st();
     scheda = scheda || ui.schedaMondo || 'citta';
     ui.schedaMondo = scheda;
-    let h = `<div class="schede">${['citta', 'industrie', 'stazioni'].map(k => `<button class="${k === scheda ? 'attivo' : ''}" data-az="schedaMondo" data-s="${k}">${{ citta: '🏙️ Città', industrie: '🏭 Industrie', stazioni: '🚉 Stazioni' }[k]}</button>`).join('')}</div>`;
+    let h = `<div class="schede">${['citta', 'industrie', 'stazioni'].map(k => `<button class="${k === scheda ? 'attivo' : ''}" data-az="schedaMondo" data-s="${k}">${{ citta: _('🏙️ Città'), industrie: _('🏭 Industrie'), stazioni: _('🚉 Stazioni') }[k]}</button>`).join('')}</div>`;
     if (scheda === 'citta') {
       if (s0.citta.length > 200) h += '<input id="cercaCitta" class="cerca" placeholder="🔍 Cerca una città per nome…" autocomplete="off">';
       h += `<table class="elenco"><thead>${intestazioneMondo('citta')}</thead><tbody id="elencoCitta">${righeCitta('')}</tbody>`;
@@ -569,10 +570,10 @@
         const att = Object.keys(s.attesa).filter(k => s.attesa[k] >= 1).map(k => `${pallino(k)}${G.numero(s.attesa[k])}`).join(' ') || '—';
         h += `<tr class="link" data-az="apriStazione" data-id="${s.id}" data-vai="1"><td>${esc(s.nome)}</td><td>${G.nomeTipoStazione(s)}</td><td class="num">${G.numero(s.popBacino || 0)}</td><td class="num">${mezziStazione(s)}</td><td>${att}</td></tr>`;
       }
-      if (!s0.stazioni.some(Boolean)) h += '<tr><td colspan="5" class="sotto">Nessuna stazione.</td></tr>';
+      if (!s0.stazioni.some(Boolean)) h += _('<tr><td colspan="5" class="sotto">Nessuna stazione.</td></tr>');
     }
     h += '</table>';
-    apriFinestra('Il mondo', h, true);
+    apriFinestra(_('Il mondo'), h, true);
   }
 
   // righe della tabella delle città: sulle mappe reali sono migliaia, quindi solo le prime 200 nell'ordine scelto
@@ -587,8 +588,8 @@
       h += `<tr class="link" data-az="apriCitta" data-id="${c.id}" data-vai="1"><td>${esc(c.nome)}<div class="sotto">${G.classeCitta(c.pop)}</div></td><td class="num">${G.numero(c.pop)}</td><td class="num">${c.crescita >= 0 ? '+' : ''}${c.crescita}</td><td class="num">${c.nServite}</td></tr>`;
     }
     const altre = s0.citta.length - el.length;
-    if (altre > 0 && !t) h += `<tr><td colspan="4" class="sotto">… e altre ${G.numero(altre)} città e paesi: cercali per nome.</td></tr>`;
-    if (!el.length) h += '<tr><td colspan="4" class="sotto">Nessuna città con questo nome.</td></tr>';
+    if (altre > 0 && !t) h += _`<tr><td colspan="4" class="sotto">… e altre ${G.numero(altre)} città e paesi: cercali per nome.</td></tr>`;
+    if (!el.length) h += _('<tr><td colspan="4" class="sotto">Nessuna città con questo nome.</td></tr>');
     return h;
   }
 
@@ -596,33 +597,33 @@
   ui.apriFinestra = (titolo, corpo, larga, rifai) => apriFinestra(titolo, corpo, larga, rifai);
 
   // l'aiuto a schede: come si gioca, quanto costa costruire, come leggere i conti, comandi
-  const SCHEDE_AIUTO = { gioco: '🚂 Come si gioca', costi: '🏗️ Costi', soldi: '💰 Soldi e profitti', comandi: '⌨️ Comandi' };
+  const SCHEDE_AIUTO = { gioco: _('🚂 Come si gioca'), costi: _('🏗️ Costi'), soldi: _('💰 Soldi e profitti'), comandi: _('⌨️ Comandi') };
   function finestraAiuto(scheda) {
     scheda = SCHEDE_AIUTO[scheda] ? scheda : 'gioco';
     const testa = `<div class="schede">${Object.keys(SCHEDE_AIUTO).map(k => `<button class="${k === scheda ? 'attivo' : ''}" data-az="schedaAiuto" data-s="${k}">${SCHEDE_AIUTO[k]}</button>`).join('')}</div>`;
     const corpo = { gioco: aiutoGioco, costi: aiutoCosti, soldi: aiutoSoldi, comandi: aiutoComandi }[scheda]();
-    apriFinestra('Come si gioca', testa + corpo, true);
+    apriFinestra(_('Come si gioca'), testa + corpo, true);
   }
 
   function aiutoCosti() {
     const s0 = st(), km = s0 ? G.kmCasella(s0) : 1;
     const terreni = Object.keys(C.moltTerreno).filter(t => isFinite(C.moltTerreno[t]));
     const reti = Object.keys(C.reti);
-    let h = `<p>Le reti si pagano <b>casella per casella</b>: costo della rete × moltiplicatore del terreno${km !== 1 ? ` × <b>${G.numero(km)} km</b>
+    let h = _`<p>Le reti si pagano <b>casella per casella</b>: costo della rete × moltiplicatore del terreno${km !== 1 ? _` × <b>${G.numero(km)} km</b>
       (in questa partita una casella è lunga ${G.numero(km)} km)` : ''}. Se nella casella c'è un bosco si aggiunge il taglio.
       Mentre trascini vedi il tracciato e il prezzo prima di costruire: è il percorso <b>più economico</b>, non il più corto, quindi gira
       attorno alle montagne e passa i fiumi dove conviene.</p>`;
-    h += `<table class="elenco"><tr><th>Terreno</th><th class="num">×</th>${reti.map(r => `<th class="num">${C.reti[r].nome}</th>`).join('')}</tr>`;
-    for (const t of terreni) h += `<tr><td>${t[0].toUpperCase() + t.slice(1)}${t === 'fiume' ? ' (ponte)' : ''}</td><td class="num">×${C.moltTerreno[t]}</td>${reti.map(r => `<td class="num">${G.lire(C.reti[r].costo * C.moltTerreno[t] * km)}</td>`).join('')}</tr>`;
-    h += `<tr><td>Bosco (in più)</td><td></td><td class="num" colspan="${reti.length}">${G.lire(C.costoBosco * km)} a casella</td></tr>`;
-    h += '<tr><td>Mare e laghi</td><td></td><td colspan="9" class="sotto">non si costruisce</td></tr></table>';
-    h += `<ul><li>Dove la rete c'è già non si paga: si può partire da un binario esistente. Le <b>strade comunali</b> delle città sono gratis.</li>
+    h += _`<table class="elenco"><tr><th>Terreno</th><th class="num">×</th>${reti.map(r => `<th class="num">${C.reti[r].nome}</th>`).join('')}</tr>`;
+    for (const t of terreni) h += `<tr><td>${G.tr(t)[0].toUpperCase() + G.tr(t).slice(1)}${t === 'fiume' ? _(' (ponte)') : ''}</td><td class="num">×${C.moltTerreno[t]}</td>${reti.map(r => `<td class="num">${G.lire(C.reti[r].costo * C.moltTerreno[t] * km)}</td>`).join('')}</tr>`;
+    h += _`<tr><td>Bosco (in più)</td><td></td><td class="num" colspan="${reti.length}">${G.lire(C.costoBosco * km)} a casella</td></tr>`;
+    h += _('<tr><td>Mare e laghi</td><td></td><td colspan="9" class="sotto">non si costruisce</td></tr></table>');
+    h += _`<ul><li>Dove la rete c'è già non si paga: si può partire da un binario esistente. Le <b>strade comunali</b> delle città sono gratis.</li>
       <li>L'<b>autostrada</b> costruita sopra una strada costa il 40% in meno.</li>
       <li>Case e industrie non si attraversano: prima vanno demolite (una casa costa ${G.lire(C.costoCasa)} per piano).</li>
       <li>Demolire un pezzo di rete o una stazione costa ${G.lire(C.costoDemolizione)}.</li>
       <li>Una casella in diagonale costa come una diritta.</li></ul>`;
     const O = C.opere;
-    h += `<h4>Pendenze, gallerie e viadotti</h4>
+    h += _`<h4>Pendenze, gallerie e viadotti</h4>
       <p>Ogni casella ha una quota in metri (la vedi passandoci sopra). Una linea non può salire o scendere più di
       <b>${O.pendenzaMax.binario}‰</b> per la ferrovia (${O.pendenzaMax.binario} m ogni km), <b>${O.pendenzaMax.strada}‰</b> per la strada e
       <b>${O.pendenzaMax.autostrada}‰</b> per l'autostrada. Il gioco disegna da solo il profilo della linea: sopra le valli fa i viadotti.
@@ -636,20 +637,20 @@
       <p><b>I treni rallentano in salita</b>: un treno a vapore pieno al ${O.pendenzaMax.binario}‰ va a circa metà velocità, le
       locomotive elettriche e diesel reggono il doppio della pendenza e un treno corto sale meglio di uno lungo. In discesa si frena
       un poco. Il pannello del treno mostra se sta salendo e di quanto rallenta.</p>`;
-    h += '<h4>Manutenzione (ogni anno, pagata un dodicesimo al mese)</h4><table class="elenco">';
-    for (const r of reti) h += `<tr><td>${C.reti[r].nome}</td><td class="num">${G.lire(C.reti[r].manutenzione)} al km</td></tr>`;
-    h += '</table><p class="sotto">La manutenzione delle reti non dipende dal terreno: un km in montagna costa come uno in pianura.</p>';
-    h += '<h4>Stazioni</h4><table class="elenco"><tr><th>Tipo</th><th class="num">Costo</th><th class="num">Manutenzione all\'anno</th><th class="num">Bacino</th></tr>';
-    for (const k in C.taglieStazione) { const d = C.taglieStazione[k]; h += `<tr><td>🚉 ${d.nome}${d.anno ? ` (dal ${d.anno})` : ''}</td><td class="num">${G.lire(d.costo)}</td><td class="num">${G.lire(d.manutenzione)}</td><td class="num">${d.raggio} caselle</td></tr>`; }
-    for (const k of ['deposito', 'aeroporto', 'porto']) { const d = C.stazioni[k]; h += `<tr><td>${d.icona} ${d.nome}${d.anno ? ` (dal ${d.anno})` : ''}</td><td class="num">${G.lire(d.costo)}</td><td class="num">${G.lire(d.manutenzione)}</td><td class="num">${d.raggio} caselle</td></tr>`; }
+    h += _('<h4>Manutenzione (ogni anno, pagata un dodicesimo al mese)</h4><table class="elenco">');
+    for (const r of reti) h += _`<tr><td>${C.reti[r].nome}</td><td class="num">${G.lire(C.reti[r].manutenzione)} al km</td></tr>`;
+    h += _('</table><p class="sotto">La manutenzione delle reti non dipende dal terreno: un km in montagna costa come uno in pianura.</p>');
+    h += _('<h4>Stazioni</h4><table class="elenco"><tr><th>Tipo</th><th class="num">Costo</th><th class="num">Manutenzione all\'anno</th><th class="num">Bacino</th></tr>');
+    for (const k in C.taglieStazione) { const d = C.taglieStazione[k]; h += `<tr><td>🚉 ${d.nome}${d.anno ? _` (dal ${d.anno})` : ''}</td><td class="num">${G.lire(d.costo)}</td><td class="num">${G.lire(d.manutenzione)}</td><td class="num">${d.raggio} caselle</td></tr>`; }
+    for (const k of ['deposito', 'aeroporto', 'porto']) { const d = C.stazioni[k]; h += `<tr><td>${d.icona} ${d.nome}${d.anno ? _` (dal ${d.anno})` : ''}</td><td class="num">${G.lire(d.costo)}</td><td class="num">${G.lire(d.manutenzione)}</td><td class="num">${d.raggio} caselle</td></tr>`; }
     h += '</table>';
-    h += `<h4>Mezzi</h4><p>Ogni modello ha un prezzo e un <b>costo annuo di esercizio</b>; ogni vagone costa ${G.lire(C.vagone.costo)} più
+    h += _`<h4>Mezzi</h4><p>Ogni modello ha un prezzo e un <b>costo annuo di esercizio</b>; ogni vagone costa ${G.lire(C.vagone.costo)} più
       ${G.lire(C.vagone.esercizio)} l'anno. L'esercizio cresce del 4% per ogni anno di età, e i mezzi fuori produzione si guastano più spesso.</p>`;
     return h;
   }
 
   function aiutoSoldi() {
-    return `${G.SPIEGAZIONE_CONTI || ''}
+    return _`${G.SPIEGAZIONE_CONTI || ''}
       <h4>🟢 Ricavi</h4>
       <p>Si incassa a ogni consegna: <b>unità × prezzo della merce × distanza</b> in linea d'aria fra la stazione di partenza e quella
       d'arrivo. Se il viaggio dura più di quanto la merce sopporta il prezzo cala: i passeggeri e la posta vogliono mezzi veloci,
@@ -683,7 +684,7 @@
   }
 
   function aiutoComandi() {
-    return `<table class="elenco"><tr><td>Sposta la mappa</td><td>trascina col tasto destro (o sinistro con 🔍), frecce</td></tr>
+    return _`<table class="elenco"><tr><td>Sposta la mappa</td><td>trascina col tasto destro (o sinistro con 🔍), frecce</td></tr>
       <tr><td>Zoom</td><td>rotellina, tasti + e −</td></tr>
       <tr><td>Vista 3D</td><td>D passa dalla vista dall'alto (2D) a quella in 3D assonometrica e ritorno · O gira la vista 3D di 90° (Maiusc+O al contrario)</td></tr>
       <tr><td>Strumenti</td><td>I info · B ferrovia (normale o galleria) · R strada · U autostrada (normale o galleria) · T stazione (apre le dimensioni) · F autostazione · A aeroporto · P porto · X demolisci</td></tr>
@@ -694,7 +695,7 @@
   }
 
   function aiutoGioco() {
-    return `
+    return _`
       <p>Sei a capo di una compagnia di trasporti. Costruisci <b>ferrovie</b>, <b>strade</b>, <b>autostrade</b> (dal 1955) e
       <b>aeroporti</b> (dal 1925), compra i mezzi e porta passeggeri e merci dove servono. Ogni consegna viene pagata in base
       alla <b>distanza</b> e alla <b>velocità</b> del viaggio.</p>
@@ -754,36 +755,47 @@
   // versione e build (da js/versione.js, generato da "npm run versione")
   G.testoVersione = function (lungo) {
     const V = window.VERSIONE;
-    if (!V) return 'versione di sviluppo';
-    const base = `v${V.versione} · build ${V.build} (${V.commit}${V.modifiche ? ', con modifiche' : ''})`;
+    if (!V) return _('versione di sviluppo');
+    const base = _`v${V.versione} · build ${V.build} (${V.commit}${V.modifiche ? _(', con modifiche') : ''})`;
     return lungo ? `${base} · ${V.data}` : base;
   };
 
+  // impostazioni: per ora la lingua (italiano o inglese), con la bandiera
+  function finestraImpostazioni() {
+    let h = _('<h4>Lingua</h4><div class="lingue">');
+    for (const k in G.LINGUE) {
+      const l = G.LINGUE[k];
+      h += `<button data-az="lingua" data-l="${k}" class="lingua${G.lingua === k ? ' attivo' : ''}">${l.bandiera}<span>${l.nome}</span></button>`;
+    }
+    h += _('</div><p class="sotto">Cambiando lingua la pagina si ricarica e la partita in corso riprende da dove era.</p>');
+    apriFinestra(_('⚙️ Impostazioni'), h);
+  }
+
   function finestraInfo() {
-    apriFinestra('Informazioni', `
+    apriFinestra(_('Informazioni'), _`
       <div class="info-testa"><span class="info-logo">🚂</span><div><div class="info-titolo">Rotaie &amp; Rotte</div>
       <div class="sotto">Gioco di strategia dei trasporti nel browser</div></div></div>
       <table class="elenco">
         <tr><td>Autore</td><td><b>Massimiliano Petra</b></td></tr>
-        <tr><td>Versione</td><td><b>${window.VERSIONE ? window.VERSIONE.versione : 'sviluppo'}</b></td></tr>
-        <tr><td>Build</td><td>${window.VERSIONE ? `${window.VERSIONE.build} · commit ${window.VERSIONE.commit}${window.VERSIONE.modifiche ? ' (con modifiche)' : ''} · ${window.VERSIONE.data}` : '—'}</td></tr>
+        <tr><td>Versione</td><td><b>${window.VERSIONE ? window.VERSIONE.versione : _('sviluppo')}</b></td></tr>
+        <tr><td>Build</td><td>${window.VERSIONE ? `${window.VERSIONE.build} · commit ${window.VERSIONE.commit}${window.VERSIONE.modifiche ? _(' (con modifiche)') : ''} · ${window.VERSIONE.data}` : '—'}</td></tr>
         <tr><td>Licenza</td><td>GPL-3.0 o successiva: software libero</td></tr>
         <tr><td>Codice</td><td><a href="https://github.com/massimilianopetra/rotteerotaie" target="_blank" rel="noopener">github.com/massimilianopetra/rotteerotaie</a></td></tr>
         <tr><td>Sito</td><td><a href="https://massimilianopetra.github.io/rotteerotaie/" target="_blank" rel="noopener">massimilianopetra.github.io/rotteerotaie</a></td></tr>
       </table>
       <p>Costruisci ferrovie, strade, autostrade e aeroporti, compra i mezzi e porta passeggeri e merci fra città
       inventate o vere (Italia ed Europa) che crescono grazie a te, dall'Ottocento ai giorni nostri.</p>` +
-      (st() ? '' : '<div class="pulsanti"><button data-az="menuIniziale">← Torna al menu</button></div>'));
+      (st() ? '' : _('<div class="pulsanti"><button data-az="menuIniziale">← Torna al menu</button></div>')));
   }
 
   // elenco delle partite salvate nel browser, con i pulsanti per aprirle o eliminarle
   function elencoPartite() {
     const el = G.elencoSalvataggi ? G.elencoSalvataggi() : [];
-    if (!el.length) return '<div class="nota">Nessuna partita salvata nel browser.</div>';
-    const quando = t => new Date(t).toLocaleString('it-IT', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    if (!el.length) return _('<div class="nota">Nessuna partita salvata nel browser.</div>');
+    const quando = t => new Date(t).toLocaleString(G.locale, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-    return `<table class="elenco partite"><tr><th>Compagnia</th><th>Data nel gioco</th><th>Salvata il</th><th></th></tr>` +
-      el.map(v => `<tr${st() && st().posto === v.id ? ' class="attuale" title="La partita in corso"' : ''}>
+    return _`<table class="elenco partite"><tr><th>Compagnia</th><th>Data nel gioco</th><th>Salvata il</th><th></th></tr>` +
+      el.map(v => _`<tr${st() && st().posto === v.id ? _(' class="attuale" title="La partita in corso"') : ''}>
         <td><b>${esc(v.nome)}</b>${v.mappa ? `<div class="sotto">${esc(v.mappa)}</div>` : ''}</td>
         <td>${esc(v.data || '—')}${v.soldi !== undefined ? `<div class="sotto">${G.lire(v.soldi)}</div>` : ''}</td>
         <td class="sotto">${quando(v.quando)}</td>
@@ -794,9 +806,9 @@
 
   function finestraMenu(avvio) {
     const seme = Math.floor(Math.random() * 1e6);
-    let h = avvio ? '<p class="intro">Costruisci un impero dei trasporti: ferrovie, strade, autostrade e aeroporti fra città inventate, oppure sulla mappa vera dell\'Italia o dell\'Europa.</p>' : '';
-    const mappe = (C.mappeReali || []).map(k => `<option value="${k.id}">${k.nome} (mappa reale)</option>`).join('');
-    h += `<label>Nome della compagnia<input id="npNome" value="Ferrovie Riunite" maxlength="40"></label>
+    let h = avvio ? _('<p class="intro">Costruisci un impero dei trasporti: ferrovie, strade, autostrade e aeroporti fra città inventate, oppure sulla mappa vera dell\'Italia o dell\'Europa.</p>') : '';
+    const mappe = (C.mappeReali || []).map(k => _`<option value="${k.id}">${k.nome} (mappa reale)</option>`).join('');
+    h += _`<label>Nome della compagnia<input id="npNome" value="Ferrovie Riunite" maxlength="40"></label>
       <label>Mondo<select id="npMappa" data-az="sceltaMappa"><option value="">Inventato (dal seme)</option>${mappe}</select></label>
       <div class="nota" id="npDescr"></div>
       <div class="riga"><label>Anno di inizio<select id="npAnno"><option>1850</option><option>1880</option><option>1920</option><option>1950</option><option>1980</option></select></label>
@@ -804,18 +816,18 @@
       <div class="riga"><label>Città<select id="npCitta"><option>8</option><option selected>14</option><option>20</option><option>28</option></select></label>
       <label>Seme del mondo<input id="npSeme" type="number" value="${seme}"></label></div>
       <div class="pulsanti"><button class="primario" data-az="iniziaPartita">🚂 Nuova partita</button>
-      ${!avvio ? '<button data-az="chiudiFinestra">Annulla</button>' : ''}</div>
+      ${!avvio ? _('<button data-az="chiudiFinestra">Annulla</button>') : ''}</div>
       <div class="nota">Con lo stesso seme si ottiene lo stesso mondo.</div>
       <h3>Partite salvate</h3>
       ${elencoPartite()}
       <div class="pulsanti">
-      ${!avvio ? `<button class="primario" data-az="salva">💾 Salva</button><button data-az="salvaNuova" title="Tiene anche il salvataggio di prima">💾 Salva come nuova</button>
+      ${!avvio ? _`<button class="primario" data-az="salva">💾 Salva</button><button data-az="salvaNuova" title="Tiene anche il salvataggio di prima">💾 Salva come nuova</button>
         <button data-az="salvaFile">⬇ Salva su file</button>` : ''}
       <button data-az="apriFile">📁 Apri da file…</button></div>
       <div class="nota">Le partite si salvano nella memoria del browser (anche da sole ogni 1° gennaio), non in una cartella:
       per averne una copia o portarla su un altro computer usa «Salva su file» (finisce nei Download) e poi «Apri da file».</div>
       <div class="versione">Rotaie &amp; Rotte ${G.testoVersione()} · di Massimiliano Petra · <span class="link" data-az="finestra" data-f="info">ℹ️ Informazioni</span></div>`;
-    apriFinestra(avvio ? 'Rotaie & Rotte' : 'Partita', h);
+    apriFinestra(avvio ? _('Rotaie & Rotte') : _('Partita'), h);
   }
   ui.finestraMenu = finestraMenu;
 
@@ -844,7 +856,8 @@
     chiudiPannello,
     chiudiFinestra,
     vaiA: d => G.vaiA(+d.x, +d.y),
-    finestra: d => ({ veicoli: finestraVeicoli, mondo: finestraMondo, finanze: () => G.apriGestione(), banca: () => G.apriBanca(), aiuto: () => finestraAiuto(d.s), info: finestraInfo, menu: () => finestraMenu(false) })[d.f](),
+    finestra: d => ({ veicoli: finestraVeicoli, mondo: finestraMondo, finanze: () => G.apriGestione(), banca: () => G.apriBanca(), aiuto: () => finestraAiuto(d.s), info: finestraInfo, impostazioni: finestraImpostazioni, menu: () => finestraMenu(false) })[d.f](),
+    lingua: d => { if (d.l !== G.lingua) G.cambiaLingua(d.l); },
     schedaMondo: d => finestraMondo(d.s),
     ordinaMondo: d => {
       const o = ui.ordineMondo[d.s], col = COLONNE_MONDO[d.s].find(c => c.k === d.k);
@@ -874,7 +887,7 @@
       scegliStrumento('info');
       ui.percorso = true;
       disegnaPannello();
-      G.avviso(`${v.nome} acquistato! Ora clicca sulle stazioni del percorso.`);
+      G.avviso(_`${v.nome} acquistato! Ora clicca sulle stazioni del percorso.`);
     },
     fermate: () => {
       const attiva = !ui.percorso;
@@ -902,7 +915,7 @@
     tornaIndietro: () => {
       const v = veicoloSel(); if (!v) return;
       const e = G.tornaIndietro(st(), v);
-      G.avviso(e || `${v.nome} torna indietro`, !!e);
+      G.avviso(e || _`${v.nome} torna indietro`, !!e);
       disegnaPannello();
     },
     suFermata: d => { const v = veicoloSel(), k = +d.k; if (v && k > 0) { const t = v.fermate[k]; v.fermate[k] = v.fermate[k - 1]; v.fermate[k - 1] = t; disegnaPannello(); } },
@@ -911,30 +924,30 @@
     fermaVeicolo: () => { const v = veicoloSel(); if (v) { v.fermoManuale = !v.fermoManuale; disegnaPannello(); } },
     vendi: () => {
       const v = veicoloSel(); if (!v) return;
-      if (!confirm(`Vendere ${v.nome} per ${G.lire(G.valoreVeicolo(v))}?`)) return;
-      G.vendiVeicolo(st(), v); chiudiPannello(); G.avviso('Mezzo venduto');
+      if (!confirm(_`Vendere ${v.nome} per ${G.lire(G.valoreVeicolo(v))}?`)) return;
+      G.vendiVeicolo(st(), v); chiudiPannello(); G.avviso(_('Mezzo venduto'));
     },
     demolisciStazione: d => {
       const s = st().stazioni[+d.id]; if (!s) return;
-      if (!confirm(`Demolire ${s.nome}? I mezzi perderanno questa fermata.`)) return;
+      if (!confirm(_`Demolire ${s.nome}? I mezzi perderanno questa fermata.`)) return;
       const e = G.demolisciStazione(st(), +d.id);
       if (e) G.avviso(e, true); else chiudiPannello();
     },
     // la banca sta in banca.js
     chiediPrestito: d => G.azioniBanca.chiediPrestito(d),
     restituisci: d => G.azioniBanca.restituisci(d),
-    salva: () => { const e = G.salvaPartita(st()); G.avviso(e || 'Partita salvata', !!e); if (!e) finestraMenu(false); },
-    salvaNuova: () => { const e = G.salvaPartita(st(), true); G.avviso(e || 'Salvata come nuova partita', !!e); if (!e) finestraMenu(false); },
-    salvaFile: () => { const e = G.salvaSuFile(st()); G.avviso(e || 'File della partita creato: lo trovi nei Download', !!e); },
+    salva: () => { const e = G.salvaPartita(st()); G.avviso(e || _('Partita salvata'), !!e); if (!e) finestraMenu(false); },
+    salvaNuova: () => { const e = G.salvaPartita(st(), true); G.avviso(e || _('Salvata come nuova partita'), !!e); if (!e) finestraMenu(false); },
+    salvaFile: () => { const e = G.salvaSuFile(st()); G.avviso(e || _('File della partita creato: lo trovi nei Download'), !!e); },
     eliminaPartita: d => {
       const v = G.elencoSalvataggi().find(x => x.id === d.id); if (!v) return;
-      if (!confirm(`Eliminare la partita salvata «${v.nome}» (${v.data || ''})?`)) return;
+      if (!confirm(_`Eliminare la partita salvata «${v.nome}» (${v.data || ''})?`)) return;
       G.eliminaSalvataggio(d.id);
       finestraMenu(!st());
     },
     // un attimo di respiro perché l'avviso si veda: le mappe reali richiedono qualche secondo
     carica: d => {
-      G.avviso('Caricamento della partita…');
+      G.avviso(_('Caricamento della partita…'));
       setTimeout(() => G.caricaPartita(d.id, partitaCaricata), 30);
     },
     apriFile: () => {
@@ -942,7 +955,7 @@
       inp.type = 'file'; inp.accept = '.rotaie,.txt';
       inp.onchange = () => {
         if (!inp.files.length) return;
-        G.avviso('Caricamento della partita…');
+        G.avviso(_('Caricamento della partita…'));
         setTimeout(() => G.caricaDaFile(inp.files[0], partitaCaricata), 30);
       };
       inp.click();
@@ -956,13 +969,13 @@
     iniziaPartita: (d, el) => {
       const [W, H] = $('#npDim').value.split('x').map(Number);
       const seme = Math.abs(parseInt($('#npSeme').value, 10) || 1), mappa = $('#npMappa').value || undefined;
-      const opz = { nome: $('#npNome').value.trim() || 'Ferrovie Riunite', anno: +$('#npAnno').value, W, H, numCitta: +$('#npCitta').value, seme, mappa };
-      if (mappa) { G.avviso('Preparo la mappa: qualche secondo…'); el.disabled = true; }
+      const opz = { nome: $('#npNome').value.trim() || _('Ferrovie Riunite'), anno: +$('#npAnno').value, W, H, numCitta: +$('#npCitta').value, seme, mappa };
+      if (mappa) { G.avviso(_('Preparo la mappa: qualche secondo…')); el.disabled = true; }
       setTimeout(() => G.nuovaPartita(opz, e => {
         el.disabled = false;
         if (e) { G.avviso(e, true); return; }
         $('#finestra').classList.add('nascosto'); ui.finestra = null;
-        if (mappa) G.avviso('Buon viaggio!');
+        if (mappa) G.avviso(_('Buon viaggio!'));
       }), 30);
     },
     menuIniziale: () => finestraMenu(true),
@@ -979,7 +992,7 @@
     // vista 2D dall'alto o 3D assonometrica (tasto D); in 3D si gira di 90° (tasto O, Maiusc+O al contrario)
     vista3d: d => {
       const si = G.vista3d(d && d.si !== undefined ? d.si === '1' : undefined);
-      G.avviso(si ? '🧊 Vista 3D: O per girarla, D per tornare alla vista dall’alto' : '🗺️ Vista dall’alto (2D)');
+      G.avviso(si ? _('🧊 Vista 3D: O per girarla, D per tornare alla vista dall’alto') : _('🗺️ Vista dall’alto (2D)'));
       aggiornaPulsanteVista();
     },
     rilievo: d => {
@@ -990,7 +1003,7 @@
     ruota: d => {
       if (!G.disegno.iso) G.vista3d(true);
       G.ruotaVista(+d.dir || 1);
-      G.avviso('🧭 Vista girata: guardi verso ' + ['nord-ovest', 'sud-ovest', 'sud-est', 'nord-est'][G.disegno.rot]);
+      G.avviso(_('🧭 Vista girata: guardi verso ') + [_('nord-ovest'), _('sud-ovest'), _('sud-est'), _('nord-est')][G.disegno.rot]);
       aggiornaPulsanteVista();
     }
   };
@@ -1001,7 +1014,7 @@
   }
   function partitaCaricata(e) {
     if (e) { G.avviso(e, true); return; }
-    $('#finestra').classList.add('nascosto'); ui.finestra = null; G.avviso('Partita caricata');
+    $('#finestra').classList.add('nascosto'); ui.finestra = null; G.avviso(_('Partita caricata'));
   }
   const veicoloSel = () => ui.selVeicolo && st() && st().veicoli.find(k => k.id === ui.selVeicolo);
 
@@ -1028,23 +1041,23 @@
     if (tr && tr.impossibile) {
       // la linea si vede in rosso con le caselle che non vanno; al rilascio non si costruisce
       ui.anteprima = { caselle: tr.caselle, ok: false, blocchi: tr.blocchi, motivo: tr.impossibile };
-      suggerisci(`<span class="rosso">${galleria ? '🚇 Galleria impossibile' : 'Impossibile passare di qui'}</span><br>${esc(tr.impossibile)}`, e);
+      suggerisci(`<span class="rosso">${galleria ? _('🚇 Galleria impossibile') : _('Impossibile passare di qui')}</span><br>${esc(tr.impossibile)}`, e);
       return;
     }
     if (galleria) {
       const ok = tr.costo <= s0.soldi, km = G.kmCasella(s0), Hm = G.metriTerreno(s0.mondo);
       const p = tr.profilo, sopra = Math.max(...tr.caselle.slice(1, -1).map((i, k) => Hm[i] - p.quote[k + 1]));
-      const pend = Math.round(p.pendenza), quote = pend ? `da ${G.numero(Math.round(tr.quota))} m a ${G.numero(Math.round(p.quotaUscita))} m · pendenza ${pend}‰ <span class="sotto">(limite ${C.opere.pendenzaMax[rete]}‰)</span>` : `in piano a ${G.numero(Math.round(tr.quota))} m`;
+      const pend = Math.round(p.pendenza), quote = pend ? _`da ${G.numero(Math.round(tr.quota))} m a ${G.numero(Math.round(p.quotaUscita))} m · pendenza ${pend}‰ <span class="sotto">(limite ${C.opere.pendenzaMax[rete]}‰)</span>` : _`in piano a ${G.numero(Math.round(tr.quota))} m`;
       ui.anteprima = { caselle: tr.caselle, costo: tr.costo, ok, tr };
-      suggerisci(`🚇 Galleria: <b class="${ok ? '' : 'rosso'}">${G.lire(tr.costo)}</b> · ${tr.caselle.length - 2} caselle sottoterra` +
-        `${km === 1 ? '' : ` (${G.numero(Math.round((tr.caselle.length - 2) * km))} km)`}<br>${quote} · fino a ${G.numero(Math.round(sopra))} m di monte sopra`, e);
+      suggerisci(_`🚇 Galleria: <b class="${ok ? '' : 'rosso'}">${G.lire(tr.costo)}</b> · ${tr.caselle.length - 2} caselle sottoterra` +
+        _`${km === 1 ? '' : ` (${G.numero(Math.round((tr.caselle.length - 2) * km))} km)`}<br>${quote} · fino a ${G.numero(Math.round(sopra))} m di monte sopra`, e);
       return;
     }
     if (!tr) {
       // niente linea dritta (coprirebbe l'ostacolo): si segnano in rosso le caselle che bloccano e si dice perché
       const mt = G.motivoTracciato(s0, ui.trascina.da, c.i, rete);
       ui.anteprima = { caselle: null, ok: false, blocchi: mt.blocchi, motivo: mt.testo };
-      suggerisci(`<span class="rosso">Impossibile passare di qui</span><br>${esc(mt.testo)}`, e);
+      suggerisci(_`<span class="rosso">Impossibile passare di qui</span><br>${esc(mt.testo)}`, e);
       return;
     }
     const ok = tr.costo <= s0.soldi;
@@ -1054,12 +1067,12 @@
     const p = tr.profilo, opere = [];
     if (p) {
       const kmTesto = x => (km === 1 ? '' : ` (${G.numero(x)} km)`);
-      if (p.gallerie) opere.push(`🚇 ${p.gallerie} ${p.gallerie === 1 ? 'galleria' : 'gallerie'}${kmTesto(p.kmGallerie)}`);
-      if (p.viadotti) opere.push(`🌉 ${p.viadotti} ${p.viadotti === 1 ? 'viadotto' : 'viadotti'}${kmTesto(p.kmViadotti)}`);
+      if (p.gallerie) opere.push(`🚇 ${p.gallerie} ${p.gallerie === 1 ? _('galleria') : _('gallerie')}${kmTesto(p.kmGallerie)}`);
+      if (p.viadotti) opere.push(`🌉 ${p.viadotti} ${p.viadotti === 1 ? _('viadotto') : _('viadotti')}${kmTesto(p.kmViadotti)}`);
       const max = C.opere.pendenzaMax[rete], pend = Math.round(p.pendenza);
-      opere.push(`pendenza massima <b class="${pend > max ? 'rosso' : ''}">${pend}‰</b> <span class="sotto">(limite ${max}‰)</span>`);
+      opere.push(_`pendenza massima <b class="${pend > max ? 'rosso' : ''}">${pend}‰</b> <span class="sotto">(limite ${max}‰)</span>`);
     }
-    suggerisci(`${C.reti[rete].nome}: <b class="${ok ? '' : 'rosso'}">${G.lire(tr.costo)}</b> · ${tr.caselle.length} caselle${lun}` +
+    suggerisci(_`${C.reti[rete].nome}: <b class="${ok ? '' : 'rosso'}">${G.lire(tr.costo)}</b> · ${tr.caselle.length} caselle${lun}` +
       (opere.length ? '<br>' + opere.join(' · ') : ''), e);
   }
 
@@ -1074,7 +1087,7 @@
     const finta = { tipo, taglia, x, y, lato: L };
     const b = G.calcolaBacino(s0, finta);
     let h = `<b>${def.nome}</b> · ${typeof r === 'string' ? `<span class="rosso">${r}</span>` : `<span class="${ok ? '' : 'rosso'}">${G.lire(r.costo)}</span>`}`;
-    h += `<br>Accetta: ${elencoMerci(b.accetta)}<br>Fornisce: ${elencoMerci(b.fornisce)}`;
+    h += _`<br>Accetta: ${elencoMerci(b.accetta)}<br>Fornisce: ${elencoMerci(b.fornisce)}`;
     suggerisci(h, e);
     return { x, y };
   }
@@ -1086,9 +1099,9 @@
       const v = veicoloSel();
       if (v && m.occ[c.i] === OCC.STAZIONE) {
         const e = G.aggiungiFermata(s0, v, m.rif[c.i]);
-        G.avviso(e || `Fermata aggiunta: ${s0.stazioni[m.rif[c.i]].nome}`, !!e);
+        G.avviso(e || _`Fermata aggiunta: ${s0.stazioni[m.rif[c.i]].nome}`, !!e);
         disegnaPannello();
-      } else G.avviso('Clicca su una stazione per aggiungerla al percorso (Esc per finire)', true);
+      } else G.avviso(_('Clicca su una stazione per aggiungerla al percorso (Esc per finire)'), true);
       return;
     }
     let best = null, bd = Math.max(0.6, 10 / D.cam.ts);
@@ -1111,10 +1124,10 @@
     const s0 = st();
     if (s0.mondo.occ[c.i] === OCC.STAZIONE) {
       const s = s0.stazioni[s0.mondo.rif[c.i]];
-      if (!confirm(`Demolire ${s.nome}?`)) { ui.trascina = null; return; }
+      if (!confirm(_`Demolire ${s.nome}?`)) { ui.trascina = null; return; }
     }
     const e = G.demolisci(s0, c.i);
-    if (e && e !== 'Niente da demolire') G.avviso(e, true);
+    if (e && e !== _('Niente da demolire')) G.avviso(e, true);
   }
 
   function preparaMouse() {
@@ -1132,7 +1145,7 @@
       if (e.button !== 0 || c.i < 0) return;
       const s0 = st();
       if (RETI.includes(ui.strumento)) {
-        if (G.anno(s0) < C.reti[ui.strumento].anno) { G.avviso(`${C.reti[ui.strumento].nome}: disponibile dal ${C.reti[ui.strumento].anno}`, true); return; }
+        if (G.anno(s0) < C.reti[ui.strumento].anno) { G.avviso(_`${C.reti[ui.strumento].nome}: disponibile dal ${C.reti[ui.strumento].anno}`, true); return; }
         ui.trascina = { da: c.i };
         aggiornaAnteprima(c, e);
       } else if (STAZIONI.includes(ui.strumento)) {
@@ -1140,7 +1153,7 @@
         chiudiMenuStazioni();
         const r = G.costruisciStazione(s0, ui.strumento, p.x, p.y, ui.strumento === 'stazione' ? ui.tagliaStazione : undefined);
         if (typeof r === 'string') G.avviso(r, true);
-        else { G.avviso(`Costruita: ${r.nome}`); ui.apriPannello('stazione', r.id); }
+        else { G.avviso(_`Costruita: ${r.nome}`); ui.apriPannello('stazione', r.id); }
       } else if (ui.strumento === 'demolisci') {
         ui.trascina = { demolisci: true };
         demolisciQui(c);
@@ -1166,11 +1179,11 @@
       else if (inGalleria(ui.strumento) && c.i >= 0) {
         const r0 = ui.strumento, m0 = st().mondo, mc = G.motivoCasella(st(), c.i, r0);
         const q = (r0 === 'binario' ? m0.mBin : m0.mStr)[c.i] ? G.quotaRete(st(), c.i, r0) : G.metriTerreno(m0)[c.i];
-        suggerisci(`🚇 Galleria · imbocco a ${G.numero(Math.round(q))} m${mc ? `: <span class="rosso">${esc(mc)}</span>` : ''}<br><span class="sotto">Tieni premuto e trascina fino all'uscita, dall'altra parte del monte</span>`, e);
+        suggerisci(_`🚇 Galleria · imbocco a ${G.numero(Math.round(q))} m${mc ? `: <span class="rosso">${esc(mc)}</span>` : ''}<br><span class="sotto">Tieni premuto e trascina fino all'uscita, dall'altra parte del monte</span>`, e);
       } else if (RETI.includes(ui.strumento) && c.i >= 0) {
         const t = G.NOMI_TERRENO[st().mondo.tipo[c.i]], mc = G.motivoCasella(st(), c.i, ui.strumento);
         const costo = G.costoCasella(st(), c.i, ui.strumento);
-        suggerisci(`${C.reti[ui.strumento].nome} · ${t}, ${G.numero(G.metriTerreno(st().mondo)[c.i])} m: ${mc ? `<span class="rosso">${esc(mc)}</span>` : costo === 0 ? 'già costruita, gratis' : G.lire(costo) + ' a casella'}<br><span class="sotto">Tieni premuto e trascina</span>`, e);
+        suggerisci(_`${C.reti[ui.strumento].nome} · ${G.tr(t)}, ${G.numero(G.metriTerreno(st().mondo)[c.i])} m: ${mc ? `<span class="rosso">${esc(mc)}</span>` : costo === 0 ? _('già costruita, gratis') : G.lire(costo) + _(' a casella')}<br><span class="sotto">Tieni premuto e trascina</span>`, e);
       } else suggerisci('', e);
     });
     cv.addEventListener('pointerup', e => {
@@ -1185,7 +1198,7 @@
       }
       if (ui.trascina && !ui.trascina.demolisci && ui.anteprima && ui.anteprima.tr) {
         const e2 = G.costruisciTracciato(st(), ui.anteprima.tr, ui.strumento);
-        if (e2) G.avviso(e2, true); else G.avviso(`Costruito: ${G.lire(ui.anteprima.tr.costo)}`);
+        if (e2) G.avviso(e2, true); else G.avviso(_`Costruito: ${G.lire(ui.anteprima.tr.costo)}`);
       } else if (ui.trascina && ui.anteprima && ui.anteprima.motivo) G.avviso(ui.anteprima.motivo, true);
       ui.trascina = null; ui.anteprima = null;
       suggerisci('', e);
@@ -1252,23 +1265,23 @@
   // Sulle mappe reali case e vie dei paesi rendono la mappa fittissima: spegnerle fa risaltare la rete.
   // La scelta si ricorda nel browser.
   const LIVELLI = [
-    { k: 'case', icona: '🏠', nome: 'Case' },
-    { k: 'vie', icona: '🏘️', nome: 'Vie dei paesi', tasto: 'C' },
-    { k: 'strade', icona: '🛣️', nome: 'Strade e autostrade' },
-    { k: 'ferrovie', icona: '🛤️', nome: 'Ferrovie' },
-    { k: 'stazioni', icona: '🚉', nome: 'Stazioni e aeroporti' },
-    { k: 'industrie', icona: '🏭', nome: 'Industrie' },
-    { k: 'mezzi', icona: '🚂', nome: 'Treni, autobus, camion e aerei' },
-    { k: 'nomi', icona: '🔤', nome: 'Nomi delle città' },
-    { k: 'griglia', icona: '#️⃣', nome: 'Griglia delle caselle', tasto: 'G', si: true },
-    { k: 'attenua', icona: '🌫️', nome: 'Terreno attenuato (la rete risalta)', si: true }
+    { k: 'case', icona: '🏠', nome: _('Case') },
+    { k: 'vie', icona: '🏘️', nome: _('Vie dei paesi'), tasto: 'C' },
+    { k: 'strade', icona: '🛣️', nome: _('Strade e autostrade') },
+    { k: 'ferrovie', icona: '🛤️', nome: _('Ferrovie') },
+    { k: 'stazioni', icona: '🚉', nome: _('Stazioni e aeroporti') },
+    { k: 'industrie', icona: '🏭', nome: _('Industrie') },
+    { k: 'mezzi', icona: '🚂', nome: _('Treni, autobus, camion e aerei') },
+    { k: 'nomi', icona: '🔤', nome: _('Nomi delle città') },
+    { k: 'griglia', icona: '#️⃣', nome: _('Griglia delle caselle'), tasto: 'G', si: true },
+    { k: 'attenua', icona: '🌫️', nome: _('Terreno attenuato (la rete risalta)'), si: true }
   ];
   const TUTTO = { case: true, vie: true, strade: true, ferrovie: true, stazioni: true, industrie: true, mezzi: true, nomi: true, griglia: false, attenua: false };
   const VISTE = [
-    { id: 'tutto', nome: 'Tutto', icona: '🌍', l: TUTTO },
-    { id: 'ferrovia', nome: 'Solo ferrovia', icona: '🛤️', l: { ferrovie: true, stazioni: true, mezzi: true, nomi: true, attenua: true } },
-    { id: 'reti', nome: 'Reti e stazioni', icona: '🚉', l: { strade: true, ferrovie: true, stazioni: true, mezzi: true, nomi: true } },
-    { id: 'merci', nome: 'Industrie e merci', icona: '🏭', l: { strade: true, ferrovie: true, stazioni: true, industrie: true, mezzi: true, nomi: true, attenua: true } }
+    { id: 'tutto', nome: _('Tutto'), icona: '🌍', l: TUTTO },
+    { id: 'ferrovia', nome: _('Solo ferrovia'), icona: '🛤️', l: { ferrovie: true, stazioni: true, mezzi: true, nomi: true, attenua: true } },
+    { id: 'reti', nome: _('Reti e stazioni'), icona: '🚉', l: { strade: true, ferrovie: true, stazioni: true, mezzi: true, nomi: true } },
+    { id: 'merci', nome: _('Industrie e merci'), icona: '🏭', l: { strade: true, ferrovie: true, stazioni: true, industrie: true, mezzi: true, nomi: true, attenua: true } }
   ];
   const CHIAVE_LIVELLI = 'rotaie-e-rotte-livelli';
   ui.livelli = Object.assign({}, TUTTO);
@@ -1289,27 +1302,27 @@
     ui.livelli[k] = acceso;
     salvaLivelli();
     const l = LIVELLI.find(x => x.k === k);
-    if (!menuMappaAperto()) G.avviso(l.icona + ' ' + l.nome + ': ' + (l.si ? (acceso ? 'sì' : 'no') : (acceso ? 'visibili' : 'nascoste')));
+    if (!menuMappaAperto()) G.avviso(l.icona + ' ' + l.nome + ': ' + (l.si ? (acceso ? _('sì') : _('no')) : (acceso ? _('visibili') : _('nascoste'))));
   }
   const menuMappaAperto = () => !$('#menuMappa').classList.contains('nascosto');
   function disegnaMenuMappa() {
     const att = vistaAttuale();
     const iso = G.disegno.iso;
-    let h = '<div class="titolo">Vista</div><div class="viste">' +
-      `<button data-az="vista3d" data-si="0" class="${iso ? '' : 'attivo'}"><span class="ic">🗺️</span>Dall'alto (2D)</button>` +
-      `<button data-az="vista3d" data-si="1" class="${iso ? 'attivo' : ''}"><span class="ic">🧊</span>3D assonometrica</button>` +
-      '<button data-az="ruota" data-dir="-1" title="Gira a sinistra (Maiusc+O)"><span class="ic">⟲</span>Gira</button>' +
-      '<button data-az="ruota" data-dir="1" title="Gira a destra (O)"><span class="ic">⟳</span>Gira</button></div>' +
-      '<div class="titolo">Montagne nella vista 3D</div><div class="viste">' +
+    let h = _('<div class="titolo">Vista</div><div class="viste">') +
+      _`<button data-az="vista3d" data-si="0" class="${iso ? '' : 'attivo'}"><span class="ic">🗺️</span>Dall'alto (2D)</button>` +
+      _`<button data-az="vista3d" data-si="1" class="${iso ? 'attivo' : ''}"><span class="ic">🧊</span>3D assonometrica</button>` +
+      _('<button data-az="ruota" data-dir="-1" title="Gira a sinistra (Maiusc+O)"><span class="ic">⟲</span>Gira</button>') +
+      _('<button data-az="ruota" data-dir="1" title="Gira a destra (O)"><span class="ic">⟳</span>Gira</button></div>') +
+      _('<div class="titolo">Montagne nella vista 3D</div><div class="viste">') +
       G.RILIEVI.map((r, n) => `<button data-az="rilievo" data-n="${n}" class="${G.disegno.rilievo === n ? 'attivo' : ''}"><span class="ic">⛰️</span>${r.nome}</button>`).join('') + '</div>';
-    h += '<div class="titolo">Viste pronte</div><div class="viste">';
+    h += _('<div class="titolo">Viste pronte</div><div class="viste">');
     for (const v of VISTE) h += `<button data-az="vista" data-v="${v.id}" class="${att === v.id ? 'attivo' : ''}"><span class="ic">${v.icona}</span>${v.nome}</button>`;
-    h += '</div><div class="titolo">Cosa mostrare</div>';
+    h += _('</div><div class="titolo">Cosa mostrare</div>');
     for (const l of LIVELLI) {
       h += `<label class="livello"><input type="checkbox" data-az="livello" data-k="${l.k}" ${ui.livelli[l.k] ? 'checked' : ''}>` +
         `<span class="ic">${l.icona}</span><span class="nome">${l.nome}</span>${l.tasto ? '<kbd>' + l.tasto + '</kbd>' : ''}</label>`;
     }
-    h += '<div class="nota">Con un attrezzo in mano si vede sempre quello che serve (i binari con la ferrovia, le strade con la strada…). Il tasto <kbd>L</kbd> apre e chiude questo menu, <kbd>D</kbd> passa dalla vista dall’alto a quella 3D, <kbd>O</kbd> la gira.</div>';
+    h += _('<div class="nota">Con un attrezzo in mano si vede sempre quello che serve (i binari con la ferrovia, le strade con la strada…). Il tasto <kbd>L</kbd> apre e chiude questo menu, <kbd>D</kbd> passa dalla vista dall’alto a quella 3D, <kbd>O</kbd> la gira.</div>');
     $('#menuMappa').innerHTML = h;
   }
   function apriMenuMappa() {
@@ -1333,6 +1346,7 @@
   };
 
   ui.prepara = function () {
+    G.traduciPagina(document.body); // la parte fissa della pagina (index.html) nella lingua scelta
     try {
       const salvati = JSON.parse(localStorage.getItem(CHIAVE_LIVELLI) || 'null');
       if (salvati) for (const l of LIVELLI) if (typeof salvati[l.k] === 'boolean') ui.livelli[l.k] = salvati[l.k];
@@ -1369,7 +1383,7 @@
     p.addEventListener('pointerleave', () => { ui.mouseSuPannello = false; });
     preparaMouse();
     preparaTastiera();
-    console.info('Rotaie & Rotte ' + G.testoVersione(true) + ' — di Massimiliano Petra');
+    console.info(_('Rotaie & Rotte ') + G.testoVersione(true) + _(' — di Massimiliano Petra'));
     scegliStrumento('info');
     impostaVelocita(1);
     aggiornaPulsanteVista();
@@ -1379,7 +1393,7 @@
       $('#azienda').textContent = s0.opz.nome;
       const soldi = $('#soldi');
       soldi.textContent = G.lire(s0.soldi); soldi.classList.toggle('rosso', s0.soldi < 0);
-      $('#prestito').textContent = s0.prestito ? `debito ${G.lire(s0.prestito)} · interessi ${G.lire(G.interessiMese(s0))}/mese` : '';
+      $('#prestito').textContent = s0.prestito ? _`debito ${G.lire(s0.prestito)} · interessi ${G.lire(G.interessiMese(s0))}/mese` : '';
       $('#data').textContent = G.testoData(s0) + ' · ' + G.testoOra(s0);
     }, 250);
     setInterval(() => { if (ui.pannello && !ui.mouseSuPannello) disegnaPannello(); }, 1000);

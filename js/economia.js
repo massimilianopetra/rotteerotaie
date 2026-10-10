@@ -42,8 +42,8 @@
     for (const k in u) if (G.VOCI_INVESTIMENTO.includes(k)) investimenti += u[k]; else costi += u[k];
     return { ricavi, costi, profitto: ricavi - costi, investimenti, cassa: ricavi - costi - investimenti };
   };
-  G.lire = n => (n < 0 ? '−' : '') + 'L. ' + Math.abs(Math.round(n)).toLocaleString('it-IT');
-  G.numero = n => Math.round(n).toLocaleString('it-IT');
+  G.lire = n => (n < 0 ? '−' : '') + 'L. ' + Math.abs(Math.round(n)).toLocaleString(G.locale);
+  G.numero = n => Math.round(n).toLocaleString(G.locale);
 
   G.valoreAzienda = function (st) {
     let v = st.soldi - st.prestito + st.valoreInfra;
@@ -54,7 +54,7 @@
   // i prestiti stanno in banca.js
 
   // ---------------------------------------------------------------- calendario
-  const MESI = G.MESI = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+  const MESI = G.MESI = [_('gen'), _('feb'), _('mar'), _('apr'), _('mag'), _('giu'), _('lug'), _('ago'), _('set'), _('ott'), _('nov'), _('dic')];
   G.data = function (st, giorno) {
     const g = Math.floor(giorno === undefined ? st.giorno : giorno);
     const d = new Date(Date.UTC(st.opz.anno, 0, 1) + g * 86400000);
@@ -83,7 +83,7 @@
     const t = C.taglieStazione[taglia] || C.taglieStazione.media;
     return Object.assign({}, def, t, { taglia: taglia in C.taglieStazione ? taglia : 'media' });
   };
-  G.nomeTipoStazione = s => s.tipo === 'stazione' ? 'Stazione ferroviaria · ' + G.defStazione(s).breve.toLowerCase() : C.stazioni[s.tipo].nome;
+  G.nomeTipoStazione = s => s.tipo === 'stazione' ? _('Stazione ferroviaria · ') + G.defStazione(s).breve.toLowerCase() : C.stazioni[s.tipo].nome;
 
   G.centroStazione = s => ({ x: s.x + s.lato / 2, y: s.y + s.lato / 2 });
   G.caselleStazione = function (st, s) {
@@ -115,16 +115,16 @@
 
   G.puoCostruireStazione = function (st, tipo, x, y, taglia) {
     const def = G.defStazione(tipo, taglia), m = st.mondo, T = G.T;
-    if (G.anno(st) < def.anno) return `${def.nome}: disponibile dal ${def.anno}`;
+    if (G.anno(st) < def.anno) return _`${def.nome}: disponibile dal ${def.anno}`;
     let costo = def.costo;
     for (let dy = 0; dy < def.lato; dy++) for (let dx = 0; dx < def.lato; dx++) {
       const xx = x + dx, yy = y + dy;
-      if (xx < 0 || yy < 0 || xx >= m.W || yy >= m.H) return 'Fuori dalla mappa';
+      if (xx < 0 || yy < 0 || xx >= m.W || yy >= m.H) return _('Fuori dalla mappa');
       const i = yy * m.W + xx, t = m.tipo[i];
-      if (t === T.ACQUA || t === T.FIUME) return "Non si costruisce sull'acqua";
-      if (m.occ[i]) return 'Casella occupata';
-      if ((tipo === 'aeroporto' || tipo === 'porto') && (m.mBin[i] || m.mStr[i])) return 'Togli prima strade e binari';
-      if (tipo === 'porto' && !G.toccaAcqua(m, i)) return 'Il porto va sulla costa: una casella che tocca il mare o un lago';
+      if (t === T.ACQUA || t === T.FIUME) return _("Non si costruisce sull'acqua");
+      if (m.occ[i]) return _('Casella occupata');
+      if ((tipo === 'aeroporto' || tipo === 'porto') && (m.mBin[i] || m.mStr[i])) return _('Togli prima strade e binari');
+      if (tipo === 'porto' && !G.toccaAcqua(m, i)) return _('Il porto va sulla costa: una casella che tocca il mare o un lago');
       if (t === T.MONTAGNA) costo += def.costo * 0.5 / (def.lato * def.lato);
       if (m.bosco[i]) costo += C.costoBosco;
     }
@@ -139,18 +139,20 @@
       base = c.nome;
       const dx = c0.x - c.x - 0.5, dy = c0.y - c.y - 0.5;
       if (Math.hypot(dx, dy) > G.raggioCitta(c) * 0.6 + 1) {
-        base += Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? ' Est' : ' Ovest') : (dy > 0 ? ' Sud' : ' Nord');
+        base += Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? _(' Est') : _(' Ovest')) : (dy > 0 ? _(' Sud') : _(' Nord'));
       }
     } else {
       const v = G.cittaVicina(st, c0.x, c0.y);
       const ind = st.industrie.find(k => !k.chiusa && Math.abs(k.x + 1 - c0.x) < 6 && Math.abs(k.y + 1 - c0.y) < 6);
-      base = (v ? v.nome : 'Campagna') + ' ' + (ind ? C.industrie[ind.tipo].breve : 'Bivio');
+      base = (v ? v.nome : _('Campagna')) + ' ' + (ind ? C.industrie[ind.tipo].breve : _('Bivio'));
     }
-    // «Porto di Porto Salino» suonerebbe male: lì diventa «Scalo di Porto Salino»
-    const pre = s.tipo === 'aeroporto' ? 'Aeroporto di ' : s.tipo === 'porto' ? (/^Porto /.test(base) ? 'Scalo di ' : 'Porto di ') : s.tipo === 'deposito' ? 'Autostazione ' : s.taglia === 'fermata' ? 'Fermata ' : '';
-    if (s.taglia === 'centrale') base += ' Centrale';
-    let nome = pre + base, k = 1;
-    while (st.stazioni.some(o => o && o !== s && o.nome === nome)) nome = pre + base + ' ' + (++k);
+    // «Porto di Porto Salino» suonerebbe male: lì diventa «Scalo di Porto Salino».
+    // Un modello per tipo: in altre lingue il nome della città può andare prima o dopo (Porto Ceruleo Airport).
+    if (s.taglia === 'centrale') base = _`${base} Centrale`;
+    const forma = b => (s.tipo === 'aeroporto' ? _`Aeroporto di ${b}` : s.tipo === 'porto' ? (/^Porto /.test(b) ? _`Scalo di ${b}` : _`Porto di ${b}`)
+      : s.tipo === 'deposito' ? _`Autostazione ${b}` : s.taglia === 'fermata' ? _`Fermata ${b}` : b);
+    let nome = forma(base), k = 1;
+    while (st.stazioni.some(o => o && o !== s && o.nome === nome)) nome = forma(base + ' ' + (++k));
     return nome;
   }
 
@@ -207,7 +209,7 @@
   G.costruisciStazione = function (st, tipo, x, y, taglia) {
     const r = G.puoCostruireStazione(st, tipo, x, y, taglia);
     if (typeof r === 'string') return r;
-    if (st.soldi < r.costo) return 'Fondi insufficienti';
+    if (st.soldi < r.costo) return _('Fondi insufficienti');
     const def = G.defStazione(tipo, taglia), m = st.mondo;
     const s = {
       id: st.stazioni.length, tipo, x, y, lato: def.lato, nome: '',
@@ -233,7 +235,7 @@
 
   G.demolisciStazione = function (st, id) {
     const s = st.stazioni[id], m = st.mondo;
-    if (st.soldi < C.costoDemolizione) return 'Fondi insufficienti';
+    if (st.soldi < C.costoDemolizione) return _('Fondi insufficienti');
     for (const v of st.veicoli) G.togliFermateStazione(st, v, id);
     G.copertura(st, s, -1);
     for (let dy = 0; dy < s.lato; dy++) for (let dx = 0; dx < s.lato; dx++) {
@@ -363,7 +365,7 @@
     for (const s of st.stazioni) if (s) G.aggiornaBacino(st, s);
     G.aggiornaIndustrieStazioni(st);
     st.minimappaSporca = true;
-    G.notizia(st, `${ind.nome} ha esaurito il giacimento e chiude.`, ind.x + 1, ind.y + 1);
+    G.notizia(st, _`${ind.nome} ha esaurito il giacimento e chiude.`, ind.x + 1, ind.y + 1);
   }
 
   // ---------------------------------------------------------------- un mese
@@ -388,8 +390,8 @@
     c.crescita = c.pop - prima;
     for (const t of [1000, 2500, 5000, 10000, 25000]) {
       if (prima < t && c.pop >= t) {
-        const cl = G.classeCitta(c.pop), art = cl === 'villaggio' || cl === 'paese' ? 'un' : 'una';
-        G.notizia(st, `${c.nome} supera i ${G.numero(t)} abitanti: ora è ${art} ${cl}!`, c.x, c.y);
+        const cl = G.classeCitta(c.pop), art = c.pop < 1000 ? _('un') : _('una'); // villaggio e paese: «un»
+        G.notizia(st, _`${c.nome} supera i ${G.numero(t)} abitanti: ora è ${art} ${cl}!`, c.x, c.y);
       }
     }
   };
@@ -433,7 +435,7 @@
       if (def.produce) {
         if (ind.perc > 0.6 && rnd() < 0.05) {
           ind.produzione = Math.round(ind.produzione * 1.25);
-          G.notizia(st, `${ind.nome}: ben servita, aumenta la produzione a ${ind.produzione} ${C.merci[def.produce].unita} al mese.`, ind.x + 1, ind.y + 1);
+          G.notizia(st, _`${ind.nome}: ben servita, aumenta la produzione a ${ind.produzione} ${C.merci[def.produce].unita} al mese.`, ind.x + 1, ind.y + 1);
         } else if (ind.perc < 0.05 && ind.produzione > 20 && rnd() < 0.015) {
           ind.produzione = Math.round(ind.produzione * 0.8);
         }
@@ -453,7 +455,7 @@
     if (inf.stazioni) G.spendi(st, inf.stazioni / 12, 'manStazioni');
     G.bancaMensile(st); // interessi del mese e nuovo tasso
     st.mesiInRosso = st.soldi < 0 ? st.mesiInRosso + 1 : 0;
-    if (st.mesiInRosso === 3) G.notizia(st, 'Attenzione: i conti sono in rosso da tre mesi! Chiedi un prestito in banca (tasto K) o vendi qualche veicolo.');
+    if (st.mesiInRosso === 3) G.notizia(st, _('Attenzione: i conti sono in rosso da tre mesi! Chiedi un prestito in banca (tasto K) o vendi qualche veicolo.'));
     st.minimappaSporca = true;
     // si chiude il conto del mese appena finito (con le spese qui sopra) e se ne apre uno nuovo: 20 anni di storia
     const cm = G.contoMese(st), d = G.data(st, st.giornoInt - 1), tondi = o => { for (const k in o) o[k] = Math.round(o[k]); return o; };
@@ -471,12 +473,12 @@
     if (c.storico.length > 40) c.storico.shift();
     c.anno = anno; c.corrente = G.nuovoConto();
     for (const v of st.veicoli) { G.chiudiAnnoVeicolo(v); v.eta++; }
-    G.notizia(st, `Bilancio del ${anno - 1}: ricavi ${G.lire(b.ricavi)}, costi ${G.lire(b.costi)}, ` +
-      `${b.profitto >= 0 ? 'profitto' : 'perdita'} di ${G.lire(Math.abs(b.profitto))}` +
-      (b.investimenti > 0 ? `; investiti ${G.lire(b.investimenti)} in rete e mezzi` : '') + `. Valore dell'azienda: ${G.lire(G.valoreAzienda(st))}.`);
-    for (const mod of C.veicoli) if (mod.anno === anno) G.notizia(st, `Novità del ${anno}: è in vendita ${mod.nome} (${mod.kmh} km/h).`);
-    for (const k in C.reti) if (C.reti[k].anno === anno) G.notizia(st, `Da quest'anno si possono costruire le ${C.reti[k].nome.toLowerCase()}!`);
-    for (const k in C.stazioni) if (C.stazioni[k].anno === anno) G.notizia(st, `Inizia l'era del volo: ora si possono costruire gli aeroporti!`);
+    G.notizia(st, _`Bilancio del ${anno - 1}: ricavi ${G.lire(b.ricavi)}, costi ${G.lire(b.costi)}, ` +
+      _`${b.profitto >= 0 ? _('profitto') : _('perdita')} di ${G.lire(Math.abs(b.profitto))}` +
+      (b.investimenti > 0 ? _`; investiti ${G.lire(b.investimenti)} in rete e mezzi` : '') + _`. Valore dell'azienda: ${G.lire(G.valoreAzienda(st))}.`);
+    for (const mod of C.veicoli) if (mod.anno === anno) G.notizia(st, _`Novità del ${anno}: è in vendita ${mod.nome} (${mod.kmh} km/h).`);
+    for (const k in C.reti) if (C.reti[k].anno === anno) G.notizia(st, _`Da quest'anno si possono costruire le ${C.reti[k].nome.toLowerCase()}!`);
+    for (const k in C.stazioni) if (C.stazioni[k].anno === anno) G.notizia(st, _`Inizia l'era del volo: ora si possono costruire gli aeroporti!`);
     // nuove industrie: le miniere esaurite vengono rimpiazzate da nuovi giacimenti
     const rnd = G.casualeLibero;
     const tipi = Object.keys(C.industrie).filter(t => !C.industrie[t].dalAnno || C.industrie[t].dalAnno <= anno);
@@ -488,7 +490,7 @@
       const tipo = rnd.scegli(tipi), ind = G.fondaIndustria(st, tipo, rnd);
       if (ind) {
         const def = C.industrie[tipo];
-        G.notizia(st, def.riserva ? `Scoperto un nuovo giacimento: apre ${ind.nome}.` : `Inaugurata ${ind.nome}.`, ind.x + 1, ind.y + 1);
+        G.notizia(st, def.riserva ? _`Scoperto un nuovo giacimento: apre ${ind.nome}.` : _`Inaugurata ${ind.nome}.`, ind.x + 1, ind.y + 1);
         for (const s of st.stazioni) if (s) G.aggiornaBacino(st, s);
         G.aggiornaIndustrieStazioni(st);
       }
