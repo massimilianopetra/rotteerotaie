@@ -778,7 +778,7 @@
       <li><b>🚇 Galleria</b>: la scavi tu. Trascina dall'<b>imbocco</b> fino all'<b>uscita</b> dall'altra parte del monte: la galleria è
       <b>dritta</b> e va dalla quota dell'imbocco a quella dell'uscita: può <b>salire o scendere</b> al massimo del ${C.opere.pendenzaMax.binario}‰
       (l'autostrada del ${C.opere.pendenzaMax.autostrada}‰), come la linea all'aperto. Sopra deve esserci almeno ${C.opere.sogliaMetri} m di monte (vicino agli imbocchi
-      basta stare sotto il terreno). Se la linea dritta ripassa sopra una valle, spezzala in due gallerie. Costa
+      basta stare sotto il terreno). Se la linea dritta ripassa sopra una valle, lì esce all'aperto da sola (trincea, rilevato o viadotto) e la galleria si divide in più gallerie. Costa
       ${C.opere.galleria} volte il binario. Poi collega i due imbocchi alle linee con la ferrovia normale.</li>
         <li><b>📐 Progettazione</b>: per studiare una linea difficile senza spendere. Clicca i punti uno dopo l'altro: ogni tratto si calcola come costruendolo (normale o in galleria), sulla mappa vedi gallerie e viadotti e nel riquadro il <b>profilo altimetrico</b>, la pendenza, il costo e i tratti impossibili. Quando il progetto va bene, «Costruisci tutto» (Invio); Backspace toglie l'ultimo punto, Esc annulla.</li></ul>
       <ul>
@@ -1121,8 +1121,10 @@
       const p = tr.profilo, sopra = Math.max(...tr.caselle.slice(1, -1).map((i, k) => Hm[i] - p.quote[k + 1]));
       const pend = Math.round(p.pendenza), quote = pend ? _`da ${G.numero(Math.round(tr.quota))} m a ${G.numero(Math.round(p.quotaUscita))} m · pendenza ${pend}‰ <span class="sotto">(limite ${C.opere.pendenzaMax[rete]}‰)</span>` : _`in piano a ${G.numero(Math.round(tr.quota))} m`;
       ui.anteprima = { caselle: tr.caselle, costo: tr.costo, ok, tr };
-      suggerisci(_`🚇 Galleria: <b class="${ok ? '' : 'rosso'}">${G.lire(tr.costo)}</b> · ${tr.caselle.length - 2} caselle sottoterra` +
-        _`${km === 1 ? '' : ` (${G.numero(Math.round((tr.caselle.length - 2) * km))} km)`}<br>${quote} · fino a ${G.numero(Math.round(sopra))} m di monte sopra`, e);
+      const sotto = p.opere.filter(o => o === G.OPERA.GALLERIA).length, aperte = tr.caselle.length - 2 - sotto;
+      suggerisci(_`🚇 Galleria: <b class="${ok ? '' : 'rosso'}">${G.lire(tr.costo)}</b> · ${sotto} caselle sottoterra` +
+        `${km === 1 ? '' : ` (${G.numero(Math.round(sotto * km))} km)`}` + (aperte > 0 ? _` · ${aperte} all'aperto (trincea, rilevato o viadotto)` : '') +
+        _`<br>${quote} · fino a ${G.numero(Math.round(sopra))} m di monte sopra`, e);
       return;
     }
     if (!tr) {
