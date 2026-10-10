@@ -44,9 +44,9 @@
   function tipoLoco(id) {
     if (LOCO[id]) return LOCO[id];
     const m = G.modello(id), n = (m && m.nome || '').toLowerCase(), anno = m ? m.anno : 1900;
-    if (n.includes('vapore')) return anno < 1860 ? 'vaporeAntico' : 'vapore';
+    if (n.includes('vapore') || n.includes('steam')) return anno < 1860 ? 'vaporeAntico' : 'vapore';
     if (n.includes('diesel')) return 'diesel';
-    if (n.includes('alta') || n.includes('etr')) return 'alta';
+    if (n.includes('alta') || n.includes('high') || n.includes('etr')) return 'alta';
     return anno < 1960 ? 'elettrica' : 'muso';
   }
   T.aVapore = mod => /^vapore/.test(tipoLoco(mod.id));

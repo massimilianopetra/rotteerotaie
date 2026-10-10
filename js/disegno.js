@@ -641,7 +641,7 @@
     }
     for (const [c, x, y] of messe) {
       etichetta(ctx, c.nome, x, y, dim, '#fff');
-      etichetta(ctx, G.numero(c.pop) + ' ab.', x, y + dim * 0.95, dim * 0.68, '#ffe9a8');
+      etichetta(ctx, G.numero(c.pop) + _(' ab.'), x, y + dim * 0.95, dim * 0.68, '#ffe9a8');
     }
     if (ts >= 20 && V.vis.stazioni) {
       for (const s of st.stazioni) {

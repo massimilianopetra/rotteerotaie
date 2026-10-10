@@ -9,6 +9,9 @@ compra treni, autobus, camion e aerei e trasporta passeggeri e merci fra città 
 
 Codice: https://github.com/massimilianopetra/rotteerotaie
 
+Il gioco è in **italiano** e in **inglese**: si sceglie dal pulsante ⚙️ Impostazioni, con la bandiera.
+*The game is available in English too: click ⚙️ and choose the British flag.*
+
 ## Come si avvia
 
 Apri `index.html` con un doppio clic (Chrome, Edge o Firefox). Non serve Internet e non serve installare nulla.
@@ -208,6 +211,15 @@ La finestra **ℹ️ Informazioni** (e il menu iniziale) mostrano autore, versio
 
 Tutti i numeri del gioco (prezzi delle merci, costi, velocità e anni dei mezzi, industrie, pezzi dei nomi
 delle città) sono in `dati/catalogo.js`, un file pensato per essere modificato a mano.
+
+## Lingue
+
+Il gioco è scritto in italiano e il testo italiano fa da chiave delle traduzioni: nel codice ogni testo
+mostrato al giocatore è scritto come _`Treno ${n} in arrivo` (oppure _('…')). Le traduzioni stanno in
+`dati/lingue/en.js`, una per riga: `"Treno {0} in arrivo": "Train {0} arriving"`. Se una traduzione manca
+resta l'italiano. `npm run lingue` elenca i testi ancora da tradurre e quelli non più usati.
+Per aggiungere una lingua bastano un nuovo file in `dati/lingue/`, il suo `<script>` in `index.html` e una voce
+in `G.LINGUE` (`js/lingua.js`, con la bandiera).
 
 ## Pubblicare su GitHub Pages
 

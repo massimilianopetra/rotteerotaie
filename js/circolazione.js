@@ -300,7 +300,7 @@
       st.stalli = (st.stalli || 0) + 1;
       const nomi = ciclo.map(k => k.nome);
       const elenco = nomi.length === 2 ? nomi.join(' e ') : nomi.slice(0, -1).join(', ') + ' e ' + nomi[nomi.length - 1];
-      G.notizia(st, `Stallo sui binari: ${elenco} si bloccano a vicenda. Seleziona uno dei treni e premi «Torna indietro»; per il futuro costruisci un binario d'incrocio o una linea doppia.`, v.x, v.y);
+      G.notizia(st, _`Stallo sui binari: ${elenco} si bloccano a vicenda. Seleziona uno dei treni e premi «Torna indietro»; per il futuro costruisci un binario d'incrocio o una linea doppia.`, v.x, v.y);
     }
   };
 })();

@@ -12,7 +12,7 @@
   const G = window.GIOCO, C = window.CATALOGO, T = G.T, OCC = G.OCC, D = G.disegno, F = D.f;
   const KX = Math.SQRT1_2, KY = KX / 2, KZ = 0.8;
   // il rilievo: metri → caselle, esagerato perché i monti si vedano (una casella è larga 1–6 km, un monte alto 4)
-  const RILIEVI = [{ nome: 'Basso', k: 2 }, { nome: 'Alto', k: 4 }, { nome: 'Altissimo', k: 6.5 }];
+  const RILIEVI = [{ nome: _('Basso'), k: 2 }, { nome: _('Alto'), k: 4 }, { nome: _('Altissimo'), k: 6.5 }];
   G.RILIEVI = RILIEVI;
   const NESSUNA = -32768;
   const CHIAVE = 'rotaie-e-rotte-vista';
@@ -930,7 +930,7 @@
     }
     for (const [c, x, y] of messe) {
       F.etichetta(ctx, c.nome, x, y, dim, '#fff');
-      F.etichetta(ctx, G.numero(c.pop) + ' ab.', x, y + dim * 0.95, dim * 0.68, '#ffe9a8');
+      F.etichetta(ctx, G.numero(c.pop) + _(' ab.'), x, y + dim * 0.95, dim * 0.68, '#ffe9a8');
     }
     if (ts >= 20 && V.vis.stazioni) for (const s of st.stazioni) {
       if (!s || !vicino(V, s.x, s.y, s.lato)) continue;

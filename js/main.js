@@ -58,7 +58,7 @@
         Object.assign(opz, { W: R.W, H: R.H, km: R.km, nomeMappa: R.nome });
       }
       const st = G.generaMondo(opz);
-      G.notizia(st, `Nasce la ${opz.nome}${opz.mappa ? ' in ' + opz.nomeMappa : ''}! Hai ${G.lire(st.soldi)} per cominciare: collega le città e porta le merci alle industrie. Premi H per l'aiuto.`);
+      G.notizia(st, _`Nasce la ${opz.nome}${opz.mappa ? _(' in ') + opz.nomeMappa : ''}! Hai ${G.lire(st.soldi)} per cominciare: collega le città e porta le merci alle industrie. Premi H per l'aiuto.`);
       avvia(st);
       fatto(null);
     };
@@ -189,7 +189,7 @@
       if (vecchio) {
         const id = 'v' + Date.now();
         localStorage.setItem(PREFISSO + id, vecchio);
-        el.unshift({ id, nome: 'Partita salvata', quando: Date.now() });
+        el.unshift({ id, nome: _('Partita salvata'), quando: Date.now() });
         localStorage.setItem(ELENCO, JSON.stringify(el));
         localStorage.removeItem(CHIAVE);
       }
@@ -217,8 +217,8 @@
       return null;
     } catch (e) {
       return /quota/i.test(e.name + e.message)
-        ? 'Spazio del browser esaurito: elimina qualche vecchia partita oppure usa «Salva su file»'
-        : 'Impossibile salvare: ' + e.message;
+        ? _('Spazio del browser esaurito: elimina qualche vecchia partita oppure usa «Salva su file»')
+        : _('Impossibile salvare: ') + e.message;
     }
   };
   G.salvaAutomatico = st => G.salvaPartita(st);
@@ -235,7 +235,7 @@
   G.caricaPartita = function (id, fatto) {
     let t = null;
     try { t = localStorage.getItem(PREFISSO + id); } catch (e) { /* sotto */ }
-    if (!t) { fatto('Partita salvata non trovata'); return; }
+    if (!t) { fatto(_('Partita salvata non trovata')); return; }
     caricaDaTesto(t, id, fatto);
   };
 
@@ -246,7 +246,7 @@
       t = t.trim();
       dati = JSON.parse(t.startsWith('Z1') ? decomprimi(t.slice(2)) : t);
       if (!dati || !dati.opz || !dati.griglie) throw new Error();
-    } catch (e) { fatto('Salvataggio illeggibile'); return; }
+    } catch (e) { fatto(_('Salvataggio illeggibile')); return; }
     const prosegui = () => {
       const m = G.generaTerreno(dati.opz);
       // le partite vecchie non hanno le griglie più nuove (gallerie e quote): restano quelle vuote
@@ -254,6 +254,7 @@
       const st = Object.assign(G.statoVuoto(dati.opz, m), dati.stato);
       if (dati.stato.oraInt === undefined) st.oraInt = Math.floor(st.giorno * 24);
       st.posto = posto;
+      G.nomiNellaLingua(st);
       avvia(st);
       G.riprendiVeicoli(st);
       fatto(null);
@@ -274,13 +275,26 @@
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 10000);
       return null;
-    } catch (e) { return 'Impossibile creare il file: ' + e.message; }
+    } catch (e) { return _('Impossibile creare il file: ') + e.message; }
   };
   G.caricaDaFile = function (file, fatto) {
     const r = new FileReader();
     r.onload = () => caricaDaTesto(String(r.result), null, fatto);
-    r.onerror = () => fatto('Impossibile leggere il file');
+    r.onerror = () => fatto(_('Impossibile leggere il file'));
     r.readAsText(file);
+  };
+
+  // ---------------------------------------------------------------- cambio di lingua
+  // tutti i testi (anche quelli preparati all'avvio, come il catalogo) cambiano ricaricando la pagina:
+  // la partita in corso passa dalla memoria della scheda (sessionStorage) e riprende subito
+  const RIPRENDI = 'rotaie-e-rotte-riprendi';
+  G.dopoCambioLingua = function () {
+    const st = G.st;
+    if (st) {
+      try { sessionStorage.setItem(RIPRENDI, JSON.stringify({ posto: st.posto || null, testo: testoPartita(st), vel: G.ui.velocita })); }
+      catch (e) { G.avviso(_('Partita troppo grande per riprenderla da sola: salvala, poi cambia lingua'), true); return; }
+    }
+    location.reload();
   };
 
   // ---------------------------------------------------------------- avvio
@@ -292,9 +306,15 @@
   // #debug (anche #rapida,debug) mostra gli aiuti per le prove, come il binario prenotato dai treni;
   // si attiva anche dalla console con GIOCO.modoDebug = true
   G.modoDebug = h.includes('debug');
-  // #rapida,mappa=italia avvia subito una mappa reale
-  if (h.includes('rapida')) {
+  let ripresa = null;
+  try { ripresa = JSON.parse(sessionStorage.getItem(RIPRENDI) || 'null'); sessionStorage.removeItem(RIPRENDI); } catch (e) { /* niente */ }
+  if (ripresa) {
+    caricaDaTesto(ripresa.testo, ripresa.posto, e => {
+      if (e) { G.avviso(e, true); G.ui.finestraMenu(true); } else if (ripresa.vel !== undefined) G.ui.impostaVelocita(ripresa.vel);
+    });
+  } else if (h.includes('rapida')) {
+    // #rapida,mappa=italia avvia subito una mappa reale
     const ms = /seme=(\d+)/.exec(h), mm = /mappa=(\w+)/.exec(h);
-    G.nuovaPartita({ nome: 'Ferrovie Riunite', anno: 1850, W: 192, H: 144, numCitta: 14, seme: ms ? +ms[1] : 12345, mappa: mm ? mm[1] : undefined });
+    G.nuovaPartita({ nome: _('Ferrovie Riunite'), anno: 1850, W: 192, H: 144, numCitta: 14, seme: ms ? +ms[1] : 12345, mappa: mm ? mm[1] : undefined });
   } else G.ui.finestraMenu(true);
 })();

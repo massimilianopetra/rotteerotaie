@@ -109,21 +109,21 @@
   // perché la rete non può passare da una casella (null se può passare)
   G.motivoCasella = function (st, i, rete) {
     const m = st.mondo;
-    if (i < 0) return 'fuori dalla mappa';
-    if (m.tipo[i] === T.ACQUA) return 'c\'è acqua (mare o lago): non si costruisce';
+    if (i < 0) return _('fuori dalla mappa');
+    if (m.tipo[i] === T.ACQUA) return _('c\'è acqua (mare o lago): non si costruisce');
     const o = m.occ[i];
     if (o === OCC.CASA) {
       const c = st.citta[m.cittaDi[i]];
-      return `c'è una casa${c ? ' di ' + c.nome : ''}: prima va demolita (💥 Demolisci, ${G.lire(C.costoCasa * m.liv[i])})`;
+      return _`c'è una casa${c ? _` di ${c.nome}` : ''}: prima va demolita (💥 Demolisci, ${G.lire(C.costoCasa * m.liv[i])})`;
     }
     if (o === OCC.INDUSTRIA) {
       const k = st.industrie[m.rif[i]];
-      return `c'è ${k ? k.nome : 'un\'industria'}: le industrie non si attraversano`;
+      return _`c'è ${k ? k.nome : _('un\'industria')}: le industrie non si attraversano`;
     }
     if (o === OCC.STAZIONE) {
       const s = st.stazioni[m.rif[i]];
-      if (rete === 'binario' && s.tipo !== 'stazione') return `c'è ${s.nome} (${G.nomeTipoStazione(s).toLowerCase()}): i binari passano solo nelle stazioni ferroviarie`;
-      if (rete !== 'binario' && s.tipo !== 'deposito') return `c'è ${s.nome} (${G.nomeTipoStazione(s).toLowerCase()}): le strade passano solo nelle autostazioni`;
+      if (rete === 'binario' && s.tipo !== 'stazione') return _`c'è ${s.nome} (${G.nomeTipoStazione(s).toLowerCase()}): i binari passano solo nelle stazioni ferroviarie`;
+      if (rete !== 'binario' && s.tipo !== 'deposito') return _`c'è ${s.nome} (${G.nomeTipoStazione(s).toLowerCase()}): le strade passano solo nelle autostazioni`;
     }
     return null;
   };
@@ -131,8 +131,8 @@
   // Il tracciato fra a e b non si trova: perché? { testo, blocchi: caselle da segnare in rosso }
   G.motivoTracciato = function (st, a, b, rete) {
     const ma = G.motivoCasella(st, a, rete), mb = G.motivoCasella(st, b, rete);
-    if (ma) return { testo: 'Non si parte da qui: ' + ma, blocchi: [a] };
-    if (mb) return { testo: 'Non si arriva qui: ' + mb, blocchi: [b] };
+    if (ma) return { testo: _('Non si parte da qui: ') + ma, blocchi: [a] };
+    if (mb) return { testo: _('Non si arriva qui: ') + mb, blocchi: [b] };
     // uno dei due punti è chiuso tutto intorno? si esplora un po' attorno a ciascuno
     const m = st.mondo, W = m.W;
     const chiuso = (da, max) => {
@@ -150,12 +150,12 @@
       return [...bordo];
     };
     const ba = chiuso(a, 4000);
-    if (ba) return { testo: 'La partenza è chiusa tutto intorno da case, industrie o acqua: demolisci una casa per aprire un varco', blocchi: ba.slice(0, 300) };
+    if (ba) return { testo: _('La partenza è chiusa tutto intorno da case, industrie o acqua: demolisci una casa per aprire un varco'), blocchi: ba.slice(0, 300) };
     const bb = chiuso(b, 4000);
-    if (bb) return { testo: 'L\'arrivo è chiuso tutto intorno da case, industrie o acqua: demolisci una casa per aprire un varco', blocchi: bb.slice(0, 300) };
+    if (bb) return { testo: _('L\'arrivo è chiuso tutto intorno da case, industrie o acqua: demolisci una casa per aprire un varco'), blocchi: bb.slice(0, 300) };
     const dist = Math.max(Math.abs(a % W - b % W), Math.abs(((a / W) | 0) - ((b / W) | 0)));
-    if (dist > 120) return { testo: 'Tratto troppo lungo o tortuoso da calcolare in una volta: costruiscilo in più pezzi', blocchi: [] };
-    return { testo: 'Fra i due punti c\'è una barriera di acqua, case o industrie: prova un altro giro o costruisci in più pezzi', blocchi: [] };
+    if (dist > 120) return { testo: _('Tratto troppo lungo o tortuoso da calcolare in una volta: costruiscilo in più pezzi'), blocchi: [] };
+    return { testo: _('Fra i due punti c\'è una barriera di acqua, case o industrie: prova un altro giro o costruisci in più pezzi'), blocchi: [] };
   };
 
   function giaCollegati(m, i, d, rete) {
@@ -169,8 +169,8 @@
   // ---------------------------------------------------------------- pendenze, gallerie e viadotti
   const NESSUNA = -32768; // quota della rete mai calcolata (reti di prima): vale quella del terreno
   // reti che non fanno gallerie da sole (le scava il giocatore con G.cercaGalleria); le strade sì
-  const GALLERIE_A_MANO = { binario: 'la ferrovia', autostrada: "l'autostrada" };
-  const MENU_RETE = { binario: 'nel menu della ferrovia (B)', autostrada: "nel menu dell'autostrada (U)" };
+  const GALLERIE_A_MANO = { binario: _('la ferrovia'), autostrada: _("l'autostrada") };
+  const MENU_RETE = { binario: _('nel menu della ferrovia (B)'), autostrada: _("nel menu dell'autostrada (U)") };
   G.GALLERIE_A_MANO = GALLERIE_A_MANO;
   const OPERA = G.OPERA = { SUPERFICIE: 0, GALLERIA: 1, VIADOTTO: 2 };
   const grQuota = rete => (rete === 'binario' ? 'quotaBin' : 'quotaStr');
@@ -272,11 +272,9 @@
     if (monti.length) {
       // si segnano in rosso le caselle del monte da forare, non quelle dove la pendenza salta fuori
       r.ripidi = monti.map(k => caselle[k]);
-      r.impossibile = 'Il monte nelle caselle in rosso è troppo alto: anche sopraelevando la linea su rilevati e viadotti, ' + GALLERIE_A_MANO[rete] +
-        ' non ci arriva salendo al massimo del ' + O.pendenzaMax[rete] + '‰. Lì scava una 🚇 Galleria (' + MENU_RETE[rete] + ') oppure fai un giro diverso, più lungo.';
+      r.impossibile = _`Il monte nelle caselle in rosso è troppo alto: anche sopraelevando la linea su rilevati e viadotti, ${GALLERIE_A_MANO[rete]} non ci arriva salendo al massimo del ${O.pendenzaMax[rete]}‰. Lì scava una 🚇 Galleria (${MENU_RETE[rete]}) oppure fai un giro diverso, più lungo.`;
     } else if (r.ripidi.length) {
-      r.impossibile = 'Troppo ripido: ' + GALLERIE_A_MANO[rete] + ' sale e scende al massimo del ' + O.pendenzaMax[rete] + '‰ (caselle in rosso). ' +
-        'Gira attorno al monte, oppure scegli 🚇 Galleria ' + MENU_RETE[rete] + ' e scavala tu.';
+      r.impossibile = _`Troppo ripido: ${GALLERIE_A_MANO[rete]} sale e scende al massimo del ${O.pendenzaMax[rete]}‰ (caselle in rosso). Gira attorno al monte, oppure scegli 🚇 Galleria ${MENU_RETE[rete]} e scavala tu.`;
     }
     return r;
   };
@@ -357,7 +355,7 @@
     const m = st.mondo, W = m.W, O = C.opere, Hm = G.metriTerreno(m), km = G.kmCasella(st), mask = rete === 'binario' ? m.mBin : m.mStr;
     const no = (testo, blocchi, caselle) => ({ caselle: caselle || null, costo: 0, impossibile: testo, blocchi: blocchi || [] });
     const ma = G.motivoCasella(st, a, rete), mb = G.motivoCasella(st, b, rete);
-    if (ma) return no('Non si entra da qui: ' + ma, [a]);
+    if (ma) return no(_('Non si entra da qui: ') + ma, [a]);
     // linea dritta a 8 direzioni (Bresenham)
     const caselle = [];
     let x = a % W, y = (a / W) | 0;
@@ -370,21 +368,22 @@
       if (e2 >= dy) { err += dy; x += sx; }
       if (e2 <= dx) { err += dx; y += sy; }
     }
-    if (caselle.length < 3) return no('Trascina dall\'imbocco fino all\'uscita dall\'altra parte del monte: la galleria è lunga almeno 3 caselle', [], caselle);
-    if (mb) return no('Non si esce qui: ' + mb, [b], caselle);
+    if (caselle.length < 3) return no(_('Trascina dall\'imbocco fino all\'uscita dall\'altra parte del monte: la galleria è lunga almeno 3 caselle'), [], caselle);
+    if (mb) return no(_('Non si esce qui: ') + mb, [b], caselle);
     const n = caselle.length;
     // in mezzo: niente stessa rete né stazioni
     const occupate = caselle.slice(1, -1).filter(i => mask[i] || m.occ[i] === OCC.STAZIONE);
-    if (occupate.length) return no('La galleria incrocerebbe ' + (rete === 'binario' ? 'un binario' : 'una strada') + ' o una stazione: falla partire o arrivare lì, oppure passa altrove', occupate, caselle);
+    if (occupate.length) return no(rete === 'binario' ? _('La galleria incrocerebbe un binario o una stazione: falla partire o arrivare lì, oppure passa altrove')
+      : _('La galleria incrocerebbe una strada o una stazione: falla partire o arrivare lì, oppure passa altrove'), occupate, caselle);
     // la galleria va in linea retta dalla quota dell'imbocco a quella dell'uscita, al massimo con la pendenza della rete
     const qa = mask[a] ? G.quotaRete(st, a, rete) : Hm[a], qb = mask[b] ? G.quotaRete(st, b, rete) : Hm[b];
     const dist = new Float64Array(n);
     for (let k = 1; k < n; k++) dist[k] = dist[k - 1] + km * 1000 * LUN[G.direzione(m, caselle[k - 1], caselle[k])];
     const pend = Math.abs(qb - qa) / dist[n - 1] * 1000, pmax = O.pendenzaMax[rete];
     if (pend > pmax + 0.5) {
-      return no('Troppo ripida: fra imbocco (' + G.numero(Math.round(qa)) + ' m) e uscita (' + G.numero(Math.round(qb)) + ' m) ci sono ' +
-        G.numero(Math.round(Math.abs(qb - qa))) + ' m su ' + G.numero(Math.round(dist[n - 1] / 100) / 10) + ' km, cioè ' + Math.round(pend) +
-        '‰: il limite è ' + pmax + '‰. Allungala, oppure fai partire l\'imbocco ' + (qb > qa ? 'più in alto' : 'più in basso') + '.', [b], caselle);
+      const fa = G.numero(Math.round(qa)), fb = G.numero(Math.round(qb)), dz = G.numero(Math.round(Math.abs(qb - qa))), lun = G.fmt(Math.round(dist[n - 1] / 100) / 10);
+      return no((qb > qa ? _`Troppo ripida: fra imbocco (${fa} m) e uscita (${fb} m) ci sono ${dz} m su ${lun} km, cioè ${Math.round(pend)}‰: il limite è ${pmax}‰. Allungala, oppure fai partire l'imbocco più in alto.`
+        : _`Troppo ripida: fra imbocco (${fa} m) e uscita (${fb} m) ci sono ${dz} m su ${lun} km, cioè ${Math.round(pend)}‰: il limite è ${pmax}‰. Allungala, oppure fai partire l'imbocco più in basso.`), [b], caselle);
     }
     const quote = new Float64Array(n);
     for (let k = 0; k < n; k++) quote[k] = qa + (qb - qa) * dist[k] / dist[n - 1];
@@ -393,8 +392,7 @@
     // (vicino agli imbocchi basta stare sotto il terreno: è il tratto di galleria artificiale)
     for (let k = 1; k < n - 1; k++) if (Hm[caselle[k]] < quote[k] + (k === 1 || k === n - 2 ? 0 : O.sogliaMetri)) scoperte.push(caselle[k]);
     if (scoperte.length) {
-      return no('La galleria uscirebbe allo scoperto: nelle caselle in rosso il terreno non sta almeno ' + O.sogliaMetri +
-        ' m sopra la galleria. Cambia direzione, fermati prima, oppure spezzala in due gallerie con un tratto all’aperto nella valle.', scoperte, caselle);
+      return no(_`La galleria uscirebbe allo scoperto: nelle caselle in rosso il terreno non sta almeno ${O.sogliaMetri} m sopra la galleria. Cambia direzione, fermati prima, oppure spezzala in due gallerie con un tratto all’aperto nella valle.`, scoperte, caselle);
     }
     const prezzo = C.reti[rete].costo * km, opere = new Uint8Array(n), costi = new Float64Array(n), quota = qa;
     const r = { quote, opere, costi, costo: 0, pendenza: pend, gallerie: 1, kmGallerie: 0, viadotti: 0, kmViadotti: 0, scavo: 0, ripidi: [], quotaUscita: qb };
@@ -409,9 +407,9 @@
   };
 
   G.costruisciTracciato = function (st, tr, rete) {
-    if (G.anno(st) < C.reti[rete].anno) return `${C.reti[rete].nome}: disponibile dal ${C.reti[rete].anno}`;
+    if (G.anno(st) < C.reti[rete].anno) return _`${C.reti[rete].nome}: disponibile dal ${C.reti[rete].anno}`;
     if (tr.impossibile) return tr.impossibile;
-    if (st.soldi < tr.costo) return 'Fondi insufficienti';
+    if (st.soldi < tr.costo) return _('Fondi insufficienti');
     const m = st.mondo, p = tr.profilo || G.profiloTracciato(st, tr.caselle, rete), qR = m[grQuota(rete)], oR = m[grOpera(rete)];
     for (let k = 0; k + 1 < tr.caselle.length; k++) G.collega(st, tr.caselle[k], tr.caselle[k + 1], rete, false);
     tr.caselle.forEach((i, k) => {
@@ -536,24 +534,24 @@
     const m = st.mondo, o = m.occ[i];
     const spesa = c => { if (st.soldi < c) return false; G.spendi(st, c, 'costruzione'); return true; };
     if (o === OCC.STAZIONE) return G.demolisciStazione(st, m.rif[i]);
-    if (o === OCC.INDUSTRIA) return 'Le industrie non si possono demolire';
+    if (o === OCC.INDUSTRIA) return _('Le industrie non si possono demolire');
     if (m.mBin[i]) {
-      if (!spesa(C.costoDemolizione)) return 'Fondi insufficienti';
+      if (!spesa(C.costoDemolizione)) return _('Fondi insufficienti');
       stacca(m, i, m.mBin); G.reteCambiata(st); return null;
     }
     if (m.mStr[i]) {
-      if (m.strCitta[i]) return 'Le strade comunali non si possono demolire';
-      if (!spesa(C.costoDemolizione)) return 'Fondi insufficienti';
+      if (m.strCitta[i]) return _('Le strade comunali non si possono demolire');
+      if (!spesa(C.costoDemolizione)) return _('Fondi insufficienti');
       stacca(m, i, m.mStr); m.tipoStr[i] = 0; G.reteCambiata(st); return null;
     }
     if (o === OCC.CASA) {
-      if (!spesa(C.costoCasa * m.liv[i])) return 'Fondi insufficienti';
+      if (!spesa(C.costoCasa * m.liv[i])) return _('Fondi insufficienti');
       G.togliCasa(st, i); return null;
     }
     if (m.bosco[i]) {
-      if (!spesa(C.costoBosco)) return 'Fondi insufficienti';
+      if (!spesa(C.costoBosco)) return _('Fondi insufficienti');
       m.bosco[i] = 0; st.sporchi.push(i); return null;
     }
-    return 'Niente da demolire';
+    return _('Niente da demolire');
   };
 })();

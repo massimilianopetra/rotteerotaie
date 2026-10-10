@@ -22,7 +22,18 @@
     }
     return meglio;
   };
-  const NOMI = { treno: 'Treno', bus: 'Autobus', camion: 'Camion', aereo: 'Aereo', traghetto: 'Traghetto', cargo: 'Nave' };
+  const NOMI = { treno: _('Treno'), bus: _('Autobus'), camion: _('Camion'), aereo: _('Aereo'), traghetto: _('Traghetto'), cargo: _('Nave') };
+  // I nomi automatici dei mezzi («Treno 3») e il nome di partenza della compagnia seguono la lingua scelta, anche
+  // nelle partite salvate in un'altra lingua; i nomi scelti dal giocatore restano come sono.
+  const NOMI_IT = { treno: 'Treno', bus: 'Autobus', camion: 'Camion', aereo: 'Aereo', traghetto: 'Traghetto', cargo: 'Nave' };
+  G.nomiNellaLingua = function (st) {
+    const diz = Object.values(window.LINGUE || {}), forme = it => [it, ...diz.map(d => d[it]).filter(Boolean)];
+    for (const v of st.veicoli) {
+      const m = /^(.*) (\d+)$/.exec(v.nome || ''), it = NOMI_IT[v.classe];
+      if (m && it && forme(it).includes(m[1])) v.nome = G.tr(it) + ' ' + m[2];
+    }
+    if (st.opz && forme('Ferrovie Riunite').includes(st.opz.nome)) st.opz.nome = G.tr('Ferrovie Riunite');
+  };
 
   G.modello = id => C.veicoli.find(v => v.id === id);
   G.modelliDisponibili = function (st, tipo) {
@@ -70,12 +81,12 @@
 
   G.compraVeicolo = function (st, modId, merce, vagoni, sid) {
     const mod = G.modello(modId), s = st.stazioni[sid];
-    if (!s || s.tipo !== TIPO_STAZ[mod.tipo]) return 'Stazione non adatta a questo mezzo';
-    if (!G.modelliDisponibili(st, mod.tipo).includes(mod)) return `${mod.nome} non è in vendita quest'anno`;
-    if (!G.merciPermesse(mod).includes(merce)) return 'Questo mezzo non trasporta ' + C.merci[merce].nome.toLowerCase();
+    if (!s || s.tipo !== TIPO_STAZ[mod.tipo]) return _('Stazione non adatta a questo mezzo');
+    if (!G.modelliDisponibili(st, mod.tipo).includes(mod)) return _`${mod.nome} non è in vendita quest'anno`;
+    if (!G.merciPermesse(mod).includes(merce)) return _('Questo mezzo non trasporta ') + C.merci[merce].nome.toLowerCase();
     vagoni = mod.tipo === 'treno' ? Math.max(1, Math.min(mod.vagoni, vagoni | 0)) : 0;
     const prezzo = G.prezzoVeicolo(mod, vagoni);
-    if (st.soldi < prezzo) return 'Fondi insufficienti';
+    if (st.soldi < prezzo) return _('Fondi insufficienti');
     const classe = mod.tipo === 'strada' || mod.tipo === 'nave' ? mod.classe : mod.tipo;
     st.contatori[classe] = (st.contatori[classe] || 0) + 1;
     const c = G.centroStazione(s), t0 = G.casellaStazione(st, s), W = st.mondo.W;
@@ -144,15 +155,15 @@
 
   G.aggiungiFermata = function (st, v, sid) {
     const s = st.stazioni[sid];
-    if (!G.fermataAdatta(v, s)) return `Un ${NOMI[v.classe].toLowerCase()} non può fermarsi qui`;
+    if (!G.fermataAdatta(v, s)) return _`Un ${NOMI[v.classe].toLowerCase()} non può fermarsi qui`;
     const ultima = v.fermate[v.fermate.length - 1];
-    if (ultima && ultima.s === sid) return 'È già l\'ultima fermata';
+    if (ultima && ultima.s === sid) return _('È già l\'ultima fermata');
     if (v.tipo !== 'aereo') {
       const da = ultima ? st.stazioni[ultima.s] : null;
       if (da && !G.percorsoVersoStazione(st, G.casellaStazione(st, da), s, RETE[v.tipo])) {
         v.fermate.push({ s: sid, pieno: false });
         G.aggiornaServizi(st);
-        return 'Fermata aggiunta, ma non c\'è ancora un collegamento con la precedente!';
+        return _('Fermata aggiunta, ma non c\'è ancora un collegamento con la precedente!');
       }
     }
     v.fermate.push({ s: sid, pieno: false });
@@ -224,8 +235,8 @@
       const caselle = v.tipo === 'treno' ? G.percorsoTreno(st, v.tile, s, v) : G.percorsoVersoStazione(st, v.tile, s, RETE[v.tipo]);
       if (!caselle) {
         v.stato = 'bloccato'; v.timer = TM.riprovaOre * ORA;
-        v.motivo = v.tipo === 'nave' ? `Nessuna rotta per mare fino a ${s.nome} (è su un'altra acqua?)`
-          : `Nessun ${v.tipo === 'treno' ? 'binario' : 'collegamento stradale'} fino a ${s.nome}`;
+        v.motivo = v.tipo === 'nave' ? _`Nessuna rotta per mare fino a ${s.nome} (è su un'altra acqua?)`
+          : _`Nessun ${v.tipo === 'treno' ? 'binario' : _('collegamento stradale')} fino a ${s.nome}`;
         return;
       }
       const W = st.mondo.W;
@@ -287,11 +298,11 @@
 
   // il giocatore rimanda indietro un mezzo alla fermata da cui è partito (per sciogliere uno stallo sui binari)
   G.tornaIndietro = function (st, v) {
-    if (v.tipo === 'aereo') return 'Un aereo in volo non può tornare indietro';
-    if (v.stato === 'guasto') return 'Il mezzo è guasto: aspetta la riparazione';
-    if (v.stato !== 'viaggio' && v.stato !== 'bloccato') return 'Il mezzo non è in viaggio';
+    if (v.tipo === 'aereo') return _('Un aereo in volo non può tornare indietro');
+    if (v.stato === 'guasto') return _('Il mezzo è guasto: aspetta la riparazione');
+    if (v.stato !== 'viaggio' && v.stato !== 'bloccato') return _('Il mezzo non è in viaggio');
     const n = v.fermate.length;
-    if (n < 2) return 'Il mezzo non ha una fermata a cui tornare';
+    if (n < 2) return _('Il mezzo non ha una fermata a cui tornare');
     v.idx = fermataPrecedente(v);
     if (v.tipo === 'treno') { v.stallo = false; v.bloccatoDa = 0; v.attesaSegnale = 0; v.ricalcolo = -1; }
     ripianifica(st, v);
@@ -308,8 +319,8 @@
     if (v.tipo === 'aereo' || !v.caselle) { v.x = c.x; v.y = c.y; v.tile = G.casellaStazione(st, s); }
     if (!s.primoArrivo) {
       s.primoArrivo = true;
-      const chi = { treno: 'Il primo treno', strada: 'Il primo ' + NOMI[v.classe].toLowerCase(), aereo: 'Il primo aereo', nave: 'La prima nave' }[v.tipo];
-      G.notizia(st, `${chi} arriva ${/^[AEIOU]/.test(s.nome) ? 'ad' : 'a'} ${s.nome}: festa in piazza!`, c.x, c.y);
+      const chi = { treno: _('Il primo treno'), strada: _('Il primo ') + NOMI[v.classe].toLowerCase(), aereo: _('Il primo aereo'), nave: _('La prima nave') }[v.tipo];
+      G.notizia(st, _`${chi} arriva ${/^[AEIOU]/.test(s.nome) ? _('ad') : 'a'} ${s.nome}: festa in piazza!`, c.x, c.y);
     }
     if (s.servite[v.merce]) s.ultimoRitiro[v.merce] = st.giornoInt;
     if (v.qta > 0 && s.accetta[v.merce]) {
@@ -460,9 +471,9 @@
   G.testoDurata = function (min) {
     min = Math.max(0, Math.round(min));
     const g = Math.floor(min / 1440), h = Math.floor((min % 1440) / 60), m = min % 60, p = [];
-    if (g) p.push(g + ' g');
-    if (h) p.push(h + ' h');
-    if (m || !p.length) p.push(m + ' min');
+    if (g) p.push(g + _(' g'));
+    if (h) p.push(h + _(' h'));
+    if (m || !p.length) p.push(m + _(' min'));
     return p.join(' ');
   };
 
@@ -470,26 +481,26 @@
     const f = v.fermate[v.idx], s = f && st.stazioni[f.s];
     switch (v.stato) {
       case 'sosta': {
-        if (!s) return 'In sosta';
+        if (!s) return _('In sosta');
         const pieno = v.qta >= v.cap - 0.5;
-        if (f.pieno && !pieno && v.timer <= 0) return `Attende il carico pieno a ${s.nome}`;
+        if (f.pieno && !pieno && v.timer <= 0) return _`Attende il carico pieno a ${s.nome}`;
         if (f.attesaMin > 0 && !pieno && v.timer <= 0) {
           const resta = f.attesaMin - v.attesa * 1440;
-          if (resta > 0) return `Attende a ${s.nome} (ancora ${G.testoDurata(resta)})`;
+          if (resta > 0) return _`Attende a ${s.nome} (ancora ${G.testoDurata(resta)})`;
         }
-        return `In sosta a ${s.nome}`;
+        return _`In sosta a ${s.nome}`;
       }
       case 'viaggio': {
         if (v.bloccatoDa) {
           const altro = st.veicoli.find(k => k.id === v.bloccatoDa);
-          if (v.stallo) return `Stallo! ${altro ? altro.nome + ' e questo treno' : 'I treni'} si bloccano a vicenda: premi «Torna indietro»`;
-          return `Fermo al segnale: binario occupato${altro ? ' da ' + altro.nome : ''}`;
+          if (v.stallo) return _`Stallo! ${altro ? altro.nome + _(' e questo treno') : _('I treni')} si bloccano a vicenda: premi «Torna indietro»`;
+          return _`Fermo al segnale: binario occupato${altro ? _(' da ') + altro.nome : ''}`;
         }
-        return s ? `Diretto a ${s.nome}` : 'In viaggio';
+        return s ? _`Diretto a ${s.nome}` : _('In viaggio');
       }
-      case 'guasto': return 'Guasto! Riparazione in corso';
-      case 'bloccato': return v.motivo || 'Bloccato';
-      default: return 'Fermo: aggiungi delle fermate';
+      case 'guasto': return _('Guasto! Riparazione in corso');
+      case 'bloccato': return v.motivo || _('Bloccato');
+      default: return _('Fermo: aggiungi delle fermate');
     }
   };
 })();

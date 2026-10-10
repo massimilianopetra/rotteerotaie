@@ -8,6 +8,7 @@
   "repository": "https://github.com/massimilianopetra/rotteerotaie",
   "scripts": {
     "versione": "node scripts/versione.js",
+    "lingue": "node scripts/lingue.js",
     "predeploy": "npm run versione",
     "deploy": "gh-pages -d . -s \"{index.html,README.md,icona.svg,css/**,js/**,dati/**}\""
   },

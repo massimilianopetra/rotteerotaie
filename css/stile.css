@@ -258,3 +258,8 @@ ol.fermate input.durata { width: 44px; font: inherit; font-size: 12px; color: va
 .chips { display: flex; flex-wrap: wrap; gap: 5px; }
 .chip { padding: 2px 8px; border-radius: 12px; font-size: 12px; background: color-mix(in srgb, var(--c) 18%, #121b24);
   border: 1px solid color-mix(in srgb, var(--c) 50%, var(--bordo)); }
+
+/* impostazioni: scelta della lingua con la bandiera */
+.lingue { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 10px; }
+.lingue .lingua { display: flex; align-items: center; gap: 10px; padding: 8px 16px; font-size: 15px; }
+.bandiera { width: 36px; height: 24px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45); flex: none; }
