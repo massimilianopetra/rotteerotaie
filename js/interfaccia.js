@@ -353,6 +353,7 @@
     let h = `<h3>${{ treno: '🚂', bus: '🚌', camion: '🚚', aereo: '✈️', traghetto: '⛴️', cargo: '🚢' }[v.classe]} ${esc(v.nome)}</h3>`;
     h += _`<div class="sotto">${esc(mod.nome)}${v.vagoni ? _` · ${v.vagoni} vagoni` : ''} · ${mod.kmh} km/h · ${v.eta} anni</div>`;
     if (v.tipo === 'treno') h += htmlComposizione(s0, v, mod);
+    else if (v.tipo === 'nave') h += `<div class="composizione mare">${G.treni.htmlMiniatura(v.modello, v.merce, v.qta >= 1 ? 1 : 0, Math.min(140, Math.floor(280 / (G.navi.forma(mod).L + 0.22))))}</div>`;
     h += _`<p class="${v.stato === 'bloccato' || v.stato === 'guasto' ? 'rosso' : ''}"><b>Stato:</b> ${esc(G.statoVeicolo(s0, v))}</p>`;
     if (v.tipo === 'treno' && v.stato === 'viaggio') {
       const p = G.pendenzaTreno(s0, v), f = G.fattorePendenza(mod, v, p), q = Math.round(Math.abs(p));
@@ -534,6 +535,9 @@
     if (mod.tipo === 'treno') {
       $('#acqRiepilogo').insertAdjacentHTML('afterbegin', `<div class="composizione">${G.treni.htmlMiniatura(mod.id, merce, vag, Math.min(110, Math.floor(440 / ((1 + vag) * 0.44 + 0.12))))}</div>`);
       G.treni.dipingiMiniature($('#acqRiepilogo'));
+    } else if (mod.tipo === 'nave') {
+      $('#acqRiepilogo').insertAdjacentHTML('afterbegin', `<div class="composizione mare">${G.treni.htmlMiniatura(mod.id, merce, 1, Math.min(150, Math.floor(420 / (G.navi.forma(mod).L + 0.22))))}</div>`);
+      G.treni.dipingiMiniature($('#acqRiepilogo'));
     }
   }
 
@@ -558,7 +562,8 @@
       const a = s0.conti.anno;
       h = htmlDeposito(s0) + _`<table class="elenco"><tr><th>Mezzo</th><th>Merce</th><th>Stato</th><th class="num">Ricavi ${a}</th><th class="num">Costi ${a}</th><th class="num">Profitto ${a}</th><th class="num">Profitto anno scorso</th><th class="num">Età</th></tr>`;
       for (const v of [...s0.veicoli].sort((a, b) => b.profittoAnno - a.profittoAnno)) {
-        h += `<tr class="link" data-az="apriVeicolo" data-id="${v.id}"><td>${esc(v.nome)}<div class="sotto">${esc(G.modello(v.modello).nome)}</div>${v.tipo === 'treno' ? G.treni.htmlMiniatura(v.modello, v.merce, v.vagoni, Math.min(64, Math.floor(300 / ((1 + v.vagoni) * 0.44 + 0.12)))) : ''}</td>
+        h += `<tr class="link" data-az="apriVeicolo" data-id="${v.id}"><td>${esc(v.nome)}<div class="sotto">${esc(G.modello(v.modello).nome)}</div>${v.tipo === 'treno' ? G.treni.htmlMiniatura(v.modello, v.merce, v.vagoni, Math.min(64, Math.floor(300 / ((1 + v.vagoni) * 0.44 + 0.12))))
+          : v.tipo === 'nave' ? G.treni.htmlMiniatura(v.modello, v.merce, v.qta >= 1 ? 1 : 0, Math.min(110, Math.floor(240 / (G.navi.forma(G.modello(v.modello)).L + 0.22)))) : ''}</td>
           <td>${pallino(v.merce)}${nomeMerce(v.merce)}</td><td>${esc(G.statoVeicolo(s0, v))}</td>
           <td class="num verde">${G.lire(v.ricaviAnno)}</td><td class="num">${G.lire(-v.costiAnno)}</td>
           <td class="num ${v.profittoAnno < 0 ? 'rosso' : 'verde'}"><b>${G.lire(v.profittoAnno)}</b></td>

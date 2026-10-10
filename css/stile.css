@@ -291,3 +291,4 @@ canvas.miniTreno { display: block; margin-top: 4px; image-rendering: auto; }
 #progetto .pulsanti { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
 #progetto button[disabled] { opacity: 0.45; cursor: default; }
 #progetto .testa .riduci { margin-left: auto; }
+.composizione.mare { background: #3c74a6; background-image: radial-gradient(ellipse at 30% 40%, rgba(255,255,255,0.08), transparent 60%); }
