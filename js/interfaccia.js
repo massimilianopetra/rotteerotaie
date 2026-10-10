@@ -114,7 +114,7 @@
     // con più scatti di rotellina fra due fotogrammi la vista altrimenti scivolerebbe via
     // (G.deltaMondo vale anche nella vista 3D, girata o no)
     const d0 = G.deltaMondo(sx - cv.clientWidth / 2, sy - cv.clientHeight / 2), p = { x: D.cam.x + d0.x, y: D.cam.y + d0.y };
-    D.cam.ts = Math.max(3, Math.min(48, D.cam.ts * f));
+    D.cam.ts = Math.max(3, Math.min(128, D.cam.ts * f));
     const d1 = G.deltaMondo(sx - cv.clientWidth / 2, sy - cv.clientHeight / 2);
     D.cam.x = p.x - d1.x;
     D.cam.y = p.y - d1.y;
