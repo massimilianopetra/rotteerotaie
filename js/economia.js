@@ -48,6 +48,7 @@
   G.valoreAzienda = function (st) {
     let v = st.soldi - st.prestito + st.valoreInfra;
     for (const veic of st.veicoli) v += G.valoreVeicolo(veic);
+    for (const k in st.depositoVagoni || {}) v += st.depositoVagoni[k] * G.valoreVagoneUsato();
     return v;
   };
 
