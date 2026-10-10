@@ -35,6 +35,15 @@
     if (st.opz && forme('Ferrovie Riunite').includes(st.opz.nome)) st.opz.nome = G.tr('Ferrovie Riunite');
   };
 
+  // Ogni mezzo ha un identificativo automatico che non cambia (v.nome: «Treno 3») e può avere un nome proprio
+  // scelto dal giocatore (v.nomeProprio: «Freccia del Sud»), da dare o cambiare quando si vuole.
+  G.nomeMezzo = v => v.nomeProprio || v.nome;
+  G.nomeCompleto = v => (v.nomeProprio ? `${v.nomeProprio} (${v.nome})` : v.nome);
+  G.rinominaMezzo = function (v, testo) {
+    const t = String(testo || '').replace(/\s+/g, ' ').trim().slice(0, 30);
+    if (t && t !== v.nome) v.nomeProprio = t; else delete v.nomeProprio;
+  };
+
   G.modello = id => C.veicoli.find(v => v.id === id);
   G.modelliDisponibili = function (st, tipo) {
     const a = G.anno(st);
@@ -420,7 +429,7 @@
       }
     }
     // vagoni da aggiungere o togliere chiesti durante il viaggio
-    if (v.vagoniVoluti) { const e = G.applicaVagoni(st, v); if (e && !v.vagoniVoluti) G.notizia(st, _`${v.nome}: ${e}`, c.x, c.y); }
+    if (v.vagoniVoluti) { const e = G.applicaVagoni(st, v); if (e && !v.vagoniVoluti) G.notizia(st, _`${G.nomeMezzo(v)}: ${e}`, c.x, c.y); }
   }
 
   // ---------------------------------------------------------------- trasbordo
@@ -586,8 +595,8 @@
       case 'viaggio': {
         if (v.bloccatoDa) {
           const altro = st.veicoli.find(k => k.id === v.bloccatoDa);
-          if (v.stallo) return _`Stallo! ${altro ? altro.nome + _(' e questo treno') : _('I treni')} si bloccano a vicenda: premi «Torna indietro»`;
-          return _`Fermo al segnale: binario occupato${altro ? _(' da ') + altro.nome : ''}`;
+          if (v.stallo) return _`Stallo! ${altro ? G.nomeMezzo(altro) + _(' e questo treno') : _('I treni')} si bloccano a vicenda: premi «Torna indietro»`;
+          return _`Fermo al segnale: binario occupato${altro ? _(' da ') + G.nomeMezzo(altro) : ''}`;
         }
         return s ? _`Diretto a ${s.nome}` : _('In viaggio');
       }
