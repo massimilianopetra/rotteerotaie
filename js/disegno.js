@@ -534,20 +534,6 @@
     ctx.restore();
   }
 
-  // nave vista dall'alto: scafo a punta del colore del modello, ponte del colore della merce, scia se naviga
-  function sagomaNave(ctx, x, y, ang, lun, colore, ponte, scia) {
-    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
-    const l = lun / 2, w = lun * 0.18;
-    if (scia) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = Math.max(1, lun * 0.05);
-      ctx.beginPath(); ctx.moveTo(-l, -w * 0.6); ctx.lineTo(-l * 2.1, -w * 1.8); ctx.moveTo(-l, w * 0.6); ctx.lineTo(-l * 2.1, w * 1.8); ctx.stroke();
-    }
-    ctx.fillStyle = colore; ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(l, 0); ctx.lineTo(l * 0.45, -w); ctx.lineTo(-l, -w); ctx.lineTo(-l, w); ctx.lineTo(l * 0.45, w); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = ponte; ctx.fillRect(-l * 0.75, -w * 0.55, l * 1.05, w * 1.1);
-    ctx.restore();
-  }
-
   function disegnaVeicoli(st, V, ui) {
     const { ts, ox, oy, ctx } = V;
     const fuori = v => v.x < V.x0 - 3 || v.x > V.x1 + 4 || v.y < V.y0 - 3 || v.y > V.y1 + 4;
@@ -570,7 +556,11 @@
         const x = ox + v.x * ts + px, y = oy + v.y * ts + py;
         rettangolo(ctx, x, y, v.ang, Math.max(3, ts * 0.32), Math.max(2, ts * 0.17), v.classe === 'bus' ? mod.colore : C.merci[v.merce].colore, 'rgba(0,0,0,0.6)');
       } else if (v.tipo === 'nave') {
-        sagomaNave(ctx, ox + v.x * ts, oy + v.y * ts, v.ang, Math.max(9, ts * 0.85), mod.colore, C.merci[v.merce].colore, v.stato === 'viaggio');
+        // navi.js: ombra e scia sull'acqua, la nave, il fumo dei piroscafi
+        const N = G.navi, p = N.dati(v, mod), x = ox + v.x * ts, y = oy + v.y * ts, naviga = v.stato === 'viaggio', t = G.treni.tempo() + v.id * 0.37;
+        if (ts >= 6) N.scia(ctx, x, y, v.ang, ts, p, naviga, t);
+        N.nave(ctx, x, y, v.ang, ts, p);
+        if (naviga && ts >= 10 && N.aVapore(mod)) N.fumo(ctx, x, y, v.ang, ts, p, t);
       } else {
         const prog = v.stato === 'viaggio' && v.lunTot > 0 ? Math.min(1, Math.min(v.pos, v.lunTot - v.pos) / 2) : 0;
         const dim = Math.max(12, ts * 0.9) * (1 + prog * 0.3);
@@ -808,7 +798,7 @@
   };
 
   // aiutanti per la vista 3D (disegno3d.js)
-  D.f = { COL_CASE, DIM, coloreHex, emoji, etichetta, trattiPercorso, sagomaAereo, sagomaNave, disegnaPorto, disegnaDeposito,
+  D.f = { COL_CASE, DIM, coloreHex, emoji, etichetta, trattiPercorso, sagomaAereo, disegnaPorto, disegnaDeposito,
     disegnaAeroporto, disegnaStazioneFerroviaria, strisceBanchina, disegnaSovrapposizioni, altA, px: () => PX };
 
   // ---------------------------------------------------------------- minimappa

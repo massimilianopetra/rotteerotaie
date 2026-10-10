@@ -649,7 +649,8 @@
       }
     }
   }
-  function solidoTreno(V, q, z, ca, sa, b, p) {
+  // tetto: funzione che disegna la faccia di sopra (senza: il pezzo di treno)
+  function solidoTreno(V, q, z, ca, sa, b, p, tetto) {
     const { ctx, ts } = V, [x0, x1, w, zb0, zb1, col, fin] = b;
     const z0 = z + zb0, z1 = z + zb1, fx = -sa * w / 2, fy = ca * w / 2;
     const ax = q.x + ca * x0, ay = q.y + sa * x0, bx = q.x + ca * x1, by = q.y + sa * x1;
@@ -679,7 +680,7 @@
     for (let k = 0; k < 4; k++) { proietta(P[k][0], P[k][1], z1); if (k) ctx.lineTo(SX, SY); else ctx.moveTo(SX, SY); }
     ctx.closePath(); ctx.clip();
     piano(ctx, z1);
-    G.treni.pezzo(ctx, q.x * S, q.y * S, Math.atan2(sa, ca), S, p, ts);
+    if (tetto) tetto(); else G.treni.pezzo(ctx, q.x * S, q.y * S, Math.atan2(sa, ca), S, p, ts);
     ctx.restore();
   }
 
@@ -707,12 +708,27 @@
       return;
     }
     if (v.tipo === 'nave') {
-      const z = zTerra(I, m, v.x, v.y);
-      ctx.save(); piano(ctx, z + 0.02);
-      F.sagomaNave(ctx, v.x * S, v.y * S, v.ang, S * 0.85, mod.colore, C.merci[v.merce].colore, v.stato === 'viaggio');
-      ctx.restore();
-      scatola(ctx, v.x - Math.cos(v.ang) * 0.22, v.y - Math.sin(v.ang) * 0.22, z + 0.02, 0.14, 0.14, v.ang, 0.18, '#f0f0f0', '#d0d0d0');
-      if (sel) anello(V, v.x, v.y, z + 0.05, 0.6);
+      // navi.js: scia sull'acqua, fiancata dello scafo, ponte disegnato come nella vista 2D, sovrastrutture solide
+      const z = zTerra(I, m, v.x, v.y), Nv = G.navi, p = Nv.dati(v, mod), naviga = v.stato === 'viaggio', t = G.treni.tempo() + v.id * 0.37;
+      const X = v.x * S, Y = v.y * S, zp = z + 0.05, fianco = p.t === 'traghetto' || p.t === 'aliscafo' ? '#c9ced4' : tinta(mod.colore, 0.75);
+      ctx.save(); piano(ctx, z + 0.005); Nv.scia(ctx, X, Y, v.ang, S, p, naviga, t); ctx.restore();
+      for (const dz of [0.012, 0.024, 0.036]) { ctx.save(); piano(ctx, z + dz); Nv.sagoma(ctx, X, Y, v.ang, S, p, fianco); ctx.restore(); }
+      ctx.save(); piano(ctx, zp); Nv.nave(ctx, X, Y, v.ang, S, p, ts); ctx.restore();
+      if (ts >= 10) {
+        const ca = Math.cos(v.ang), sa = Math.sin(v.ang), verso = ca * VWX + sa * VWY, q = { x: v.x, y: v.y };
+        const vol = Nv.volumi(p).sort((a, b) => a[3] - b[3] || (a[0] + a[1] - b[0] - b[1]) * verso);
+        for (const b of vol) solidoTreno(V, q, zp, ca, sa, b, p, () => Nv.nave(ctx, X, Y, v.ang, S, p, ts));
+        if (naviga && Nv.aVapore(mod)) {
+          const xf = Nv.posizioneFumaiolo(p);
+          for (let j = 0; j < 7; j++) {
+            const f = (t * 0.7 + j / 7) % 1, d = xf - f * 0.9;
+            proietta(v.x + ca * d, v.y + sa * d, zp + 0.22 + f * 0.35);
+            ctx.fillStyle = `rgba(90,90,90,${(0.45 * (1 - f)).toFixed(3)})`;
+            ctx.beginPath(); ctx.arc(SX, SY, (0.03 + f * 0.09) * ts, 0, Math.PI * 2); ctx.fill();
+          }
+        }
+      }
+      if (sel) anello(V, v.x, v.y, zp, 0.7);
       return;
     }
     // aereo: l'ombra a terra e l'aereo in quota (più alto a metà del volo)
