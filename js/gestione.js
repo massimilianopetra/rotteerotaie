@@ -144,7 +144,7 @@
     const max = Math.max(1, ...veicoli.map(v => Math.abs(v[campo])));
     return '<div class="barreG">' + veicoli.map(v => {
       const p = v[campo], w = (Math.abs(p) / max * 50).toFixed(1);
-      return `<div class="rigaB link" data-az="apriVeicolo" data-id="${v.id}" title="Apri ${esc(v.nome)}"><span class="nomeB">${esc(v.nome)}<small>${esc(G.modello(v.modello).nome)}</small></span>` +
+      return `<div class="rigaB link" data-az="apriVeicolo" data-id="${v.id}" title="${esc(G.nomeCompleto(v))}"><span class="nomeB">${esc(G.nomeMezzo(v))}<small>${esc(G.modello(v.modello).nome)}</small></span>` +
         `<span class="pistaB doppia"><i style="${p >= 0 ? 'left:50%' : 'right:50%'};width:${w}%;background:${p >= 0 ? COL.entrate : COL.uscite}"></i></span>` +
         `<span class="valB ${classe(p)}">${segno(p)}${G.lireBreve(p)}</span></div>`;
     }).join('') + '</div>';
@@ -350,7 +350,7 @@
       }
       h += _('</table><div class="sotto">I più cari (cresce del 4% per anno di età):</div><table class="elenco">');
       for (const v of [...st.veicoli].sort((a, b) => G.esercizioVeicolo(b) - G.esercizioVeicolo(a)).slice(0, 5)) {
-        h += _`<tr class="link" data-az="apriVeicolo" data-id="${v.id}"><td>${esc(v.nome)} <span class="sotto">${v.eta} anni${v.vagoni ? _` · ${v.vagoni} vagoni` : ''}</span></td><td class="num">${G.lire(G.esercizioVeicolo(v))}/anno</td>` +
+        h += _`<tr class="link" data-az="apriVeicolo" data-id="${v.id}"><td>${esc(G.nomeCompleto(v))} <span class="sotto">${v.eta} anni${v.vagoni ? _` · ${v.vagoni} vagoni` : ''}</span></td><td class="num">${G.lire(G.esercizioVeicolo(v))}/anno</td>` +
           `<td class="num ${classe(v.profittoAnno)}" title="Profitto quest'anno">${segno(v.profittoAnno)}${G.lireBreve(v.profittoAnno)}</td></tr>`;
       }
       h += '</table>';

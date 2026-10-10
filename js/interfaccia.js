@@ -277,7 +277,7 @@
     }
     const veic = s0.veicoli.filter(v => v.fermate.some(f => f.s === s.id));
     h += _`<h4>Mezzi che si fermano qui (${veic.length})</h4>`;
-    for (const v of veic) h += `<div class="link" data-az="apriVeicolo" data-id="${v.id}">${esc(v.nome)} · ${pallino(v.merce)}${nomeMerce(v.merce)}</div>`;
+    for (const v of veic) h += `<div class="link" data-az="apriVeicolo" data-id="${v.id}">${esc(G.nomeCompleto(v))} · ${pallino(v.merce)}${nomeMerce(v.merce)}</div>`;
     const cosa = { stazione: _('un treno'), deposito: _('un autobus o un camion'), aeroporto: _('un aereo'), porto: _('una nave') }[s.tipo];
     h += _`<div class="pulsanti"><button class="primario" data-az="acquista" data-id="${s.id}">🛒 Compra ${cosa}</button>`;
     h += _`<button data-az="demolisciStazione" data-id="${s.id}">💥 Demolisci</button></div>`;
@@ -350,7 +350,16 @@
 
   function htmlVeicolo(s0, v) {
     const mod = G.modello(v.modello);
-    let h = `<h3>${{ treno: '🚂', bus: '🚌', camion: '🚚', aereo: '✈️', traghetto: '⛴️', cargo: '🚢' }[v.classe]} ${esc(v.nome)}</h3>`;
+    const ic = { treno: '🚂', bus: '🚌', camion: '🚚', aereo: '✈️', traghetto: '⛴️', cargo: '🚢' }[v.classe];
+    let h;
+    if (ui.rinomina === v.id) {
+      h = `<h3 class="rinomina">${ic} <input id="nomeMezzo" maxlength="30" value="${esc(v.nomeProprio || '')}" placeholder="${esc(v.nome)}">` +
+        `<button class="mini" data-az="salvaNome" title="${_('Salva il nome (Invio)')}">✔</button><button class="mini" data-az="annullaNome" title="${_('Annulla (Esc)')}">✕</button></h3>` +
+        `<div class="sotto">${_('Un nome a scelta; lascialo vuoto per togliere il nome.')}</div>`;
+    } else {
+      h = `<h3>${ic} ${esc(G.nomeMezzo(v))} <button class="mini" data-az="rinomina" title="${_('Dai un nome a questo mezzo')}">✏️</button></h3>`;
+      if (v.nomeProprio) h += `<div class="sotto">${esc(v.nome)}</div>`;
+    }
     h += _`<div class="sotto">${esc(mod.nome)}${v.vagoni ? _` · ${v.vagoni} vagoni` : ''} · ${mod.kmh} km/h · ${v.eta} anni</div>`;
     if (v.tipo === 'treno') h += htmlComposizione(s0, v, mod);
     else if (v.tipo === 'nave') h += `<div class="composizione mare">${G.treni.htmlMiniatura(v.modello, v.merce, v.qta >= 1 ? 1 : 0, Math.min(140, Math.floor(280 / (G.navi.forma(mod).L + 0.22))))}</div>`;
@@ -442,6 +451,7 @@
   }
 
   ui.apriPannello = function (tipo, id) {
+    ui.rinomina = null;
     ui.pannello = { tipo, id };
     if (tipo !== 'veicolo') { ui.percorso = false; if (tipo !== 'stazione') ui.selVeicolo = null; }
     if (tipo === 'veicolo') ui.selVeicolo = id;
@@ -562,7 +572,7 @@
       const a = s0.conti.anno;
       h = htmlDeposito(s0) + _`<table class="elenco"><tr><th>Mezzo</th><th>Merce</th><th>Stato</th><th class="num">Ricavi ${a}</th><th class="num">Costi ${a}</th><th class="num">Profitto ${a}</th><th class="num">Profitto anno scorso</th><th class="num">Età</th></tr>`;
       for (const v of [...s0.veicoli].sort((a, b) => b.profittoAnno - a.profittoAnno)) {
-        h += `<tr class="link" data-az="apriVeicolo" data-id="${v.id}"><td>${esc(v.nome)}<div class="sotto">${esc(G.modello(v.modello).nome)}</div>${v.tipo === 'treno' ? G.treni.htmlMiniatura(v.modello, v.merce, v.vagoni, Math.min(64, Math.floor(300 / ((1 + v.vagoni) * 0.44 + 0.12))))
+        h += `<tr class="link" data-az="apriVeicolo" data-id="${v.id}"><td>${v.nomeProprio ? `<b>${esc(v.nomeProprio)}</b> <span class="sotto">${esc(v.nome)}</span>` : esc(v.nome)}<div class="sotto">${esc(G.modello(v.modello).nome)}</div>${v.tipo === 'treno' ? G.treni.htmlMiniatura(v.modello, v.merce, v.vagoni, Math.min(64, Math.floor(300 / ((1 + v.vagoni) * 0.44 + 0.12))))
           : v.tipo === 'nave' ? G.treni.htmlMiniatura(v.modello, v.merce, v.qta >= 1 ? 1 : 0, Math.min(110, Math.floor(240 / (G.navi.forma(G.modello(v.modello)).L + 0.22)))) : ''}</td>
           <td>${pallino(v.merce)}${nomeMerce(v.merce)}</td><td>${esc(G.statoVeicolo(s0, v))}</td>
           <td class="num verde">${G.lire(v.ricaviAnno)}</td><td class="num">${G.lire(-v.costiAnno)}</td>
@@ -987,7 +997,7 @@
     tornaIndietro: () => {
       const v = veicoloSel(); if (!v) return;
       const e = G.tornaIndietro(st(), v);
-      G.avviso(e || _`${v.nome} torna indietro`, !!e);
+      G.avviso(e || _`${G.nomeMezzo(v)} torna indietro`, !!e);
       disegnaPannello();
     },
     suFermata: d => { const v = veicoloSel(), k = +d.k; if (v && k > 0) { const t = v.fermate[k]; v.fermate[k] = v.fermate[k - 1]; v.fermate[k - 1] = t; disegnaPannello(); } },
@@ -1000,16 +1010,19 @@
     progettoAnnulla: () => G.progetto.annulla(),
     progettoRiduci: () => G.progetto.riduci(st()),
     progettoCostruisci: () => { const e = G.progetto.costruisci(st()); if (e) G.avviso(e, true); },
+    rinomina: () => { const v = veicoloSel(); if (!v) return; ui.rinomina = v.id; disegnaPannello(); const i = $('#nomeMezzo'); if (i) { i.focus(); i.select(); } },
+    salvaNome: () => { const v = veicoloSel(), i = $('#nomeMezzo'); if (v && i) G.rinominaMezzo(v, i.value); ui.rinomina = null; disegnaPannello(); },
+    annullaNome: () => { ui.rinomina = null; disegnaPannello(); },
     vagoni: d => { const e = G.chiediVagoni(st(), veicoloSel(), +d.d); if (e) G.avviso(e, true); disegnaPannello(); },
     vendiVagone: d => { const e = G.vendiVagoneDeposito(st(), d.fam); G.avviso(e || _('Vagone venduto'), !!e); finestraVeicoli(); },
     vendiLoco: () => {
       const v = veicoloSel(); if (!v) return;
-      if (!confirm(_`Vendere la locomotiva di ${v.nome} per ${G.lire(G.valoreLocomotiva(v))}? I ${v.vagoni} vagoni vanno nel deposito.`)) return;
+      if (!confirm(_`Vendere la locomotiva di ${G.nomeMezzo(v)} per ${G.lire(G.valoreLocomotiva(v))}? I ${v.vagoni} vagoni vanno nel deposito.`)) return;
       G.vendiVeicolo(st(), v, true); chiudiPannello(); G.avviso(_('Locomotiva venduta: i vagoni sono nel deposito'));
     },
     vendi: () => {
       const v = veicoloSel(); if (!v) return;
-      if (!confirm(_`Vendere ${v.nome} per ${G.lire(G.valoreVeicolo(v))}?`)) return;
+      if (!confirm(_`Vendere ${G.nomeMezzo(v)} per ${G.lire(G.valoreVeicolo(v))}?`)) return;
       G.vendiVeicolo(st(), v); chiudiPannello(); G.avviso(_('Mezzo venduto'));
     },
     demolisciStazione: d => {
@@ -1318,6 +1331,7 @@
     window.addEventListener('keydown', e => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const tag = e.target.tagName;
+      if (e.target.id === 'nomeMezzo' && (e.key === 'Enter' || e.key === 'Escape')) { AZIONI[e.key === 'Enter' ? 'salvaNome' : 'annullaNome'](); e.preventDefault(); return; }
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
       if (!st()) return;
       const k = e.key;

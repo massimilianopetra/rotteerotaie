@@ -80,6 +80,8 @@ Per aggiungere un'altra mappa basta una voce in `MAPPE` dentro `scripts/mappe.js
 - **Vagoni e deposito**: nel pannello di un treno i pulsanti − e + tolgono e aggiungono vagoni (in stazione subito,
   altrimenti alla prossima fermata). I vagoni tolti vanno nel deposito, in cima alla finestra Mezzi, e si rimontano
   gratis su altri treni o all'acquisto di un treno nuovo; «Vendi solo la locomotiva» tiene i vagoni.
+- **Nome dei mezzi**: ogni mezzo ha un identificativo automatico («Treno 3») e può avere un nome proprio
+  («Freccia del Sud»), da dare o cambiare quando si vuole con la matita ✏️ nel suo pannello.
 - **Progettazione** (menu della ferrovia e dell'autostrada): si disegna una linea punto per punto senza costruire,
   con il profilo altimetrico, gallerie, viadotti, pendenza e costo; poi «Costruisci tutto».
 - **Tempo realistico**: a velocità normale un secondo vero è 5 minuti di gioco e i mezzi viaggiano alla

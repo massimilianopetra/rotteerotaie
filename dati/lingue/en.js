@@ -832,4 +832,9 @@ window.LINGUE.en = {
   "<span class=\"sotto\" title=\"Qui si scarica soltanto\">⬇</span> ": "<span class=\"sotto\" title=\"Unloading only here\">⬇</span> ",
   "La galleria uscirebbe allo scoperto dove non si può costruire (case, industrie o acqua): le caselle in rosso. Cambia direzione, oppure fermati prima e prosegui con un altro tratto.": "The tunnel would come out into the open where nothing can be built (houses, industries or water): the red tiles. Change direction, or stop earlier and carry on with another section.",
   " · {0} all'aperto (trincea, rilevato o viadotto)": " · {0} in the open (cutting, embankment or viaduct)",
+  " e ": " and ",
+  "Salva il nome (Invio)": "Save the name (Enter)",
+  "Annulla (Esc)": "Cancel (Esc)",
+  "Un nome a scelta; lascialo vuoto per togliere il nome.": "Any name you like; leave it empty to remove the name.",
+  "Dai un nome a questo mezzo": "Give this vehicle a name",
 };
