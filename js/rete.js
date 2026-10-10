@@ -93,7 +93,7 @@
     if (o === OCC.CASA || o === OCC.INDUSTRIA) return Infinity;
     if (o === OCC.STAZIONE) {
       const s = st.stazioni[m.rif[i]];
-      if (rete === 'binario') return s.tipo === 'stazione' ? 0 : Infinity;
+      if (rete === 'binario') return s.tipo === 'stazione' || s.tipo === 'porto' ? 0 : Infinity; // i binari passano anche nei porti
       return s.tipo === 'deposito' ? 0 : Infinity;
     }
     if (rete === 'binario' && m.mBin[i]) return 0;
@@ -122,7 +122,7 @@
     }
     if (o === OCC.STAZIONE) {
       const s = st.stazioni[m.rif[i]];
-      if (rete === 'binario' && s.tipo !== 'stazione') return _`c'è ${s.nome} (${G.nomeTipoStazione(s).toLowerCase()}): i binari passano solo nelle stazioni ferroviarie`;
+      if (rete === 'binario' && s.tipo !== 'stazione' && s.tipo !== 'porto') return _`c'è ${s.nome} (${G.nomeTipoStazione(s).toLowerCase()}): i binari passano solo nelle stazioni ferroviarie e nei porti`;
       if (rete !== 'binario' && s.tipo !== 'deposito') return _`c'è ${s.nome} (${G.nomeTipoStazione(s).toLowerCase()}): le strade passano solo nelle autostazioni`;
     }
     return null;

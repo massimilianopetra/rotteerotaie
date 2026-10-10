@@ -222,7 +222,8 @@
   };
 
   // la stazione va bene per questo veicolo?
-  G.fermataAdatta = (v, s) => s && s.tipo === TIPO_STAZ[v.tipo];
+  // i treni si fermano anche nei porti: un binario sopra il porto ne fa una stazione di scambio fra treni e navi
+  G.fermataAdatta = (v, s) => s && (s.tipo === TIPO_STAZ[v.tipo] || (v.tipo === 'treno' && s.tipo === 'porto'));
 
   G.aggiungiFermata = function (st, v, sid) {
     const s = st.stazioni[sid];
@@ -394,7 +395,10 @@
       G.notizia(st, _`${chi} arriva ${/^[AEIOU]/.test(s.nome) ? _('ad') : 'a'} ${s.nome}: festa in piazza!`, c.x, c.y);
     }
     if (s.servite[v.merce]) s.ultimoRitiro[v.merce] = st.giornoInt;
-    if (v.qta > 0 && s.accetta[v.merce]) {
+    // la merce si consegna se la stazione la accetta; si lascia per il trasbordo se la fermata lo chiede, oppure se
+    // qui non è accettata ma un mezzo di un altro tipo la ritira (dal treno alla nave, dalla nave al treno…)
+    const lascia = v.qta > 0 && (f.trasbordo || (!s.accetta[v.merce] && altroRitira(st, s, v)));
+    if (v.qta > 0 && (s.accetta[v.merce] || lascia)) {
       const def = C.merci[v.merce];
       let incasso = 0;
       for (const p of v.carico) {
@@ -404,7 +408,8 @@
         const ft = Math.max(0.25, Math.min(1, 1 - (giorni - def.giorni) / (def.giorni * 2)));
         incasso += p.q * def.prezzo * dist * ft;
       }
-      G.consegna(st, s, v.merce, v.qta);
+      if (lascia) { const sc = scorta(s, v.merce); sc[v.tipo] = (sc[v.tipo] || 0) + v.qta; } // il mezzo è pagato per il suo pezzo
+      else G.consegna(st, s, v.merce, v.qta);
       v.timer += v.qta / ritmo(v, s);
       v.carico = []; v.qta = 0;
       incasso = Math.round(incasso);
@@ -418,12 +423,27 @@
     if (v.vagoniVoluti) { const e = G.applicaVagoni(st, v); if (e && !v.vagoniVoluti) G.notizia(st, _`${v.nome}: ${e}`, c.x, c.y); }
   }
 
+  // ---------------------------------------------------------------- trasbordo
+  // La merce lasciata in una stazione per un altro mezzo sta in s.trasbordo[merce][tipo del mezzo che l'ha lasciata]
+  // e la riprende solo un mezzo di un altro tipo: così un treno non si ricarica la merce che ha appena lasciato.
+  // Chi la lascia è pagato per il suo pezzo di viaggio (dall'origine fin qui); chi la riprende parte da qui.
+  const scorta = (s, merce) => { const t = s.trasbordo || (s.trasbordo = {}); return t[merce] || (t[merce] = {}); };
+  G.trasbordoDisponibile = function (s, merce, tipo) {
+    const t = s.trasbordo && s.trasbordo[merce];
+    let q = 0;
+    if (t) for (const k in t) if (k !== tipo) q += t[k];
+    return q;
+  };
+  const altroRitira = G.altroRitira = (st, s, v) => st.veicoli.some(w => w !== v && w.tipo !== v.tipo && w.merce === v.merce && w.fermate.some(f => f.s === s.id));
+
   function carica(st, v, s, dt) {
     if (!s.servite[v.merce]) return;
-    const disp = s.attesa[v.merce] || 0, spazio = v.cap - v.qta;
+    const tr = G.trasbordoDisponibile(s, v.merce, v.tipo), disp = (s.attesa[v.merce] || 0) + tr, spazio = v.cap - v.qta;
     if (disp < 0.01 || spazio <= 0.01) return;
     const q = Math.min(disp, spazio, ritmo(v, s) * dt);
-    s.attesa[v.merce] = disp - q;
+    let resto = q;
+    if (tr > 0) { const t = s.trasbordo[v.merce]; for (const k in t) if (k !== v.tipo && resto > 0) { const x = Math.min(t[k], resto); t[k] -= x; resto -= x; } }
+    s.attesa[v.merce] = Math.max(0, (s.attesa[v.merce] || 0) - resto);
     s.ultimoRitiro[v.merce] = st.giornoInt;
     let p = v.carico.find(k => k.o === s.id);
     if (!p) { p = { o: s.id, q: 0, g: st.giorno }; v.carico.push(p); }
@@ -439,7 +459,7 @@
     if (s) carica(st, v, s, dt);
     if (v.timer > 0 || v.fermate.length < 2 || v.fermoManuale) return;
     // se in stazione resta merce e c'è ancora posto, finisce di caricare (al massimo mezza giornata)
-    const resta = s && s.servite[v.merce] && (s.attesa[v.merce] || 0) >= 1 && v.qta < v.cap - 0.5;
+    const resta = s && s.servite[v.merce] && (s.attesa[v.merce] || 0) + G.trasbordoDisponibile(s, v.merce, v.tipo) >= 1 && v.qta < v.cap - 0.5;
     if (resta && v.attesa < 0.5) return;
     if (f && f.pieno && v.qta < v.cap - 0.5 && v.attesa < 120) return; // aspetta il carico pieno (al massimo 4 mesi)
     // attesa a tempo: resta fino all'ora indicata per riempirsi di più, ma parte prima se è pieno
