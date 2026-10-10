@@ -409,7 +409,18 @@
     const k = [modId, merce, n, ts, anno].join('|');
     let c = miniature.get(k);
     if (c) return c;
-    const mod = modId ? G.modello(modId) : null, pezzi = (mod ? 1 : 0) + n, passo = 0.44 * ts;
+    const mod = modId ? G.modello(modId) : null;
+    if (mod && mod.tipo === 'nave') { // una nave (n > 0: carica), rivolta a sinistra come i treni
+      const p = G.navi.dati({ merce, qta: n > 0 ? 50 : 0, id: 3 }, mod);
+      const w = Math.ceil((p.L + 0.22) * ts), h = Math.ceil(Math.max(p.W * 2, 0.3) * ts), r = 2;
+      c = document.createElement('canvas'); c.width = w * r; c.height = h * r; c.w = w; c.h = h;
+      const ctx = c.getContext('2d'); ctx.scale(r, r);
+      G.navi.scia(ctx, w / 2, h / 2, Math.PI, ts, p, false);
+      G.navi.nave(ctx, w / 2, h / 2, Math.PI, ts, p);
+      miniature.set(k, c);
+      return c;
+    }
+    const pezzi = (mod ? 1 : 0) + n, passo = 0.44 * ts;
     const w = Math.ceil(pezzi * passo + 0.12 * ts), h = Math.ceil(0.36 * ts), r = 2;
     c = document.createElement('canvas'); c.width = w * r; c.height = h * r; c.w = w; c.h = h;
     const ctx = c.getContext('2d'); ctx.scale(r, r);
