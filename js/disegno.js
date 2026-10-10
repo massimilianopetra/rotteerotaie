@@ -747,6 +747,7 @@
       if (a.caselle.length === 1) ctx.lineTo(ox + (a.caselle[0] % m.W + 0.5) * ts + 0.1, oy + (((a.caselle[0] / m.W) | 0) + 0.5) * ts);
       ctx.stroke();
     }
+    if (G.progetto && G.progetto.attivo()) G.progetto.disegna2d(V);
     // tracciato impossibile: le caselle che bloccano
     if (a && a.blocchi) for (const i of a.blocchi) rettCaselle(V, i % m.W, (i / m.W) | 0, 1, 1, 'rgba(240,70,60,0.35)', 'rgba(255,90,70,0.95)');
     // casella sotto il mouse

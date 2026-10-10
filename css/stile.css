@@ -273,3 +273,21 @@ canvas.miniTreno { display: block; margin-top: 4px; image-rendering: auto; }
 .deposito { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
 .voceDeposito { display: flex; align-items: center; gap: 10px; }
 .voceDeposito canvas.miniTreno { margin: 0; }
+
+/* progettazione di ferrovie e autostrade: riquadro con il profilo altimetrico, in alto sulla mappa */
+#progetto { position: fixed; top: 54px; left: 70px; width: min(760px, calc(100% - 430px)); max-height: calc(100% - 64px - 190px);
+  overflow-y: auto; background: var(--pannello); border: 1px solid var(--bordo); border-radius: 10px; padding: 8px 12px; z-index: 6; }
+#progetto .testa { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+#progetto .testa b { color: var(--accento); font-size: 15px; }
+#progetto .riga { display: flex; gap: 6px 14px; align-items: center; flex-wrap: wrap; margin: 5px 0; }
+#progetto .riga button.attivo { background: var(--blu); border-color: #6b9be6; }
+#progetto .numeri span { white-space: nowrap; }
+.profiloAlt { width: 100%; height: auto; display: block; background: #0e151c; border-radius: 8px; margin: 4px 0; }
+.profiloAlt text { fill: #8ea3b6; font-size: 11px; font-family: inherit; }
+.legendaProfilo { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--tenue); }
+.legendaProfilo i { display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+.trattiProgetto { margin: 6px 0; padding-left: 0; list-style: none; font-size: 13px; }
+.trattiProgetto li { margin: 3px 0; }
+#progetto .pulsanti { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+#progetto button[disabled] { opacity: 0.45; cursor: default; }
+#progetto .testa .riduci { margin-left: auto; }

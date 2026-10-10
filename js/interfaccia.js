@@ -160,10 +160,11 @@
     autostrada: { titolo: _('Autostrada'), icona: '🚧', normale: _('Autostrada normale') }
   };
   const inGalleria = rete => !!MENU_GALLERIA[rete] && ui.modoRete[rete] === 'galleria';
+  const inProgetto = rete => !!MENU_GALLERIA[rete] && ui.modoRete[rete] === 'progetto';
   function aggiornaPulsanteBinario() {
     for (const id in MENU_GALLERIA) {
       const b = document.querySelector(`#attrezzi button[data-id="${id}"]`);
-      if (b) b.innerHTML = (inGalleria(id) ? '🚇' : MENU_GALLERIA[id].icona) + '<span class="freccina">▸</span>';
+      if (b) b.innerHTML = (inGalleria(id) ? '🚇' : inProgetto(id) ? '📐' : MENU_GALLERIA[id].icona) + '<span class="freccina">▸</span>';
     }
   }
   function apriMenuBinario(rete) {
@@ -172,7 +173,8 @@
       <span class="icona">${ic}</span><span><b>${nome}</b><span class="sotto">${testo}</span></span></button>`;
     menu.innerHTML = `<div class="titolo">${M.titolo}</div>` +
       voce('normale', M.icona, M.normale, _`Segue il terreno, sale al massimo del ${O.pendenzaMax[rete]}‰.<br>Per scavalcare un dosso o salire a una città si sopraeleva da sola, già prima, su rilevati e viadotti (più alti, più cari). Se nemmeno così ce la fa non si costruisce: il monte da forare diventa rosso.`) +
-      voce('galleria', '🚇', _('Galleria'), _`Dritta, dalla quota dell'imbocco a quella dell'uscita: può salire o scendere fino al ${O.pendenzaMax[rete]}‰.<br>Trascina dall'imbocco all'uscita, dall'altra parte del monte; sopra servono almeno ${O.sogliaMetri} m di monte. ×${O.galleria} il costo.`);
+      voce('galleria', '🚇', _('Galleria'), _`Dritta, dalla quota dell'imbocco a quella dell'uscita: può salire o scendere fino al ${O.pendenzaMax[rete]}‰.<br>Trascina dall'imbocco all'uscita, dall'altra parte del monte; sopra servono almeno ${O.sogliaMetri} m di monte. ×${O.galleria} il costo.`) +
+      voce('progetto', '📐', _('Progettazione'), _('Si disegna la linea punto per punto senza costruire: vedi sulla mappa gallerie e viadotti e sotto il profilo altimetrico, la pendenza e il costo. Ogni tratto può essere normale o in galleria; quando va bene, «Costruisci tutto».'));
     const r = b.getBoundingClientRect();
     menu.classList.remove('nascosto');
     menu.style.top = Math.max(50, Math.min(r.top, window.innerHeight - menu.offsetHeight - 10)) + 'px';
@@ -751,7 +753,7 @@
       Torino → Milano, passando da Vercelli senza fermarsi) oppure <b>↔ andata e ritorno</b> (Milano → Vercelli → Torino → Vercelli →
       Milano). Sulla mappa il percorso del mezzo selezionato segue i binari; il tratto pieno è il viaggio in corso.</p>
       <h4>⛰️ Montagne: gallerie e viadotti</h4>
-      <p>Il pulsante della ferrovia (tasto B) apre un menu con due voci; quello dell'autostrada (tasto U) uguale, con il limite del ${C.opere.pendenzaMax.autostrada}‰:</p>
+      <p>Il pulsante della ferrovia (tasto B) apre un menu con tre voci; quello dell'autostrada (tasto U) uguale, con il limite del ${C.opere.pendenzaMax.autostrada}‰:</p>
       <ul><li><b>🛤️ Ferrovia normale</b>: segue il terreno e non sale né scende più del ${C.opere.pendenzaMax.binario}‰
       (${C.opere.pendenzaMax.binario} m ogni km). Sopra le valli fa da sola i <b>viadotti</b> 🌉 e, per scavalcare un dosso o salire
       a una città in alto, <b>si sopraeleva già prima</b> su rilevati e viadotti, a rampa (più è alto il viadotto, più costa). Se nemmeno così ce la fa
@@ -760,7 +762,8 @@
       <b>dritta</b> e va dalla quota dell'imbocco a quella dell'uscita: può <b>salire o scendere</b> al massimo del ${C.opere.pendenzaMax.binario}‰
       (l'autostrada del ${C.opere.pendenzaMax.autostrada}‰), come la linea all'aperto. Sopra deve esserci almeno ${C.opere.sogliaMetri} m di monte (vicino agli imbocchi
       basta stare sotto il terreno). Se la linea dritta ripassa sopra una valle, spezzala in due gallerie. Costa
-      ${C.opere.galleria} volte il binario. Poi collega i due imbocchi alle linee con la ferrovia normale.</li></ul>
+      ${C.opere.galleria} volte il binario. Poi collega i due imbocchi alle linee con la ferrovia normale.</li>
+        <li><b>📐 Progettazione</b>: per studiare una linea difficile senza spendere. Clicca i punti uno dopo l'altro: ogni tratto si calcola come costruendolo (normale o in galleria), sulla mappa vedi gallerie e viadotti e nel riquadro il <b>profilo altimetrico</b>, la pendenza, il costo e i tratti impossibili. Quando il progetto va bene, «Costruisci tutto» (Invio); Backspace toglie l'ultimo punto, Esc annulla.</li></ul>
       <ul>
       <li>In <b>salita</b> i treni rallentano (il vapore molto più delle elettriche), quindi una galleria in piano può far guadagnare tempo.</li>
       <li>Clicca con 🔍 su una casella della linea per sapere se è in galleria o su un viadotto e a che quota passa.</li></ul>
@@ -955,6 +958,12 @@
     togliFermata: d => { const v = veicoloSel(); if (v) { G.togliFermata(st(), v, +d.k); disegnaPannello(); } },
     segui: () => { ui.segui = !ui.segui; disegnaPannello(); },
     fermaVeicolo: () => { const v = veicoloSel(); if (v) { v.fermoManuale = !v.fermoManuale; disegnaPannello(); } },
+    progettoProssimo: d => G.progetto.prossimo(st(), d.t),
+    progettoTipo: d => G.progetto.cambiaTipo(st(), +d.k),
+    progettoTogli: () => G.progetto.togliUltimo(st()),
+    progettoAnnulla: () => G.progetto.annulla(),
+    progettoRiduci: () => G.progetto.riduci(st()),
+    progettoCostruisci: () => { const e = G.progetto.costruisci(st()); if (e) G.avviso(e, true); },
     vagoni: d => { const e = G.chiediVagoni(st(), veicoloSel(), +d.d); if (e) G.avviso(e, true); disegnaPannello(); },
     vendiVagone: d => { const e = G.vendiVagoneDeposito(st(), d.fam); G.avviso(e || _('Vagone venduto'), !!e); finestraVeicoli(); },
     vendiLoco: () => {
@@ -1186,6 +1195,7 @@
       const s0 = st();
       if (RETI.includes(ui.strumento)) {
         if (G.anno(s0) < C.reti[ui.strumento].anno) { G.avviso(_`${C.reti[ui.strumento].nome}: disponibile dal ${C.reti[ui.strumento].anno}`, true); return; }
+        if (inProgetto(ui.strumento)) { G.progetto.clic(s0, c.i, ui.strumento); suggerisci('', e); return; }
         ui.trascina = { da: c.i };
         aggiornaAnteprima(c, e);
       } else if (STAZIONI.includes(ui.strumento)) {
@@ -1216,7 +1226,11 @@
         return;
       }
       if (STAZIONI.includes(ui.strumento)) anteprimaStazione(c, e);
-      else if (inGalleria(ui.strumento) && c.i >= 0) {
+      else if (inProgetto(ui.strumento)) {
+        G.progetto.muovi(st(), c.i);
+        const n = G.progetto.attivo() && G.progetto.rete() === ui.strumento ? G.progetto.dati().punti.length : 0;
+        suggerisci(c.i >= 0 ? (n ? _`📐 Clic: punto ${n + 1} del progetto` : _('📐 Clic: primo punto del progetto')) : '', e);
+      } else if (inGalleria(ui.strumento) && c.i >= 0) {
         const r0 = ui.strumento, m0 = st().mondo, mc = G.motivoCasella(st(), c.i, r0);
         const q = (r0 === 'binario' ? m0.mBin : m0.mStr)[c.i] ? G.quotaRete(st(), c.i, r0) : G.metriTerreno(m0)[c.i];
         suggerisci(_`🚇 Galleria · imbocco a ${G.numero(Math.round(q))} m${mc ? `: <span class="rosso">${esc(mc)}</span>` : ''}<br><span class="sotto">Tieni premuto e trascina fino all'uscita, dall'altra parte del monte</span>`, e);
@@ -1243,7 +1257,7 @@
       ui.trascina = null; ui.anteprima = null;
       suggerisci('', e);
     });
-    cv.addEventListener('pointerleave', () => { ui.cursore = -1; if (!ui.trascina) { ui.bacino = null; $('#suggerimento').style.display = 'none'; } });
+    cv.addEventListener('pointerleave', () => { ui.cursore = -1; G.progetto.esci(st()); if (!ui.trascina) { ui.bacino = null; $('#suggerimento').style.display = 'none'; } });
     cv.addEventListener('wheel', e => {
       e.preventDefault();
       const r = cv.getBoundingClientRect();
@@ -1276,11 +1290,14 @@
         else if (ui.trascina) { ui.trascina = null; ui.anteprima = null; }
         else if (ui.finestra) chiudiFinestra();
         else if (ui.percorso) { ui.percorso = false; disegnaPannello(); }
+        else if (G.progetto.attivo()) G.progetto.annulla();
         else if (ui.strumento !== 'info') scegliStrumento('info');
         else chiudiPannello();
         return;
       }
       if (ui.finestra) return;
+      if (G.progetto.attivo() && (k === 'Backspace' || k === 'Delete')) { G.progetto.togliUltimo(st()); e.preventDefault(); return; }
+      if (G.progetto.attivo() && k === 'Enter') { const r = G.progetto.costruisci(st()); if (r) G.avviso(r, true); e.preventDefault(); return; }
       if (k === ' ') { impostaVelocita(ui.velocita ? 0 : ui.ultimaVel); e.preventDefault(); return; }
       if (k === '1' || k === '2' || k === '3' || k === '4') { impostaVelocita(+k); return; }
       if (k === '+') { zoom(1.25); return; }
