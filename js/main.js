@@ -172,7 +172,7 @@
     for (const k of GRIGLIE) griglie[k] = grigliaInTesto(st.mondo[k]);
     const stato = {};
     for (const k of ['citta', 'industrie', 'stazioni', 'soldi', 'prestito', 'giorno', 'giornoInt', 'oraInt', 'versioneRete',
-      'conti', 'notizie', 'contatori', 'valoreInfra', 'mesiInRosso', 'industrieIniziali', 'banca']) stato[k] = st[k];
+      'conti', 'notizie', 'contatori', 'valoreInfra', 'mesiInRosso', 'industrieIniziali', 'banca', 'depositoVagoni']) stato[k] = st[k];
     stato.veicoli = st.veicoli.map(v => Object.assign({}, v, { punti: null, lun: null, caselle: null, pr: [] }));
     return 'Z1' + comprimi(JSON.stringify({ versione: 2, opz: st.opz, stato, griglie }));
   }

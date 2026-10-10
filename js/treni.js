@@ -398,6 +398,40 @@
     }
   };
 
+  // ---------------------------------------------------------------- miniature per finestre e pannelli
+  // Nell'HTML si mette T.htmlMiniatura(...): un <canvas class="miniTreno"> con i dati nel dataset; dopo ogni
+  // innerHTML si chiama T.dipingiMiniature(radice). Le immagini si preparano una volta sola (cache).
+  // mod = id della locomotiva ('' = solo vagoni), n = vagoni, ts = pixel per casella, anno = epoca dei vagoni
+  T.htmlMiniatura = (mod, merce, n, ts, anno, titolo) =>
+    `<canvas class="miniTreno" data-mod="${mod}" data-merce="${merce}" data-n="${n}" data-ts="${ts}" data-anno="${anno || ''}"${titolo ? ` title="${titolo}"` : ''}></canvas>`;
+  const miniature = new Map();
+  function miniatura(modId, merce, n, ts, anno) {
+    const k = [modId, merce, n, ts, anno].join('|');
+    let c = miniature.get(k);
+    if (c) return c;
+    const mod = modId ? G.modello(modId) : null, pezzi = (mod ? 1 : 0) + n, passo = 0.44 * ts;
+    const w = Math.ceil(pezzi * passo + 0.12 * ts), h = Math.ceil(0.36 * ts), r = 2;
+    c = document.createElement('canvas'); c.width = w * r; c.height = h * r; c.w = w; c.h = h;
+    const ctx = c.getContext('2d'); ctx.scale(r, r);
+    const v = { merce, id: 1, qta: 1 }, ep = T.epoca(mod ? mod.anno : (anno || 1900));
+    const lista = [];
+    if (mod) lista.push(T.dati(v, 0, mod));
+    for (let j = 1; j <= n; j++) lista.push(mod ? T.dati(v, j, mod) : { genere: 'vagone', merce, coloreMerce: C.merci[merce].colore, epoca: ep, seme: 31 + j });
+    // la locomotiva a sinistra, rivolta a sinistra (angolo π), i vagoni dietro verso destra
+    const X = j => 0.26 * ts + j * passo, Y = h / 2 - 0.02 * ts;
+    lista.forEach((p, j) => T.ombra(ctx, X(j), Y, Math.PI, ts));
+    for (let j = lista.length - 1; j >= 0; j--) T.pezzo(ctx, X(j), Y, Math.PI, ts, lista[j]);
+    miniature.set(k, c);
+    return c;
+  }
+  T.dipingiMiniature = function (radice) {
+    for (const el of radice.querySelectorAll('canvas.miniTreno')) {
+      const d = el.dataset, m = miniatura(d.mod, d.merce, +d.n, +d.ts, +d.anno || 0);
+      el.width = m.width; el.height = m.height; el.style.width = m.w + 'px'; el.style.height = m.h + 'px';
+      el.getContext('2d').drawImage(m, 0, 0);
+    }
+  };
+
   // ---------------------------------------------------------------- 3D: volumi di ogni pezzo
   // [x0, x1, larghezza, z0, z1, colore dei fianchi, finestre?]; il tetto è il disegno 2D ritagliato
   T.volumi = function (p) {

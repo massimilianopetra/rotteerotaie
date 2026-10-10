@@ -318,10 +318,23 @@
     return h;
   }
 
+  // il treno disegnato con i suoi vagoni, e i pulsanti per aggiungerne o toglierne
+  function htmlComposizione(s0, v, mod) {
+    const voluti = G.vagoniVoluti(v), ts = Math.min(110, Math.floor(280 / ((1 + v.vagoni) * 0.44 + 0.12)));
+    const inDep = G.vagoniInDeposito(s0, v.merce);
+    let nota;
+    if (voluti !== v.vagoni) nota = _`diventeranno <b>${voluti}</b> alla prossima fermata`;
+    else if (voluti >= mod.vagoni) nota = _('al completo per questa locomotiva');
+    else nota = inDep ? _`il prossimo arriva dal deposito (ce ne sono ${inDep})` : _`un vagone nuovo costa ${G.lire(C.vagone.costo)}`;
+    return `<div class="composizione">${G.treni.htmlMiniatura(v.modello, v.merce, v.vagoni, ts)}</div>` +
+      _`<div class="vagoni"><span>Vagoni</span><button class="mini" data-az="vagoni" data-d="-1" title="Togli un vagone: va nel deposito">−</button><b>${v.vagoni}</b><button class="mini" data-az="vagoni" data-d="1" title="Aggiungi un vagone: dal deposito se c'è, altrimenti nuovo">+</button><span class="sotto">al massimo ${mod.vagoni} · ${nota}</span></div>`;
+  }
+
   function htmlVeicolo(s0, v) {
     const mod = G.modello(v.modello);
     let h = `<h3>${{ treno: '🚂', bus: '🚌', camion: '🚚', aereo: '✈️', traghetto: '⛴️', cargo: '🚢' }[v.classe]} ${esc(v.nome)}</h3>`;
     h += _`<div class="sotto">${esc(mod.nome)}${v.vagoni ? _` · ${v.vagoni} vagoni` : ''} · ${mod.kmh} km/h · ${v.eta} anni</div>`;
+    if (v.tipo === 'treno') h += htmlComposizione(s0, v, mod);
     h += _`<p class="${v.stato === 'bloccato' || v.stato === 'guasto' ? 'rosso' : ''}"><b>Stato:</b> ${esc(G.statoVeicolo(s0, v))}</p>`;
     if (v.tipo === 'treno' && v.stato === 'viaggio') {
       const p = G.pendenzaTreno(s0, v), f = G.fattorePendenza(mod, v, p), q = Math.round(Math.abs(p));
@@ -379,7 +392,8 @@
       <button class="${ui.segui ? 'attivo' : ''}" data-az="segui">🎥 Segui</button>
       <button data-az="fermaVeicolo">${v.fermoManuale ? _('▶ Riparti') : _('⏸ Resta in stazione')}</button>
       ${v.tipo !== 'aereo' && (v.stato === 'viaggio' || v.stato === 'bloccato') ? _`<button class="${v.stallo ? 'attivo' : ''}" data-az="tornaIndietro" title="Torna alla fermata precedente (per sbloccare due treni che si bloccano a vicenda)">↩ Torna indietro</button>` : ''}
-      <button data-az="vendi">💰 Vendi (${G.lire(G.valoreVeicolo(v))})</button></div>`;
+      <button data-az="vendi">💰 Vendi (${G.lire(G.valoreVeicolo(v))})</button>
+      ${v.tipo === 'treno' ? _`<button data-az="vendiLoco" title="I vagoni restano nel deposito, per altri treni">🚂 Vendi solo la locomotiva (${G.lire(G.valoreLocomotiva(v))})</button>` : ''}</div>`;
     return h;
   }
 
@@ -428,7 +442,7 @@
     else if (p.tipo === 'casella') h = htmlCasella(s0, p.id);
     if (!h) { chiudiPannello(); return; }
     h = '<button class="chiudi" data-az="chiudiPannello" title="Chiudi (Esc)">✕</button>' + h;
-    if (h !== pannelloVisto) { const sc = el.scrollTop; el.innerHTML = h; el.scrollTop = sc; pannelloVisto = h; }
+    if (h !== pannelloVisto) { const sc = el.scrollTop; el.innerHTML = h; G.treni.dipingiMiniature(el); el.scrollTop = sc; pannelloVisto = h; }
     el.classList.remove('nascosto');
   }
 
@@ -438,7 +452,7 @@
   function apriFinestra(titolo, corpo, larga, rifai) {
     $('#finestra .testa span').textContent = titolo;
     const el = $('#finestra .corpo');
-    if (!inDiretta || ui.finestra !== titolo || corpo !== corpoVisto) { const sc = el.scrollTop; el.innerHTML = corpo; if (inDiretta) el.scrollTop = sc; }
+    if (!inDiretta || ui.finestra !== titolo || corpo !== corpoVisto) { const sc = el.scrollTop; el.innerHTML = corpo; G.treni.dipingiMiniature(el); if (inDiretta) el.scrollTop = sc; }
     corpoVisto = corpo;
     $('#finestra .riquadro').classList.toggle('larga', !!larga);
     $('#finestra').classList.remove('nascosto');
@@ -494,8 +508,26 @@
     const r = $('#acqVagoni');
     if (r) { r.max = mod.vagoni; if (+r.value > mod.vagoni) r.value = mod.vagoni; vag = +r.value; $('#acqNumVag').textContent = vag; }
     const merce = selM.value, cap = G.capacita(mod, merce, vag);
-    const prezzo = G.prezzoVeicolo(mod, vag);
-    $('#acqRiepilogo').innerHTML = _`Capacità: <b>${G.numero(cap)} ${C.merci[merce].unita}</b> · Prezzo: <b class="${prezzo > st().soldi ? 'rosso' : ''}">${G.lire(prezzo)}</b> · Costo annuo: ${G.lire(mod.esercizio + vag * C.vagone.esercizio)}`;
+    const usati = mod.tipo === 'treno' ? Math.min(vag, G.vagoniInDeposito(st(), merce)) : 0, prezzo = G.prezzoVeicolo(mod, vag) - usati * C.vagone.costo;
+    $('#acqRiepilogo').innerHTML = _`Capacità: <b>${G.numero(cap)} ${C.merci[merce].unita}</b> · Prezzo: <b class="${prezzo > st().soldi ? 'rosso' : ''}">${G.lire(prezzo)}</b> · Costo annuo: ${G.lire(mod.esercizio + vag * C.vagone.esercizio)}` +
+      (usati ? _`<br>${usati} ${usati === 1 ? _('vagone arriva') : _('vagoni arrivano')} dal deposito, gratis` : '');
+    if (mod.tipo === 'treno') {
+      $('#acqRiepilogo').insertAdjacentHTML('afterbegin', `<div class="composizione">${G.treni.htmlMiniatura(mod.id, merce, vag, Math.min(110, Math.floor(440 / ((1 + vag) * 0.44 + 0.12))))}</div>`);
+      G.treni.dipingiMiniature($('#acqRiepilogo'));
+    }
+  }
+
+  // il deposito dei vagoni tolti ai treni: si rimontano gratis su altri treni della stessa famiglia, o si vendono
+  function htmlDeposito(s0) {
+    const dep = s0.depositoVagoni || {}, fam = Object.keys(G.FAMIGLIE_VAGONI).filter(k => dep[k] > 0);
+    if (!fam.length) return '';
+    let h = _('<h4>🏚️ Deposito dei vagoni</h4><div class="deposito">');
+    for (const k of fam) {
+      const [nome, merce] = G.FAMIGLIE_VAGONI[k];
+      h += `<div class="voceDeposito">${G.treni.htmlMiniatura('', merce, Math.min(dep[k], 4), 56, G.anno(s0))}<span><b>${dep[k]}</b> × ${nome}</span>` +
+        `<button class="mini" data-az="vendiVagone" data-fam="${k}">${_`💰 Vendine uno (${G.lire(G.valoreVagoneUsato())})`}</button></div>`;
+    }
+    return h + _('</div><div class="nota">I vagoni del deposito si rimontano gratis: con il pulsante + nel pannello di un treno che porta la stessa merce, oppure comprando un treno nuovo.</div>');
   }
 
   function finestraVeicoli() {
@@ -504,9 +536,9 @@
     if (!s0.veicoli.length) h = _('<p>Non hai ancora mezzi. Costruisci due stazioni collegate, poi clicca su una stazione e premi «Compra».</p>');
     else {
       const a = s0.conti.anno;
-      h = _`<table class="elenco"><tr><th>Mezzo</th><th>Merce</th><th>Stato</th><th class="num">Ricavi ${a}</th><th class="num">Costi ${a}</th><th class="num">Profitto ${a}</th><th class="num">Profitto anno scorso</th><th class="num">Età</th></tr>`;
+      h = htmlDeposito(s0) + _`<table class="elenco"><tr><th>Mezzo</th><th>Merce</th><th>Stato</th><th class="num">Ricavi ${a}</th><th class="num">Costi ${a}</th><th class="num">Profitto ${a}</th><th class="num">Profitto anno scorso</th><th class="num">Età</th></tr>`;
       for (const v of [...s0.veicoli].sort((a, b) => b.profittoAnno - a.profittoAnno)) {
-        h += `<tr class="link" data-az="apriVeicolo" data-id="${v.id}"><td>${esc(v.nome)}<div class="sotto">${esc(G.modello(v.modello).nome)}</div></td>
+        h += `<tr class="link" data-az="apriVeicolo" data-id="${v.id}"><td>${esc(v.nome)}<div class="sotto">${esc(G.modello(v.modello).nome)}</div>${v.tipo === 'treno' ? G.treni.htmlMiniatura(v.modello, v.merce, v.vagoni, Math.min(64, Math.floor(300 / ((1 + v.vagoni) * 0.44 + 0.12)))) : ''}</td>
           <td>${pallino(v.merce)}${nomeMerce(v.merce)}</td><td>${esc(G.statoVeicolo(s0, v))}</td>
           <td class="num verde">${G.lire(v.ricaviAnno)}</td><td class="num">${G.lire(-v.costiAnno)}</td>
           <td class="num ${v.profittoAnno < 0 ? 'rosso' : 'verde'}"><b>${G.lire(v.profittoAnno)}</b></td>
@@ -922,6 +954,13 @@
     togliFermata: d => { const v = veicoloSel(); if (v) { G.togliFermata(st(), v, +d.k); disegnaPannello(); } },
     segui: () => { ui.segui = !ui.segui; disegnaPannello(); },
     fermaVeicolo: () => { const v = veicoloSel(); if (v) { v.fermoManuale = !v.fermoManuale; disegnaPannello(); } },
+    vagoni: d => { const e = G.chiediVagoni(st(), veicoloSel(), +d.d); if (e) G.avviso(e, true); disegnaPannello(); },
+    vendiVagone: d => { const e = G.vendiVagoneDeposito(st(), d.fam); G.avviso(e || _('Vagone venduto'), !!e); finestraVeicoli(); },
+    vendiLoco: () => {
+      const v = veicoloSel(); if (!v) return;
+      if (!confirm(_`Vendere la locomotiva di ${v.nome} per ${G.lire(G.valoreLocomotiva(v))}? I ${v.vagoni} vagoni vanno nel deposito.`)) return;
+      G.vendiVeicolo(st(), v, true); chiudiPannello(); G.avviso(_('Locomotiva venduta: i vagoni sono nel deposito'));
+    },
     vendi: () => {
       const v = veicoloSel(); if (!v) return;
       if (!confirm(_`Vendere ${v.nome} per ${G.lire(G.valoreVeicolo(v))}?`)) return;

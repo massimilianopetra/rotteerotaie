@@ -263,3 +263,13 @@ ol.fermate input.durata { width: 44px; font: inherit; font-size: 12px; color: va
 .lingue { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 10px; }
 .lingue .lingua { display: flex; align-items: center; gap: 10px; padding: 8px 16px; font-size: 15px; }
 .bandiera { width: 36px; height: 24px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45); flex: none; }
+
+/* miniature dei treni (finestra Mezzi, pannello, acquisto) e deposito dei vagoni */
+canvas.miniTreno { display: block; margin-top: 4px; image-rendering: auto; }
+.composizione { background: #5f7a45; border-radius: 6px; padding: 6px 8px; margin: 6px 0; overflow: hidden;
+  background-image: linear-gradient(transparent 44%, #6b5136 44%, #6b5136 56%, transparent 56%); }
+.vagoni { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 4px 0 8px; }
+.vagoni b { min-width: 1.6em; text-align: center; }
+.deposito { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.voceDeposito { display: flex; align-items: center; gap: 10px; }
+.voceDeposito canvas.miniTreno { margin: 0; }

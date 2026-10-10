@@ -85,8 +85,11 @@
     if (!G.modelliDisponibili(st, mod.tipo).includes(mod)) return _`${mod.nome} non è in vendita quest'anno`;
     if (!G.merciPermesse(mod).includes(merce)) return _('Questo mezzo non trasporta ') + C.merci[merce].nome.toLowerCase();
     vagoni = mod.tipo === 'treno' ? Math.max(1, Math.min(mod.vagoni, vagoni | 0)) : 0;
-    const prezzo = G.prezzoVeicolo(mod, vagoni);
-    if (st.soldi < prezzo) return _('Fondi insufficienti');
+    // i vagoni si prendono prima dal deposito (gratis), poi si comprano nuovi
+    const usati = mod.tipo === 'treno' ? Math.min(vagoni, G.vagoniInDeposito(st, merce)) : 0;
+    const prezzo = G.prezzoVeicolo(mod, vagoni), spesa = prezzo - usati * C.vagone.costo;
+    if (st.soldi < spesa) return _('Fondi insufficienti');
+    if (usati) deposito(st)[G.famigliaVagone(merce)] -= usati;
     const classe = mod.tipo === 'strada' || mod.tipo === 'nave' ? mod.classe : mod.tipo;
     st.contatori[classe] = (st.contatori[classe] || 0) + 1;
     const c = G.centroStazione(s), t0 = G.casellaStazione(st, s), W = st.mondo.W;
@@ -106,15 +109,83 @@
       G.prendiCasella(st, v, t0, 0);
     }
     st.veicoli.push(v);
-    G.spendi(st, prezzo, 'veicoli');
+    G.spendi(st, spesa, 'veicoli');
     G.aggiornaServizi(st);
     return v;
   };
 
-  G.vendiVeicolo = function (st, v) {
+  // ---------------------------------------------------------------- vagoni e deposito
+  // Un treno può avere da 1 vagone al massimo della sua locomotiva. Si cambia solo in stazione: fuori, la richiesta
+  // (v.vagoniVoluti) aspetta la prossima fermata, perché la lunghezza del treno conta per i binari prenotati.
+  // I vagoni tolti vanno nel deposito della compagnia (st.depositoVagoni, per famiglia: un carro aperto porta
+  // carbone o ferro, una cisterna petrolio o carburante) e si rimontano gratis su altri treni; si possono vendere.
+  const FAMIGLIA = { passeggeri: 'carrozza', posta: 'postale', carbone: 'aperto', ferro: 'aperto', legname: 'pianale', acciaio: 'pianale',
+    petrolio: 'cisterna', carburante: 'cisterna', grano: 'tramoggia', cibo: 'frigo', merci: 'coperto' };
+  // nome della famiglia e merce che la rappresenta nei disegni
+  G.FAMIGLIE_VAGONI = {
+    carrozza: [_('Carrozze passeggeri'), 'passeggeri'], postale: [_('Vagoni postali'), 'posta'], aperto: [_('Carri aperti (carbone, ferro)'), 'carbone'],
+    pianale: [_('Carri pianale (legname, acciaio)'), 'legname'], cisterna: [_('Carri cisterna (petrolio, carburante)'), 'petrolio'],
+    tramoggia: [_('Carri tramoggia (grano)'), 'grano'], frigo: [_('Carri frigo (cibo)'), 'cibo'], coperto: [_('Carri merci coperti'), 'merci']
+  };
+  G.famigliaVagone = merce => FAMIGLIA[merce] || 'coperto';
+  G.valoreVagoneUsato = () => C.vagone.costo * 0.5;
+  const deposito = st => st.depositoVagoni || (st.depositoVagoni = {});
+  G.vagoniInDeposito = (st, merce) => deposito(st)[G.famigliaVagone(merce)] || 0;
+  G.vagoniVoluti = v => v.vagoniVoluti || v.vagoni;
+
+  // delta = +1 o −1: restituisce un messaggio se non si può, altrimenti null
+  G.chiediVagoni = function (st, v, delta) {
+    if (!v || v.tipo !== 'treno') return null;
+    const mod = G.modello(v.modello), ora = G.vagoniVoluti(v), n = Math.max(1, Math.min(mod.vagoni, ora + delta));
+    if (n === ora) return delta > 0 ? _`${mod.nome}: al massimo ${mod.vagoni} vagoni` : _('Il treno deve avere almeno un vagone');
+    if (delta > 0 && n > v.vagoni) { // i vagoni in più: prima quelli del deposito, poi nuovi da pagare
+      const nuovi = Math.max(0, n - v.vagoni - G.vagoniInDeposito(st, v.merce));
+      if (nuovi * C.vagone.costo > st.soldi) return _('Fondi insufficienti per un vagone nuovo');
+    }
+    v.vagoniVoluti = n === v.vagoni ? 0 : n;
+    return v.stato === 'sosta' ? G.applicaVagoni(st, v) : null;
+  };
+
+  // in stazione: si aggiungono o si tolgono i vagoni chiesti. Togliere un vagone pieno non si può: si aspetta
+  // che il carico scenda (alla prossima fermata, dopo lo scarico).
+  G.applicaVagoni = function (st, v) {
+    const voluti = v.vagoniVoluti;
+    if (!voluti || v.tipo !== 'treno') return null;
+    const mod = G.modello(v.modello), fam = G.famigliaVagone(v.merce), dep = deposito(st);
+    let msg = null;
+    while (v.vagoni < voluti) {
+      if (dep[fam] > 0) dep[fam]--;
+      else if (st.soldi >= C.vagone.costo) G.spendi(st, C.vagone.costo, 'veicoli');
+      else { msg = _('Fondi insufficienti per un vagone nuovo'); v.vagoniVoluti = 0; break; }
+      v.vagoni++; v.prezzo += C.vagone.costo;
+    }
+    while (v.vagoni > voluti) {
+      if (v.qta > G.capacita(mod, v.merce, v.vagoni - 1) + 1e-6) { msg = _('Il carico non ci sta: il vagone si stacca alla prossima fermata, dopo lo scarico'); break; }
+      v.vagoni--; v.prezzo -= C.vagone.costo; dep[fam] = (dep[fam] || 0) + 1;
+    }
+    if (v.vagoni === voluti) v.vagoniVoluti = 0;
+    v.cap = G.capacita(mod, v.merce, v.vagoni);
+    return msg;
+  };
+
+  G.vendiVagoneDeposito = function (st, fam) {
+    const dep = deposito(st);
+    if (!(dep[fam] > 0)) return _('Nessun vagone di questo tipo nel deposito');
+    dep[fam]--;
+    G.incassa(st, G.valoreVagoneUsato(), 'vendite');
+    return null;
+  };
+
+  // vendere: tutto il treno, oppure solo la locomotiva (tieniVagoni) con i vagoni che vanno nel deposito
+  G.valoreLocomotiva = v => Math.max(0, v.prezzo - v.vagoni * C.vagone.costo) * Math.max(0.1, 1 - 0.07 * v.eta);
+  G.vendiVeicolo = function (st, v, tieniVagoni) {
     const k = st.veicoli.indexOf(v);
     if (k < 0) return;
-    G.incassa(st, G.valoreVeicolo(v), 'vendite');
+    if (tieniVagoni && v.tipo === 'treno') {
+      const dep = deposito(st), fam = G.famigliaVagone(v.merce);
+      dep[fam] = (dep[fam] || 0) + v.vagoni;
+      G.incassa(st, G.valoreLocomotiva(v), 'vendite');
+    } else G.incassa(st, G.valoreVeicolo(v), 'vendite');
     if (v.tipo === 'treno') G.liberaTutto(st, v);
     st.veicoli.splice(k, 1);
     G.aggiornaServizi(st);
@@ -343,6 +414,8 @@
         st.effetti.push({ x: c.x, y: c.y, testo: '+' + G.lire(incasso), t: 0 });
       }
     }
+    // vagoni da aggiungere o togliere chiesti durante il viaggio
+    if (v.vagoniVoluti) { const e = G.applicaVagoni(st, v); if (e && !v.vagoniVoluti) G.notizia(st, _`${v.nome}: ${e}`, c.x, c.y); }
   }
 
   function carica(st, v, s, dt) {
