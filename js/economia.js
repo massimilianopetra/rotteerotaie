@@ -94,7 +94,7 @@
   };
   // una casella della stazione toccata dalla rete giusta (binari per le ferroviarie, strade per le autostazioni)
   G.casellaStazione = function (st, s) {
-    const m = st.mondo, mask = s.tipo === 'stazione' ? m.mBin : s.tipo === 'deposito' ? m.mStr : null;
+    const m = st.mondo, mask = s.tipo === 'stazione' || s.tipo === 'porto' ? m.mBin : s.tipo === 'deposito' ? m.mStr : null;
     const el = G.caselleStazione(st, s);
     if (mask) for (const i of el) if (mask[i]) return i;
     return el[0];
@@ -124,7 +124,9 @@
       const i = yy * m.W + xx, t = m.tipo[i];
       if (t === T.ACQUA || t === T.FIUME) return _("Non si costruisce sull'acqua");
       if (m.occ[i]) return _('Casella occupata');
-      if ((tipo === 'aeroporto' || tipo === 'porto') && (m.mBin[i] || m.mStr[i])) return _('Togli prima strade e binari');
+      // il porto può stare sulle vie del paese (spesso il lungomare è tutto case e vie): la via resta e ci si passa
+      if (tipo === 'aeroporto' && (m.mBin[i] || m.mStr[i])) return _('Togli prima strade e binari');
+      if (tipo === 'porto' && m.mStr[i] && !m.strCitta[i]) return _('Togli prima strade e binari');
       if (tipo === 'porto' && !G.toccaAcqua(m, i)) return _('Il porto va sulla costa: una casella che tocca il mare o un lago');
       if (t === T.MONTAGNA) costo += def.costo * 0.5 / (def.lato * def.lato);
       if (m.bosco[i]) costo += C.costoBosco;

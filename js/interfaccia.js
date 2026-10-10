@@ -239,6 +239,17 @@
     return h + _('</div><div class="nota">La valutazione sale quando i mezzi passano spesso: più è alta, più passeggeri e merci arrivano alla stazione.</div>');
   }
 
+  // la merce lasciata da un mezzo perché la porti avanti uno di un altro tipo
+  const DA_CHI = { treno: _('dai treni'), nave: _('dalle navi'), strada: _('dai mezzi su strada'), aereo: _('dagli aerei') };
+  function htmlTrasbordo(s) {
+    const righe = [];
+    for (const k in s.trasbordo || {}) for (const t in s.trasbordo[k]) {
+      const q = s.trasbordo[k][t];
+      if (q >= 1) righe.push(`<div>${pallino(k)}${nomeMerce(k)}: <b>${G.numero(q)}</b> ${C.merci[k].unita} <span class="sotto">${DA_CHI[t] || ''}</span></div>`);
+    }
+    return righe.length ? _('<h4>⇄ In attesa di trasbordo</h4>') + righe.join('') : '';
+  }
+
   function htmlStazione(s0, s) {
     const def = G.defStazione(s);
     const icona = s.tipo === 'stazione' ? `<span class="icona-titolo">${iconaStazione(def.taglia)}</span>` : def.icona;
@@ -254,6 +265,10 @@
     }
     h += _`<p><b>Abitanti nel bacino:</b> ${G.numero(s.popBacino)}</p>`;
     h += schedeFornisce(s0, s);
+    if (s.tipo === 'porto') h += s0.mondo.mBin[G.casellaStazione(s0, s)]
+      ? _('<p>🛤️ <b>Collegato alla ferrovia</b>: anche i treni si fermano qui e la merce passa dal treno alla nave e viceversa.</p>')
+      : _('<div class="nota">Porta un binario sopra il porto: anche i treni potranno fermarsi qui e la merce passerà dal treno alla nave (trasbordo).</div>');
+    h += htmlTrasbordo(s);
     const acc = Object.keys(C.merci).filter(k => s.accetta[k]);
     h += _`<h4>Accetta</h4><div class="chips">${acc.length ? acc.map(k => `<span class="chip" style="--c:${C.merci[k].colore}">${C.merci[k].icona} ${nomeMerce(k)}</span>`).join('') : _('<span class="sotto">nulla</span>')}</div>`;
     if (s.industrie.length) {
@@ -372,12 +387,14 @@
     v.fermate.forEach((f, k) => {
       const s = s0.stazioni[f.s];
       let avv = '';
-      if (s && !s.accetta[v.merce] && !s.fornisce[v.merce]) avv = `<span class="rosso" title="Qui ${nomeMerce(v.merce).toLowerCase()} non si carica e non si scarica">⚠</span> `;
-      else if (s && !s.accetta[v.merce]) avv = `<span class="sotto" title="Qui si carica soltanto">⬆</span> `;
-      else if (s && !s.fornisce[v.merce]) avv = `<span class="sotto" title="Qui si scarica soltanto">⬇</span> `;
+      if (s && (f.trasbordo || (!s.accetta[v.merce] && G.altroRitira(s0, s, v)))) avv = _`<span class="sotto" title="Qui il carico passa a un mezzo di un altro tipo (trasbordo)">⇄</span> `;
+      else if (s && !s.accetta[v.merce] && !s.fornisce[v.merce]) avv = _`<span class="rosso" title="Qui ${nomeMerce(v.merce).toLowerCase()} non si carica e non si scarica">⚠</span> `;
+      else if (s && !s.accetta[v.merce]) avv = _`<span class="sotto" title="Qui si carica soltanto">⬆</span> `;
+      else if (s && !s.fornisce[v.merce]) avv = _`<span class="sotto" title="Qui si scarica soltanto">⬇</span> `;
       // come aspetta in questa fermata: parte subito, aspetta il pieno, o aspetta un certo tempo
       const modo = f.pieno ? 'pieno' : f.attesaMin > 0 ? 'tempo' : '';
       const am = f.attesaMin || 0;
+      const trasb = _`<label class="trasbordo" title="Lascia qui tutto il carico: lo porterà avanti un mezzo di un altro tipo (dal treno alla nave e viceversa). Questo mezzo è pagato per il suo pezzo di viaggio."><input type="checkbox" data-az="trasbordoFermata" data-k="${k}" ${f.trasbordo ? 'checked' : ''}> ⇄ trasbordo</label>`;
       const campo = (u, val, max) => `<input type="number" class="durata" data-az="durata" data-k="${k}" data-u="${u}" min="0" max="${max}" value="${val}">`;
       h += _`<li class="${k === v.idx ? 'attuale' : ''}">${avv}<span class="link" data-az="apriStazione" data-id="${f.s}">${s ? esc(s.nome) : '?'}</span>
         <button class="mini" data-az="suFermata" data-k="${k}" title="Sposta su">▲</button><button class="mini" data-az="togliFermata" data-k="${k}" title="Togli">✕</button>
@@ -385,10 +402,10 @@
           <option value="" ${modo === '' ? 'selected' : ''}>parte appena carico</option>
           <option value="pieno" ${modo === 'pieno' ? 'selected' : ''}>attende il pieno</option>
           <option value="tempo" ${modo === 'tempo' ? 'selected' : ''}>attende fino a…</option></select>
-        ${modo === 'tempo' ? _`<span class="durate" title="Riparte allo scadere del tempo, o prima se è pieno">${campo('g', Math.floor(am / 1440), 120)} g ${campo('h', Math.floor((am % 1440) / 60), 23)} h ${campo('m', am % 60, 59)} min</span>` : ''}</div></li>`;
+        ${modo === 'tempo' ? _`<span class="durate" title="Riparte allo scadere del tempo, o prima se è pieno">${campo('g', Math.floor(am / 1440), 120)} g ${campo('h', Math.floor((am % 1440) / 60), 23)} h ${campo('m', am % 60, 59)} min</span>` : ''}${trasb}</div></li>`;
     });
     h += '</ol>';
-    if (v.fermate.length) h += _('<div class="nota">⬆ qui si carica soltanto · ⬇ qui si scarica soltanto · ⚠ qui questa merce non si carica né si scarica</div>');
+    if (v.fermate.length) h += _('<div class="nota">⬆ qui si carica soltanto · ⬇ qui si scarica soltanto · ⇄ qui passa a un mezzo di un altro tipo · ⚠ qui questa merce non si carica né si scarica</div>');
     if (v.fermate.length < 2 && !ui.percorso) h += _('<div class="nota">Servono almeno due fermate: premi «Aggiungi fermate» e clicca sulle stazioni.</div>');
     h += _`<div class="pulsanti">
       <button class="${ui.percorso ? 'attivo' : 'primario'}" data-az="fermate">${ui.percorso ? _('✔ Fine fermate') : _('➕ Aggiungi fermate')}</button>
@@ -780,6 +797,7 @@
       navigano sull'acqua e girano da sole attorno a coste e isole, quindi due porti bastano per una linea. I <b>traghetti</b>
       portano passeggeri e posta, le <b>navi da carico</b> tutte le altre merci. Sono lente ma molto capienti, e si pagano come
       gli altri mezzi: in base alla distanza in linea d'aria fra i due porti. Due porti su acque diverse (un lago e il mare) non si collegano.</p>
+      <p><b>Treni e navi insieme</b>: se un binario passa sopra il porto, anche i treni ci si fermano. La merce che il treno porta al porto e che lì non serve resta in porto e la carica la nave (e al contrario, dalla nave al treno): per esempio il carbone va in treno dalla miniera al porto e poi in nave fino all'acciaieria. Ogni mezzo è pagato per il suo pezzo di viaggio. Con la casella <b>⇄ trasbordo</b> di una fermata il mezzo lascia lì tutto il carico anche quando la merce sarebbe accettata (per esempio i passeggeri che proseguono in traghetto). Il porto si può costruire anche sulle vie del paese, sulla costa.</p>
       <h4>Le catene delle merci</h4>
       <p>⛏️ Carbone + ⛰️ Ferro → 🏭 Acciaieria → Acciaio · Acciaio + 🌲 Legname → 🏗️ Fabbrica → Merci → città<br>
       🌾 Grano → 🍝 Pastificio → Cibo → città · 🛢️ Petrolio → ⚗️ Raffineria → Carburante → città · ⚡ La centrale compra il carbone.</p>
@@ -936,6 +954,11 @@
       const f = v.fermate[+d.k];
       f.pieno = el.value === 'pieno';
       f.attesaMin = el.value === 'tempo' ? (f.attesaMin || 60) : 0; // di partenza un'ora
+      disegnaPannello();
+    },
+    trasbordoFermata: (d, el) => {
+      const v = veicoloSel(); if (!v || !v.fermate[+d.k]) return;
+      if (el.checked) v.fermate[+d.k].trasbordo = true; else delete v.fermate[+d.k].trasbordo;
       disegnaPannello();
     },
     modoPercorso: (d, el) => {
