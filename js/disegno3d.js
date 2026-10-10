@@ -623,13 +623,64 @@
     return i >= 0 && i < m.N && m.operaBin[i] === G.OPERA.GALLERIA;
   }
 
-  function pezzoTreno(V, q, z, colore, loco) {
-    const { ctx, ts } = V;
-    scatola(ctx, q.x, q.y, z + 0.03, 0.4, 0.2, q.ang, loco ? 0.22 : 0.18, colore, colore);
-    if (loco && ts >= 10) { // la cabina
-      const bx = q.x - Math.cos(q.ang) * 0.12, by = q.y - Math.sin(q.ang) * 0.12;
-      scatola(ctx, bx, by, z + 0.25, 0.14, 0.18, q.ang, 0.08, colore, '#2b2b2b');
+  // un pezzo del treno (k = 0 la locomotiva): i volumi di treni.js come solidi, con i finestrini sui fianchi
+  // e sul tetto il disegno della vista 2D ritagliato. Da lontano basta una scatola del colore di sempre.
+  const VETRO = '#1b2731';
+  function pezzoTreno(V, q, z, v, k, mod) {
+    const { ctx, ts } = V, TR = G.treni;
+    if (ts < 10) {
+      const col = k === 0 ? mod.colore : C.merci[v.merce].colore;
+      scatola(ctx, q.x, q.y, z + 0.03, 0.4, 0.2, q.ang, k === 0 ? 0.2 : 0.16, col, col);
+      return;
     }
+    const p = TR.dati(v, k, mod), ca = Math.cos(q.ang), sa = Math.sin(q.ang), verso = ca * VWX + sa * VWY;
+    // prima le parti basse (telaio, passerella), poi le altre dal fondo verso chi guarda, per ultime quelle
+    // appoggiate sopra (il camino sulla caldaia)
+    const piano3 = b => b[3] >= 0.14 ? 2 : b[4] <= 0.07 ? 0 : 1;
+    const vol = TR.volumi(p).sort((a, b) => piano3(a) - piano3(b) || (a[0] + a[1] - b[0] - b[1]) * verso);
+    for (const b of vol) solidoTreno(V, q, z, ca, sa, b, p);
+    if (k === 0 && v.stato === 'viaggio' && !v.bloccatoDa && TR.aVapore(mod)) {
+      const t = TR.tempo() + v.id * 0.37;
+      for (let j = 0; j < 6; j++) {
+        const f = (t * 0.9 + j / 6) % 1, d = 0.154 - f * 0.9;
+        proietta(q.x + ca * d, q.y + sa * d, z + 0.22 + f * 0.3);
+        ctx.fillStyle = `rgba(230,230,228,${(0.5 * (1 - f)).toFixed(3)})`;
+        ctx.beginPath(); ctx.arc(SX, SY, (0.025 + f * 0.07) * ts, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  }
+  function solidoTreno(V, q, z, ca, sa, b, p) {
+    const { ctx, ts } = V, [x0, x1, w, zb0, zb1, col, fin] = b;
+    const z0 = z + zb0, z1 = z + zb1, fx = -sa * w / 2, fy = ca * w / 2;
+    const ax = q.x + ca * x0, ay = q.y + sa * x0, bx = q.x + ca * x1, by = q.y + sa * x1;
+    const P = [[ax - fx, ay - fy], [bx - fx, by - fy], [bx + fx, by + fy], [ax + fx, ay + fy]];
+    // le normali dei fianchi: −f, +e (davanti), +f, −e (dietro)
+    const N = [[sa, -ca], [ca, sa], [-sa, ca], [-ca, -sa]];
+    for (let k = 0; k < 4; k++) {
+      const n = N[k];
+      if (!visibile(n[0], n[1], 0)) continue;
+      const a = P[k], c = P[(k + 1) & 3];
+      faccia(ctx, [a[0], a[1], z0, c[0], c[1], z0, c[0], c[1], z1, a[0], a[1], z1], tinta(col, luce(n[0], n[1], 0)));
+      if (!fin) continue;
+      const fz0 = z0 + (z1 - z0) * 0.45, fz1 = z0 + (z1 - z0) * 0.85;
+      const vetro = (t0, t1, za, zc, colore) => {
+        const p0x = a[0] + (c[0] - a[0]) * t0, p0y = a[1] + (c[1] - a[1]) * t0, p1x = a[0] + (c[0] - a[0]) * t1, p1y = a[1] + (c[1] - a[1]) * t1;
+        faccia(ctx, [p0x, p0y, za, p1x, p1y, za, p1x, p1y, zc, p0x, p0y, zc], colore);
+      };
+      if (k === 0 || k === 2) { // fianchi lunghi: k = 0 va da dietro a davanti, k = 2 al contrario
+        const tratti = fin === 'cabina' ? [[0.25, 0.75]] : fin === 'cabine' ? [[0.04, 0.13], [0.87, 0.96]] : fin === 'muso' ? [[0.8, 0.95]] : null;
+        if (tratti) for (const [t0, t1] of tratti) vetro(k ? 1 - t1 : t0, k ? 1 - t0 : t1, fz0, fz1, VETRO);
+        else if (ts >= 14) for (let j = 0; j < 7; j++) vetro((j + 0.2) / 7, (j + 0.75) / 7, fz0, fz1, fin);
+      } else if (fin === 'cabine' || (fin === 'muso' && k === 1)) vetro(0.18, 0.82, z0 + 0.07, z1 - 0.02, VETRO); // parabrezza
+    }
+    // il tetto: il disegno 2D del pezzo, ritagliato sulla faccia di sopra
+    ctx.save();
+    ctx.beginPath();
+    for (let k = 0; k < 4; k++) { proietta(P[k][0], P[k][1], z1); if (k) ctx.lineTo(SX, SY); else ctx.moveTo(SX, SY); }
+    ctx.closePath(); ctx.clip();
+    piano(ctx, z1);
+    G.treni.pezzo(ctx, q.x * S, q.y * S, Math.atan2(sa, ca), S, p, ts);
+    ctx.restore();
   }
 
   function anello(V, x, y, z, r) {
@@ -644,7 +695,7 @@
     const { ctx, ts, m, I } = V;
     const mod = G.modello(v.modello), sel = ui.selVeicolo === v.id;
     if (v.tipo === 'treno') {
-      for (const p of parti) if (!inGalleria(V, p.q.x, p.q.y)) pezzoTreno(V, p.q, p.z, p.k === 0 ? mod.colore : C.merci[v.merce].colore, p.k === 0);
+      for (const p of parti) if (!inGalleria(V, p.q.x, p.q.y)) pezzoTreno(V, p.q, p.z, v, p.k, mod);
       return;
     }
     if (v.tipo === 'strada') {

@@ -556,12 +556,15 @@
       if ((v.tipo === 'aereo') !== (passo === 1) || fuori(v)) continue;
       const mod = G.modello(v.modello), sel = ui.selVeicolo === v.id;
       if (v.tipo === 'treno') {
-        const pezzi = 1 + v.vagoni, passoV = 0.44;
-        for (let k = pezzi - 1; k >= 0; k--) {
-          const q = v.punti ? G.puntoSu(v, v.pos - k * passoV, v.seg) : { x: v.x, y: v.y, ang: v.ang };
-          rettangolo(ctx, ox + q.x * ts, oy + q.y * ts, q.ang, ts * 0.4, Math.max(2, ts * 0.22),
-            k === 0 ? mod.colore : C.merci[v.merce].colore, ts >= 10 ? 'rgba(0,0,0,0.6)' : null);
+        // locomotiva e vagoni disegnati da treni.js: prima le ombre, poi i pezzi dalla coda, poi il fumo
+        const TR = G.treni, pos = [];
+        for (let k = 0; k <= v.vagoni; k++) {
+          const q = v.punti ? G.puntoSu(v, v.pos - k * 0.44, v.seg) : { x: v.x, y: v.y, ang: v.ang };
+          pos.push({ x: ox + q.x * ts, y: oy + q.y * ts, ang: q.ang });
         }
+        if (ts >= 10) for (const q of pos) TR.ombra(ctx, q.x, q.y, q.ang, ts);
+        for (let k = v.vagoni; k >= 0; k--) TR.pezzo(ctx, pos[k].x, pos[k].y, pos[k].ang, ts, TR.dati(v, k, mod));
+        if (ts >= 10 && v.stato === 'viaggio' && !v.bloccatoDa && TR.aVapore(mod)) TR.fumo(ctx, pos[0].x, pos[0].y, pos[0].ang, ts, TR.tempo() + v.id * 0.37);
       } else if (v.tipo === 'strada') {
         const off = ts * 0.1, px = -Math.sin(v.ang) * off, py = Math.cos(v.ang) * off;
         const x = ox + v.x * ts + px, y = oy + v.y * ts + py;
