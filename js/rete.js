@@ -387,20 +387,31 @@
     }
     const quote = new Float64Array(n);
     for (let k = 0; k < n; k++) quote[k] = qa + (qb - qa) * dist[k] / dist[n - 1];
-    // e deve restare sotto il terreno: almeno sogliaMetri di roccia sopra
-    const scoperte = [];
-    // (vicino agli imbocchi basta stare sotto il terreno: è il tratto di galleria artificiale)
-    for (let k = 1; k < n - 1; k++) if (Hm[caselle[k]] < quote[k] + (k === 1 || k === n - 2 ? 0 : O.sogliaMetri)) scoperte.push(caselle[k]);
-    if (scoperte.length) {
-      return no(_`La galleria uscirebbe allo scoperto: nelle caselle in rosso il terreno non sta almeno ${O.sogliaMetri} m sopra la galleria. Cambia direzione, fermati prima, oppure spezzala in due gallerie con un tratto all’aperto nella valle.`, scoperte, caselle);
-    }
+    // Dove sopra la linea ci sono almeno sogliaMetri di monte si scava (vicino agli imbocchi basta stare sotto il
+    // terreno: è il tratto di galleria artificiale). Dove il monte si abbassa (una valle in mezzo) la linea esce
+    // all'aperto alla stessa quota: trincea o rilevato, oppure viadotto se il terreno è molto più in basso. Così la
+    // galleria si spezza da sola in più gallerie; all'aperto però non si passa su case, industrie e acqua.
     const prezzo = C.reti[rete].costo * km, opere = new Uint8Array(n), costi = new Float64Array(n), quota = qa;
-    const r = { quote, opere, costi, costo: 0, pendenza: pend, gallerie: 1, kmGallerie: 0, viadotti: 0, kmViadotti: 0, scavo: 0, ripidi: [], quotaUscita: qb };
+    const r = { quote, opere, costi, costo: 0, pendenza: pend, gallerie: 0, kmGallerie: 0, viadotti: 0, kmViadotti: 0, scavo: 0, ripidi: [], quotaUscita: qb };
+    const bloccate = [];
     for (let k = 0; k < n; k++) {
       const i = caselle[k];
       if (k === 0 || k === n - 1) costi[k] = G.costoCasella(st, i, rete); // gli imbocchi sono in superficie
-      else { opere[k] = OPERA.GALLERIA; costi[k] = prezzo * O.galleria; r.kmGallerie += km; }
+      else {
+        const d = Hm[i] - quote[k];
+        if (d >= O.sogliaMetri || ((k === 1 || k === n - 2) && d >= 0)) { opere[k] = OPERA.GALLERIA; costi[k] = prezzo * O.galleria; r.kmGallerie += km; }
+        else {
+          const c0 = G.costoCasella(st, i, rete);
+          if (!isFinite(c0)) { bloccate.push(i); continue; }
+          if (d < -O.sogliaMetri) { opere[k] = OPERA.VIADOTTO; costi[k] = prezzo * O.viadotto * (1 + (-d - O.sogliaMetri) / 100); r.kmViadotti += km; }
+          else { const s = Math.abs(d) * O.scavoAlMetro * km; costi[k] = c0 + s; r.scavo += s; }
+        }
+        if (opere[k] && opere[k] !== opere[k - 1]) { if (opere[k] === OPERA.GALLERIA) r.gallerie++; else r.viadotti++; }
+      }
       r.costo += costi[k];
+    }
+    if (bloccate.length) {
+      return no(_`La galleria uscirebbe allo scoperto dove non si può costruire (case, industrie o acqua): le caselle in rosso. Cambia direzione, oppure fermati prima e prosegui con un altro tratto.`, bloccate, caselle);
     }
     r.costo = Math.round(r.costo);
     return { caselle, costo: r.costo, profilo: r, galleria: true, quota };
